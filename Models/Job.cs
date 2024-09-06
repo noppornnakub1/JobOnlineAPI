@@ -1,14 +1,40 @@
-﻿namespace JobOnlineAPI.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace JobOnlineAPI.Models
 {
     public class Job
     {
         public int JobID { get; set; }
-        public required string JobTitle { get; set; }
-        public required string JobDescription { get; set; }
-        public required string Requirements { get; set; }
-        public required string Location { get; set; }
-        public decimal Salary { get; set; }
-        public DateTime PostedDate { get; set; }
+
+        [Required(ErrorMessage = "Job title is required.")]
+        public string JobTitle { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Job description is required.")]
+        public string JobDescription { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Requirements are required.")]
+        public string Requirements { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Location is required.")]
+        public string Location { get; set; } = string.Empty;
+
+        [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50.")]
+        public int ExperienceYears { get; set; }
+
+        [Range(1, 100, ErrorMessage = "Number of positions must be between 1 and 100.")]
+        public int NumberOfPositions { get; set; }
+
+        [Required(ErrorMessage = "Department is required.")]
+        public string Department { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Job status is required.")]
+        public string JobStatus { get; set; } = "Open";
+
+        public DateTime PostedDate { get; set; } = DateTime.Now;
+
         public DateTime? ClosingDate { get; set; }
+
+        public int CreatedBy { get; set; }
+        public string CreatedByRole { get; set; } = string.Empty;
     }
 }

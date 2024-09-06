@@ -38,8 +38,14 @@ namespace JobOnlineAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Job>> AddJob(Job job)
         {
+            if (job == null)
+            {
+                return BadRequest();
+            }
+
             int newId = await _jobRepository.AddJobAsync(job);
             job.JobID = newId;
+
             return CreatedAtAction(nameof(GetJobById), new { id = newId }, job);
         }
 

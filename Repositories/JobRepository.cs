@@ -21,8 +21,9 @@ namespace JobOnlineAPI.Repositories
         public async Task<IEnumerable<Job>> GetAllJobsAsync()
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            string sql = "SELECT * FROM Jobs";
-            return await db.QueryAsync<Job>(sql);
+            string sql = "sp_GetAllJobs";
+
+            return await db.QueryAsync<Job>(sql, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<Job> GetJobByIdAsync(int id)
@@ -36,11 +37,31 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> AddJobAsync(Job job)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            string sql = @"
-                    INSERT INTO Jobs (JobTitle, JobDescription, Requirements, Location, Salary, PostedDate, ClosingDate)
-                    VALUES (@JobTitle, @JobDescription, @Requirements, @Location, @Salary, @PostedDate, @ClosingDate);
-                    SELECT CAST(SCOPE_IDENTITY() as int)";
-            var id = await db.QuerySingleAsync<int>(sql, job);
+
+            string sql = "sp_AddJob";
+
+            var parameters = new
+            {
+                job.JobTitle,
+                job.JobDescription,
+                job.Requirements,
+                job.Location,
+                job.ExperienceYears,
+                job.NumberOfPositions,
+                job.Department,
+                job.JobStatus,
+                ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
+                job.CreatedBy,
+                job.CreatedByRole
+            };
+
+            var id = await db.ExecuteScalarAsync<int>(sql, parameters, commandType: CommandType.StoredProcedure);
+
+            if (id == 0)
+            {
+                throw new InvalidOperationException("Failed to retrieve JobID after inserting the job.");
+            }
+
             return id;
         }
 
