@@ -15,7 +15,7 @@ namespace JobOnlineAPI.Repositories
         public JobRepository(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection")
-                                ?? throw new ArgumentNullException(nameof(_connectionString), "Connection string 'DefaultConnection' is not found.");
+                                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
         }
 
         public async Task<IEnumerable<Job>> GetAllJobsAsync()

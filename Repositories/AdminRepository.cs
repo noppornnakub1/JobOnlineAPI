@@ -10,12 +10,11 @@ namespace JobOnlineAPI.Repositories
 {
     public class AdminRepository : IAdminRepository
     {
-        private readonly string _connectionString;
+        private readonly string? _connectionString;
 
         public AdminRepository(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                                ?? throw new ArgumentNullException(nameof(_connectionString), "Connection string 'DefaultConnection' is not found.");
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
         public async Task<int> AddAdminUserAsync(AdminUser admin)
@@ -42,6 +41,15 @@ namespace JobOnlineAPI.Repositories
                 return false;
 
             return BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
+        }
+
+        public async Task<AdminUser> GetAdminUserByUsernameAsync(string username)
+        {
+            using IDbConnection db = new SqlConnection(_connectionString);
+            var query = "SELECT * FROM AdminUsers WHERE Username = @Username";
+            var user = await db.QuerySingleOrDefaultAsync<AdminUser>(query, new { Username = username });
+
+            return user ?? throw new Exception($"User with username '{username}' not found.");
         }
     }
 }

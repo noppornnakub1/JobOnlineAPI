@@ -1,21 +1,25 @@
 using JobOnlineAPI.Repositories;
 using JobOnlineAPI.Filters;
+using JobOnlineAPI.Services;
 using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 builder.Services.AddScoped<IApplicantRepository, ApplicantRepository>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 
-builder.Services.AddSwaggerGen(options =>
-{
-    options.DocumentFilter<HideSchemasDocumentFilter>();
-});
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 

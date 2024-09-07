@@ -21,11 +21,9 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                using (var connection = new SqlConnection(connectionString))
-                {
-                    await connection.OpenAsync();
-                    return Ok("Database connection successful!");
-                }
+                using var connection = new SqlConnection(connectionString);
+                await connection.OpenAsync();
+                return Ok("Database connection successful!");
             }
             catch (Exception ex)
             {
