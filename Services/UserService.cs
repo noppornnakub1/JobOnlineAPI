@@ -32,5 +32,10 @@ namespace JobOnlineAPI.Services
 
             return null;
         }
+
+        public async Task<string?> GetConfigValueAsync(string key)
+        {
+            return await _adminRepository.GetConfigValueAsync(key);
+        }
     }
 }

@@ -51,5 +51,17 @@ namespace JobOnlineAPI.Repositories
 
             return user ?? throw new Exception($"User with username '{username}' not found.");
         }
+
+        public async Task<string?> GetConfigValueAsync(string key)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            string sql = "GetConfigValue";
+            var configValue = await conn.QueryFirstOrDefaultAsync<string>(
+                sql,
+                new { ConfigKey = key },
+                commandType: System.Data.CommandType.StoredProcedure);
+
+            return configValue;
+        }
     }
 }
