@@ -21,7 +21,7 @@ namespace JobOnlineAPI.Models
         [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50.")]
         public int ExperienceYears { get; set; }
 
-        [Range(1, 100, ErrorMessage = "Number of positions must be between 1 and 100.")]
+        [Range(0, 100, ErrorMessage = "Number of positions must be between 0 and 100.")]
         public int NumberOfPositions { get; set; }
 
         [Required(ErrorMessage = "Department is required.")]
