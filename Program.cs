@@ -17,6 +17,11 @@ builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 
+builder.Services.AddSwaggerGen(options =>
+{
+    options.DocumentFilter<HideSchemasDocumentFilter>();
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
