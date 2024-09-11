@@ -8,5 +8,6 @@ namespace JobOnlineAPI.Repositories
         Task<bool> VerifyPasswordAsync(string username, string password);
         Task<AdminUser> GetAdminUserByUsernameAsync(string username);
         Task<string?> GetConfigValueAsync(string key);
+        Task<string?> GetStyleValueAsync(string key);
     }
 }

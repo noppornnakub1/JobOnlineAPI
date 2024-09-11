@@ -1,8 +1,6 @@
 using JobOnlineAPI.Repositories;
 using JobOnlineAPI.Filters;
 using JobOnlineAPI.Services;
-using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,10 +9,20 @@ builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder =>
+        {
+            builder.WithOrigins("https://localhost:7191")
+                   .AllowAnyHeader()                        
+                   .AllowAnyMethod();                      
+        });
+});
+
 builder.Services.AddScoped<IApplicantRepository, ApplicantRepository>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
-
 builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddSwaggerGen(options =>
@@ -35,6 +43,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowSpecificOrigin");
 
 app.UseAuthorization();
 

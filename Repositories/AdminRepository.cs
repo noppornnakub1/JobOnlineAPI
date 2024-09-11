@@ -63,5 +63,17 @@ namespace JobOnlineAPI.Repositories
 
             return configValue;
         }
+
+        public async Task<string?> GetStyleValueAsync(string key)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            string sql = "GetStyleValue";
+            var styleValue = await conn.QueryFirstOrDefaultAsync<string>(
+                sql,
+                new { SettingName = key },
+                commandType: CommandType.StoredProcedure);
+
+            return styleValue;
+        }
     }
 }

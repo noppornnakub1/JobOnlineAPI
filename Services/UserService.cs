@@ -37,5 +37,10 @@ namespace JobOnlineAPI.Services
         {
             return await _adminRepository.GetConfigValueAsync(key);
         }
+
+        public async Task<string?> GetStyleValueAsync(string key)
+        {
+            return await _adminRepository.GetStyleValueAsync(key);
+        }
     }
 }
