@@ -68,17 +68,27 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> UpdateJobAsync(Job job)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            string sql = @"
-                    UPDATE Jobs
-                    SET JobTitle = @JobTitle,
-                        JobDescription = @JobDescription,
-                        Requirements = @Requirements,
-                        Location = @Location,
-                        Salary = @Salary,
-                        PostedDate = @PostedDate,
-                        ClosingDate = @ClosingDate
-                    WHERE JobID = @JobID";
-            return await db.ExecuteAsync(sql, job);
+
+            string sql = "sp_UpdateJob";
+
+            var parameters = new
+            {
+                job.JobID,
+                job.JobTitle,
+                job.JobDescription,
+                job.Requirements,
+                job.Location,
+                job.ExperienceYears,
+                job.NumberOfPositions,
+                job.Department,
+                job.JobStatus,
+                job.PostedDate,
+                ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
+                ModifiedBy = job.ModifiedBy.HasValue ? (object)job.ModifiedBy.Value : DBNull.Value,
+                ModifiedDate = job.ModifiedDate.HasValue ? (object)job.ModifiedDate.Value : DBNull.Value
+            };
+
+            return await db.ExecuteAsync(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<int> DeleteJobAsync(int id)

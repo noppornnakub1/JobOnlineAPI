@@ -36,5 +36,7 @@ namespace JobOnlineAPI.Models
 
         public int CreatedBy { get; set; }
         public string CreatedByRole { get; set; } = string.Empty;
+        public int? ModifiedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
     }
 }
