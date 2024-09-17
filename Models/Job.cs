@@ -38,5 +38,26 @@ namespace JobOnlineAPI.Models
         public string CreatedByRole { get; set; } = string.Empty;
         public int? ModifiedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
+
+        public required string HighlightedJobTitle
+        {
+            get; set;
+        }
+        public required string HighlightedDepartment
+        {
+            get; set;
+        }
+        public required string HighlightedLocation
+        {
+            get; set;
+        }
+        public required string HighlightedDescription
+        {
+            get; set;
+        }
+        public required string HighlightedRequirements
+        {
+            get; set;
+        }
     }
 }
