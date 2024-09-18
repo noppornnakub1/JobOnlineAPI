@@ -3,11 +3,10 @@
     public class Applicant
     {
         public int ApplicantID { get; set; }
-        public required string FirstName { get; set; }
-        public required string LastName { get; set; }
-        public required string Email { get; set; }
-        public required string Phone { get; set; }
-        public required string Resume { get; set; }
-        public DateTime AppliedDate { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string? Resume { get; set; }
     }
 }

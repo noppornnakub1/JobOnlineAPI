@@ -37,9 +37,9 @@ namespace JobOnlineAPI.Repositories
         {
             using IDbConnection db = new SqlConnection(_connectionString);
             string sql = @"
-                INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
-                VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, @AppliedDate);
-                SELECT CAST(SCOPE_IDENTITY() as int)";
+        INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
+        VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, GETDATE());
+        SELECT CAST(SCOPE_IDENTITY() as int)";
             return await db.QuerySingleAsync<int>(sql, applicant);
         }
 

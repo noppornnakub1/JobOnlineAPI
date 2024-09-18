@@ -2,19 +2,23 @@
 using System.Threading.Tasks;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+
     public class ApplicantsController : ControllerBase
     {
         private readonly IApplicantRepository _applicantRepository;
+        private readonly IJobApplicationRepository _jobApplicationRepository;
 
-        public ApplicantsController(IApplicantRepository applicantRepository)
+        public ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository)
         {
             _applicantRepository = applicantRepository;
+            _jobApplicationRepository = jobApplicationRepository;
         }
 
         [HttpGet]
@@ -88,6 +92,53 @@ namespace JobOnlineAPI.Controllers
             }
 
             return Ok(new { filePath });
+        }
+
+        [HttpPost("submit-application")]
+        public async Task<IActionResult> SubmitApplication([FromForm] Applicant applicant, [FromForm] int jobId, [FromForm] IFormFile? resume)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (jobId == 0)
+            {
+                return BadRequest("JobID is required.");
+            }
+
+            if (resume != null && resume.Length > 0)
+            {
+                var resumesFolder = Path.Combine("wwwroot", "resumes");
+
+                if (!Directory.Exists(resumesFolder))
+                {
+                    Directory.CreateDirectory(resumesFolder);
+                }
+
+                var filePath = Path.Combine(resumesFolder, resume.FileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await resume.CopyToAsync(stream);
+                }
+
+                applicant.Resume = filePath;
+            }
+
+            int applicantId = await _applicantRepository.AddApplicantAsync(applicant);
+
+            var jobApplication = new JobApplication
+            {
+                ApplicantID = applicantId,
+                JobID = jobId,
+                Status = "Submitted",
+                SubmissionDate = DateTime.Now
+            };
+
+            await _jobApplicationRepository.AddJobApplicationAsync(jobApplication);
+
+            return Ok(new { applicantId, jobApplication });
         }
     }
 }
