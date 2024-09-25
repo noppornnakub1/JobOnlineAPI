@@ -1,6 +1,7 @@
 using JobOnlineAPI.Repositories;
-using JobOnlineAPI.Filters;
 using JobOnlineAPI.Services;
+using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,10 +28,11 @@ builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.DocumentFilter<HideSchemasDocumentFilter>();
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "JobOnlineAPI", Version = "v1" });
 });
 
 builder.Services.AddControllers();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -39,6 +41,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
+    c.DefaultModelsExpandDepth(-1);
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "JobOnlineAPI v1");
 });
 

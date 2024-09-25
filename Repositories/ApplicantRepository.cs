@@ -17,12 +17,24 @@ namespace JobOnlineAPI.Repositories
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
         }
-
         public async Task<IEnumerable<Applicant>> GetAllApplicantsAsync()
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            string sql = "SELECT * FROM Applicants";
-            return await db.QueryAsync<Applicant>(sql);
+
+            string storedProcedure = "spGetAllApplicantsWithJobDetails";
+
+            return await db.QueryAsync<Applicant, Job, Applicant>(
+                storedProcedure,
+                (applicant, job) =>
+                {
+                    applicant.JobTitle = job.JobTitle;
+                    applicant.JobLocation = job.Location;
+                    applicant.JobDepartment = job.Department;
+                    return applicant;
+                },
+                splitOn: "JobTitle",
+                commandType: CommandType.StoredProcedure
+            );
         }
 
         public async Task<Applicant> GetApplicantByIdAsync(int id)
