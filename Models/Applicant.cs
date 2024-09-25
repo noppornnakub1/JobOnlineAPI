@@ -12,5 +12,6 @@
         public string? JobTitle { get; set; }
         public string? JobLocation { get; set; }
         public string? JobDepartment { get; set; }
+        public string? Status { get; set; }
     }
 }

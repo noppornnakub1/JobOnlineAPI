@@ -23,16 +23,17 @@ namespace JobOnlineAPI.Repositories
 
             string storedProcedure = "spGetAllApplicantsWithJobDetails";
 
-            return await db.QueryAsync<Applicant, Job, Applicant>(
+            return await db.QueryAsync<Applicant, Job, string, Applicant>(
                 storedProcedure,
-                (applicant, job) =>
+                (applicant, job, status) =>
                 {
                     applicant.JobTitle = job.JobTitle;
                     applicant.JobLocation = job.Location;
                     applicant.JobDepartment = job.Department;
+                    applicant.Status = status;
                     return applicant;
                 },
-                splitOn: "JobTitle",
+                splitOn: "JobTitle,Status",
                 commandType: CommandType.StoredProcedure
             );
         }
