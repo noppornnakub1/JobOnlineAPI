@@ -1,3 +1,5 @@
+using System.Data;
+using Microsoft.Data.SqlClient;
 using JobOnlineAPI.Repositories;
 using JobOnlineAPI.Services;
 using Microsoft.OpenApi.Models;
@@ -26,13 +28,15 @@ builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>(
 builder.Services.AddScoped<IHRStaffRepository, HRStaffRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+builder.Services.AddScoped<IDbConnection>(sp =>
+    new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "JobOnlineAPI", Version = "v1" });
 });
 
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -46,13 +50,9 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
-
 app.UseCors("AllowAllOrigins");
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
