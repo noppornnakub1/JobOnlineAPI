@@ -3,7 +3,6 @@ using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
 using System.Text;
-using JobOnlineAPI.Models;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -19,37 +18,43 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register([FromBody] RegisterModel model)
+        public async Task<IActionResult> Register([FromBody] Dictionary<string, object> data)
         {
-            if (!ModelState.IsValid)
+            if (!data.TryGetValue("Email", out _) || !data.TryGetValue("Password", out object? value))
             {
-                return BadRequest(ModelState);
+                return BadRequest("Email and Password are required.");
             }
+            string email = data["Email"]?.ToString() ?? string.Empty;
+            string password = value?.ToString() ?? string.Empty;
 
-            var passwordHash = HashPassword(model.Password);
+            var passwordHash = HashPassword(password);
 
-            var result = await _dbConnection.ExecuteScalarAsync<int>(
+            var parameters = new DynamicParameters();
+            parameters.Add("Email", email);
+            parameters.Add("PasswordHash", passwordHash);
+            parameters.Add("ResultCode", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add("ResultMessage", dbType: DbType.String, size: 255, direction: ParameterDirection.Output);
+
+            await _dbConnection.ExecuteAsync(
                 "RegisterUser",
-                new
-                {
-                    model.Email,
-                    PasswordHash = passwordHash,
-                    CreatedAt = DateTime.Now
-                },
+                parameters,
                 commandType: CommandType.StoredProcedure
             );
 
-            if (result == -1)
+            int resultCode = parameters.Get<int>("ResultCode");
+            string resultMessage = parameters.Get<string>("ResultMessage");
+
+            if (resultCode == 1)
             {
-                return BadRequest("Email already exists.");
+                return Ok(resultMessage);
             }
-            else if (result == 1)
+            else if (resultCode == -1)
             {
-                return Ok("User registered successfully.");
+                return BadRequest(resultMessage);
             }
             else
             {
-                return StatusCode(500, "An error occurred while registering the user.");
+                return StatusCode(500, resultMessage);
             }
         }
 

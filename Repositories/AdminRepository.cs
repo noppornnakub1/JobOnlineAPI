@@ -5,6 +5,8 @@ using BCrypt.Net;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using JobOnlineAPI.Models;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace JobOnlineAPI.Repositories
 {
@@ -43,13 +45,36 @@ namespace JobOnlineAPI.Repositories
             return BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
         }
 
-        public async Task<AdminUser> GetAdminUserByUsernameAsync(string username)
+        public async Task<AdminUser?> GetAdminUserByUsernameAsync(string username)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
             var query = "SELECT * FROM AdminUsers WHERE Username = @Username";
-            var user = await db.QuerySingleOrDefaultAsync<AdminUser>(query, new { Username = username });
 
-            return user ?? throw new Exception($"User with username '{username}' not found.");
+            try
+            {
+                return await db.QuerySingleOrDefaultAsync<AdminUser>(query, new { Username = username });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetAdminUserByUsernameAsync: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            using IDbConnection db = new SqlConnection(_connectionString);
+            var query = "SELECT * FROM Users WHERE Email = @Email";
+
+            try
+            {
+                return await db.QuerySingleOrDefaultAsync<User>(query, new { Email = email });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetUserByEmailAsync: {ex.Message}");
+                return null;
+            }
         }
 
         public async Task<string?> GetConfigValueAsync(string key)
@@ -74,6 +99,14 @@ namespace JobOnlineAPI.Repositories
                 commandType: CommandType.StoredProcedure);
 
             return styleValue;
+        }
+
+        public bool VerifySHA256Hash(string input, string storedHash)
+        {
+            byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+            byte[] hashBytes = SHA256.HashData(inputBytes);
+            string hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            return hash == storedHash;
         }
     }
 }

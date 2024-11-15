@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using JobOnlineAPI.Services;
-using System.Threading.Tasks;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -18,14 +17,22 @@ namespace JobOnlineAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
-            var user = await _userService.AuthenticateAsync(loginRequest.Username, loginRequest.Password);
-
-            if (user != null)
+            try
             {
-                return Ok(new { user.Username, user.Role });
-            }
+                var user = await _userService.AuthenticateAsync(loginRequest.Username, loginRequest.Password);
 
-            return Unauthorized("Invalid username or password.");
+                if (user != null)
+                {
+                    return Ok(new { user.Username, user.Role });
+                }
+
+                return Unauthorized("Invalid username or password.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Login failed: {ex.Message}");
+                return StatusCode(500, "An unexpected error occurred. Please try again later.");
+            }
         }
     }
 
