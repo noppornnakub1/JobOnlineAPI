@@ -1,11 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
+﻿using System.Data;
 using Dapper;
 using JobOnlineAPI.Models;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 
 namespace JobOnlineAPI.Repositories
 {
@@ -17,6 +13,11 @@ namespace JobOnlineAPI.Repositories
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
+        }
+
+        public IDbConnection GetConnection()
+        {
+            return new SqlConnection(_connectionString);
         }
 
         public async Task<IEnumerable<JobApplication>> GetAllJobApplicationsAsync()

@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Data;
+using System.Dynamic;
+using System.Text.Json;
+using Dapper;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobOnlineAPI.Controllers
@@ -139,6 +140,58 @@ namespace JobOnlineAPI.Controllers
             await _jobApplicationRepository.AddJobApplicationAsync(jobApplication);
 
             return Ok(new { applicantId, jobApplication });
+        }
+
+        [HttpPost("submit-application-dynamic")]
+        public async Task<IActionResult> SubmitApplicationDynamic([FromBody] ExpandoObject request)
+        {
+            if (request == null || !((IDictionary<string, object?>)request).Any())
+                return BadRequest("Invalid input.");
+
+            var applicantParams = new DynamicParameters();
+            foreach (var kvp in (IDictionary<string, object?>)request)
+            {
+                if (kvp.Value is JsonElement jsonElement)
+                {
+                    switch (jsonElement.ValueKind)
+                    {
+                        case JsonValueKind.String:
+                            applicantParams.Add(kvp.Key, jsonElement.GetString());
+                            break;
+                        case JsonValueKind.Array:
+                        case JsonValueKind.Object:
+                            applicantParams.Add(kvp.Key, jsonElement.ToString());
+                            break;
+                        case JsonValueKind.Number:
+                            if (jsonElement.TryGetInt32(out int intValue))
+                                applicantParams.Add(kvp.Key, intValue);
+                            else if (jsonElement.TryGetDouble(out double doubleValue))
+                                applicantParams.Add(kvp.Key, doubleValue);
+                            break;
+                        case JsonValueKind.True:
+                        case JsonValueKind.False:
+                            applicantParams.Add(kvp.Key, jsonElement.GetBoolean());
+                            break;
+                        case JsonValueKind.Null:
+                            applicantParams.Add(kvp.Key, null);
+                            break;
+                        default:
+                            return BadRequest($"Unsupported JSON value for key '{kvp.Key}'.");
+                    }
+                }
+                else
+                {
+                    applicantParams.Add(kvp.Key, kvp.Value);
+                }
+            }
+
+            using var connection = _applicantRepository.GetConnection();
+            var applicantId = await connection.QueryFirstOrDefaultAsync<int>(
+                "InsertApplicantData",
+                applicantParams,
+                commandType: CommandType.StoredProcedure
+            );
+            return Ok(new { ApplicantID = applicantId });
         }
     }
 }

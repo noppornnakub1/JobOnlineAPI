@@ -17,6 +17,11 @@ namespace JobOnlineAPI.Repositories
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
         }
+        public IDbConnection GetConnection()
+        {
+            return new SqlConnection(_connectionString);
+        }
+
         public async Task<IEnumerable<Applicant>> GetAllApplicantsAsync()
         {
             using IDbConnection db = new SqlConnection(_connectionString);
