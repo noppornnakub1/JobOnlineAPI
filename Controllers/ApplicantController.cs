@@ -148,6 +148,9 @@ namespace JobOnlineAPI.Controllers
             if (request == null || !((IDictionary<string, object?>)request).Any())
                 return BadRequest("Invalid input.");
 
+            if (!((IDictionary<string, object?>)request).TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
+                return BadRequest("JobID is required.");
+
             var applicantParams = new DynamicParameters();
             foreach (var kvp in (IDictionary<string, object?>)request)
             {
