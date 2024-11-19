@@ -27,7 +27,7 @@ builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
 builder.Services.AddScoped<IHRStaffRepository, HRStaffRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ILocationService, LocationService>(); // เพิ่ม LocationService
+builder.Services.AddScoped<ILocationService, LocationService>();
 
 builder.Services.AddScoped<IDbConnection>(sp =>
     new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
