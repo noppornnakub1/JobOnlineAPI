@@ -3,6 +3,7 @@ using Microsoft.Data.SqlClient;
 using JobOnlineAPI.Repositories;
 using JobOnlineAPI.Services;
 using Microsoft.OpenApi.Models;
+using JobOnlineAPI.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,9 @@ builder.Services.AddScoped<IHRStaffRepository, HRStaffRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 builder.Services.AddScoped<IDbConnection>(sp =>
     new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -39,7 +43,6 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 

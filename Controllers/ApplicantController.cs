@@ -4,6 +4,7 @@ using System.Text.Json;
 using Dapper;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
+using JobOnlineAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobOnlineAPI.Controllers
@@ -15,11 +16,13 @@ namespace JobOnlineAPI.Controllers
     {
         private readonly IApplicantRepository _applicantRepository;
         private readonly IJobApplicationRepository _jobApplicationRepository;
+        private readonly IEmailService _emailService;
 
-        public ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository)
+        public ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService)
         {
             _applicantRepository = applicantRepository;
             _jobApplicationRepository = jobApplicationRepository;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -148,35 +151,42 @@ namespace JobOnlineAPI.Controllers
             if (request == null || !((IDictionary<string, object?>)request).Any())
                 return BadRequest("Invalid input.");
 
-            if (!((IDictionary<string, object?>)request).TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
+            var requestDictionary = (IDictionary<string, object?>)request;
+
+            if (!requestDictionary.TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
                 return BadRequest("JobID is required.");
 
-            var applicantParams = new DynamicParameters();
-            foreach (var kvp in (IDictionary<string, object?>)request)
+            using var connection = _applicantRepository.GetConnection();
+
+            var parameters = new DynamicParameters();
+
+            foreach (var kvp in requestDictionary)
             {
                 if (kvp.Value is JsonElement jsonElement)
                 {
                     switch (jsonElement.ValueKind)
                     {
                         case JsonValueKind.String:
-                            applicantParams.Add(kvp.Key, jsonElement.GetString());
-                            break;
-                        case JsonValueKind.Array:
-                        case JsonValueKind.Object:
-                            applicantParams.Add(kvp.Key, jsonElement.ToString());
+                            var stringValue = jsonElement.GetString();
+                            parameters.Add(
+                                kvp.Key,
+                                stringValue,
+                                dbType: DbType.String,
+                                size: stringValue?.Length > 0 ? stringValue.Length : 1
+                            );
                             break;
                         case JsonValueKind.Number:
                             if (jsonElement.TryGetInt32(out int intValue))
-                                applicantParams.Add(kvp.Key, intValue);
+                                parameters.Add(kvp.Key, intValue, dbType: DbType.Int32);
                             else if (jsonElement.TryGetDouble(out double doubleValue))
-                                applicantParams.Add(kvp.Key, doubleValue);
+                                parameters.Add(kvp.Key, doubleValue, dbType: DbType.Double);
                             break;
                         case JsonValueKind.True:
                         case JsonValueKind.False:
-                            applicantParams.Add(kvp.Key, jsonElement.GetBoolean());
+                            parameters.Add(kvp.Key, jsonElement.GetBoolean(), dbType: DbType.Boolean);
                             break;
                         case JsonValueKind.Null:
-                            applicantParams.Add(kvp.Key, null);
+                            parameters.Add(kvp.Key, null);
                             break;
                         default:
                             return BadRequest($"Unsupported JSON value for key '{kvp.Key}'.");
@@ -184,17 +194,68 @@ namespace JobOnlineAPI.Controllers
                 }
                 else
                 {
-                    applicantParams.Add(kvp.Key, kvp.Value);
+                    if (kvp.Value is string strValue)
+                    {
+                        parameters.Add(
+                            kvp.Key,
+                            strValue,
+                            dbType: DbType.String,
+                            size: strValue.Length > 0 ? strValue.Length : 1
+                        );
+                    }
+                    else
+                    {
+                        parameters.Add(kvp.Key, kvp.Value);
+                    }
                 }
             }
 
-            using var connection = _applicantRepository.GetConnection();
-            var applicantId = await connection.QueryFirstOrDefaultAsync<int>(
-                "InsertApplicantData",
-                applicantParams,
-                commandType: CommandType.StoredProcedure
-            );
-            return Ok(new { ApplicantID = applicantId });
+            parameters.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
+            parameters.Add("HRManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+            parameters.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+
+            try
+            {
+                await connection.ExecuteAsync(
+                    "InsertApplicantDataV2",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                var applicantId = parameters.Get<int?>("ApplicantID");
+                if (applicantId == null)
+                {
+                    return BadRequest("ApplicantID was not generated by the stored procedure.");
+                }
+
+                var applicantEmail = parameters.Get<string>("ApplicantEmail");
+                var hrManagerEmails = parameters.Get<string>("HRManagerEmails");
+                var jobManagerEmails = parameters.Get<string>("JobManagerEmails");
+
+                if (!string.IsNullOrEmpty(applicantEmail))
+                {
+                    var applicantBody = $"<p>Dear Applicant, Your application (ID: {applicantId}) has been submitted successfully.</p>";
+                    await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
+                }
+
+                var managerEmails = $"{hrManagerEmails},{jobManagerEmails}".Split(',');
+                foreach (var email in managerEmails.Distinct())
+                {
+                    if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        var managerBody = $"<p>A new application has been submitted for JobID: {jobIdObj}.</p>";
+                        await _emailService.SendEmailAsync(email.Trim(), "New Job Application", managerBody, true);
+                    }
+                }
+
+                return Ok(new { ApplicantID = applicantId, Message = "Application submitted and emails sent successfully." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error occurred: {ex.Message}");
+                return StatusCode(500, new { Error = "Internal Server Error", Details = ex.Message });
+            }
         }
     }
 }
