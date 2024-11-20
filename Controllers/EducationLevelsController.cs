@@ -23,14 +23,12 @@ namespace JobOnlineAPI.Controllers
             {
                 var connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-                using (IDbConnection db = new SqlConnection(connectionString))
-                {
-                    var educationLevels = await db.QueryAsync<dynamic>(
-                        "GetAllEducationLevels",
-                        commandType: CommandType.StoredProcedure);
+                using IDbConnection db = new SqlConnection(connectionString);
+                var educationLevels = await db.QueryAsync<dynamic>(
+                    "GetAllEducationLevels",
+                    commandType: CommandType.StoredProcedure);
 
-                    return Ok(educationLevels);
-                }
+                return Ok(educationLevels);
             }
             catch (Exception ex)
             {
