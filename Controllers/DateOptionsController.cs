@@ -23,7 +23,7 @@ namespace JobOnlineAPI.Controllers
                 var parameters = new DynamicParameters();
                 parameters.Add("@CurrentYear", currentYear);
 
-                var dateOptions = await _dbConnection.QueryAsync<DateOption>(
+                var dateOptions = await _dbConnection.QueryAsync<dynamic>(
                     "GetDateSelectionOptions",
                     parameters,
                     commandType: CommandType.StoredProcedure
@@ -40,13 +40,5 @@ namespace JobOnlineAPI.Controllers
                 });
             }
         }
-    }
-
-    public class DateOption
-    {
-        public required string ThaiMonth { get; set; }
-        public int MonthNumber { get; set; }
-        public int Year { get; set; }
-        public int MaxDay { get; set; }
     }
 }
