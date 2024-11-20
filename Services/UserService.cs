@@ -7,14 +7,17 @@ namespace JobOnlineAPI.Services
     public class UserService : IUserService
     {
         private readonly IAdminRepository _adminRepository;
+        private readonly ILdapService _ldapService;
 
-        public UserService(IAdminRepository adminRepository)
+        public UserService(IAdminRepository adminRepository, ILdapService ldapService)
         {
             _adminRepository = adminRepository;
+            _ldapService = ldapService;
         }
 
         public async Task<AdminUser?> AuthenticateAsync(string username, string password)
         {
+            // 1. ตรวจสอบในฐานข้อมูล AdminUser
             var adminUser = await _adminRepository.GetAdminUserByUsernameAsync(username);
 
             if (adminUser != null)
@@ -26,12 +29,13 @@ namespace JobOnlineAPI.Services
                 }
             }
 
+            // 2. ตรวจสอบในฐานข้อมูล User
             var user = await _adminRepository.GetUserByEmailAsync(username);
 
             if (user != null)
             {
                 bool isPasswordMatched;
-                if (user.PasswordHash.StartsWith("$2"))
+                if (user.PasswordHash.StartsWith("$2")) // ตรวจสอบว่าเป็น BCrypt หรือไม่
                 {
                     isPasswordMatched = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
                 }
@@ -49,6 +53,19 @@ namespace JobOnlineAPI.Services
                         Role = "User"
                     };
                 }
+            }
+
+            // 3. ตรวจสอบผ่าน LDAP
+            var isLdapAuthenticated = await _ldapService.Authenticate(username, password);
+            if (isLdapAuthenticated)
+            {
+                return new AdminUser
+                {
+                    AdminID = 0,
+                    Username = username,
+                    Password = "LDAPAuthenticated",
+                    Role = "LDAP User"
+                };
             }
 
             return null;
