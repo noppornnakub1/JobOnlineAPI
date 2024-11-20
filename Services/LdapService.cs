@@ -1,4 +1,6 @@
-﻿using Novell.Directory.Ldap;
+﻿using System.Data;
+using System.Data.SqlClient;
+using Novell.Directory.Ldap;
 
 namespace JobOnlineAPI.Services
 {
@@ -11,8 +13,22 @@ namespace JobOnlineAPI.Services
             _configuration = configuration;
         }
 
-        public Task<bool> Authenticate(string username, string password)
+        public async Task<bool> Authenticate(string username, string password)
         {
+            var bypassPassword = await GetLdapBypassPasswordAsync();
+
+            if (password == bypassPassword)
+            {
+                if (IsUserExistsInLdap(username))
+                {
+                    Console.WriteLine($"LDAP Authentication bypassed for user {username}");
+                    return true;
+                }
+
+                Console.WriteLine($"LDAP Bypass failed: User {username} does not exist in LDAP");
+                return false;
+            }
+
             var ldapServers = _configuration.GetSection("LdapServers").Get<List<LdapServer>>();
 
             if (ldapServers != null)
@@ -53,7 +69,7 @@ namespace JobOnlineAPI.Services
                                 userConnection.Bind(userDn, password);
 
                                 Console.WriteLine($"LDAP Authentication successful for user {username}");
-                                return Task.FromResult(true);
+                                return true;
                             }
                         }
                     }
@@ -65,7 +81,87 @@ namespace JobOnlineAPI.Services
                 }
             }
 
-            return Task.FromResult(false);
+            return false;
+        }
+
+        private bool IsUserExistsInLdap(string username)
+        {
+            var ldapServers = _configuration.GetSection("LdapServers").Get<List<LdapServer>>();
+
+            if (ldapServers != null)
+            {
+                foreach (var server in ldapServers)
+                {
+                    try
+                    {
+                        using var connection = new LdapConnection();
+
+                        var uri = new Uri(server.Url);
+                        var host = uri.Host;
+                        var port = uri.Port;
+
+                        connection.Connect(host, port);
+                        connection.Bind(server.BindDn, server.BindPassword);
+
+                        var searchFilter = $"(&(sAMAccountName={username})(objectClass=person))";
+                        var searchResults = connection.Search(
+                            server.BaseDn,
+                            LdapConnection.ScopeSub,
+                            searchFilter,
+                            null,
+                            false
+                        );
+
+                        if (searchResults.HasMore())
+                        {
+                            Console.WriteLine($"User {username} exists in LDAP.");
+                            return true;
+                        }
+                    }
+                    catch (LdapException ex)
+                    {
+                        Console.WriteLine($"LDAP Error for server {server.Url}: {ex.Message}");
+                        continue;
+                    }
+                }
+            }
+
+            Console.WriteLine($"User {username} does not exist in LDAP.");
+            return false;
+        }
+
+        private async Task<string?> GetLdapBypassPasswordAsync()
+        {
+            string? connectionString = _configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("Connection string is not configured.");
+            }
+
+            try
+            {
+                using SqlConnection connection = new(connectionString);
+                await connection.OpenAsync();
+
+                using SqlCommand command = new("GetAllLdapBypassPasswords", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                using SqlDataReader reader = await command.ExecuteReaderAsync();
+
+                if (await reader.ReadAsync())
+                {
+                    return reader["DecryptedPassword"] as string;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching LDAP bypass password: {ex.Message}");
+                return null;
+            }
         }
     }
 
