@@ -12,18 +12,11 @@ namespace JobOnlineAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
 
-    public class ApplicantsController : ControllerBase
+    public class ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService) : ControllerBase
     {
-        private readonly IApplicantRepository _applicantRepository;
-        private readonly IJobApplicationRepository _jobApplicationRepository;
-        private readonly IEmailService _emailService;
-
-        public ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService)
-        {
-            _applicantRepository = applicantRepository;
-            _jobApplicationRepository = jobApplicationRepository;
-            _emailService = emailService;
-        }
+        private readonly IApplicantRepository _applicantRepository = applicantRepository;
+        private readonly IJobApplicationRepository _jobApplicationRepository = jobApplicationRepository;
+        private readonly IEmailService _emailService = emailService;
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Applicant>>> GetAllApplicants()

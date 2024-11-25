@@ -4,15 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace JobOnlineAPI.Controllers
 {
-    public class AccountController : Controller
+    public class AccountController(IUserService userService) : Controller
     {
-        private readonly IUserService _userService;
-
-        public AccountController(IUserService userService)
-        {
-            _userService = userService;
-        }
-
         [HttpGet]
         public IActionResult Login()
         {
@@ -24,7 +17,7 @@ namespace JobOnlineAPI.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = await _userService.AuthenticateAsync(model.Username, model.Password);
+                var user = await userService.AuthenticateAsync(model.Username, model.Password);
 
                 if (user != null)
                 {
