@@ -9,16 +9,10 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class LoginController : ControllerBase
+    public class LoginController(IUserService userService, IConfiguration configuration) : ControllerBase
     {
-        private readonly IUserService _userService;
-        private readonly IConfiguration _configuration;
-
-        public LoginController(IUserService userService, IConfiguration configuration)
-        {
-            _userService = userService;
-            _configuration = configuration;
-        }
+        private readonly IUserService _userService = userService;
+        private readonly IConfiguration _configuration = configuration;
 
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
