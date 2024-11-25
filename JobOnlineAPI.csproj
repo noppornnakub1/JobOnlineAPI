@@ -4,7 +4,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<EnableDefaultStaticWebAssets>false</EnableDefaultStaticWebAssets>
+		<EnableDefaultStaticWebAssets>true</EnableDefaultStaticWebAssets>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -30,6 +30,11 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
+		<Content Include="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="wwwroot\" />
+	</ItemGroup>
+	
 </Project>
