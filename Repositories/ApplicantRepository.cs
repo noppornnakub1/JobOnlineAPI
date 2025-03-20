@@ -32,13 +32,13 @@ namespace JobOnlineAPI.Repositories
                 storedProcedure,
                 (applicant, job, status) =>
                 {
-                    applicant.JobTitle = job.JobTitle;
-                    applicant.JobLocation = job.Location;
-                    applicant.JobDepartment = job.Department;
-                    applicant.Status = status;
+                    //applicant.JobTitle = job.JobTitle;
+                    //applicant.JobLocation = job.Location;
+                    //applicant.JobDepartment = job.Department;
+                    //applicant.Status = status;
                     return applicant;
                 },
-                splitOn: "JobTitle,Status",
+                //splitOn: "JobTitle,Status",
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -54,9 +54,14 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> AddApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
+            //    string sql = @"
+            //INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
+            //VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, GETDATE());
+            //SELECT CAST(SCOPE_IDENTITY() as int)";
+
             string sql = @"
-        INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
-        VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, GETDATE());
+        INSERT INTO Applicants (FirstNameThai, LastNameThai, Email, MobilePhone)
+        VALUES (@FirstNameThai, @LastNameThai, @Email, @MobilePhone);
         SELECT CAST(SCOPE_IDENTITY() as int)";
             return await db.QuerySingleAsync<int>(sql, applicant);
         }
@@ -64,14 +69,22 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> UpdateApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
+            //string sql = @"
+            //    UPDATE Applicants
+            //    SET FirstName = @FirstName,
+            //        LastName = @LastName,
+            //        Email = @Email,
+            //        Phone = @Phone,
+            //        Resume = @Resume,
+            //        AppliedDate = @AppliedDate
+            //    WHERE ApplicantID = @ApplicantID";
+
             string sql = @"
                 UPDATE Applicants
-                SET FirstName = @FirstName,
-                    LastName = @LastName,
+                SET FirstNameThai = @FirstNameThai,
+                    LastNameThai = @LastNameThai,
                     Email = @Email,
-                    Phone = @Phone,
-                    Resume = @Resume,
-                    AppliedDate = @AppliedDate
+                    MobilePhone = @MobilePhone
                 WHERE ApplicantID = @ApplicantID";
             return await db.ExecuteAsync(sql, applicant);
         }

@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using JobOnlineAPI.Repositories;
 using JobOnlineAPI.Services;
 using JobOnlineAPI.Models;
+using JobOnlineAPI.DAL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,11 @@ builder.Services.AddCors(options =>
                .AllowAnyMethod();
     });
 });
+
+//builder.Services.AddOpenApi();
+builder.Services.AddSingleton<DapperContext>();
+
+AppContext.SetSwitch("Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows", true);
 
 builder.Services.AddScoped<IApplicantRepository, ApplicantRepository>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();

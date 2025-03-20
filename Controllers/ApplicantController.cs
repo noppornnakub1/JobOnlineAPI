@@ -120,7 +120,7 @@ namespace JobOnlineAPI.Controllers
                     await resume.CopyToAsync(stream);
                 }
 
-                applicant.Resume = filePath;
+                 //applicant.Resume = filePath;
             }
 
             int applicantId = await _applicantRepository.AddApplicantAsync(applicant);
