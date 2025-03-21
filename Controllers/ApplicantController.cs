@@ -178,6 +178,12 @@ namespace JobOnlineAPI.Controllers
                         case JsonValueKind.False:
                             parameters.Add(kvp.Key, jsonElement.GetBoolean(), dbType: DbType.Boolean);
                             break;
+
+                        case JsonValueKind.Array:
+                        case JsonValueKind.Object:
+                            var rawJson = jsonElement.GetRawText();
+                            parameters.Add(kvp.Key, rawJson, DbType.String, size: rawJson.Length);
+                            break;
                         case JsonValueKind.Null:
                             parameters.Add(kvp.Key, null);
                             break;
