@@ -17,17 +17,17 @@ namespace JobOnlineAPI.Services
 
         public async Task<AdminUser?> AuthenticateAsync(string username, string password)
         {
-            // 1. ตรวจสอบในฐานข้อมูล AdminUser
-            var adminUser = await _adminRepository.GetAdminUserByUsernameAsync(username);
+            // // 1. ตรวจสอบในฐานข้อมูล AdminUser
+            // var adminUser = await _adminRepository.GetAdminUserByUsernameAsync(username);
 
-            if (adminUser != null)
-            {
-                var isPasswordMatched = BCrypt.Net.BCrypt.Verify(password, adminUser.Password);
-                if (isPasswordMatched)
-                {
-                    return adminUser;
-                }
-            }
+            // if (adminUser != null)
+            // {
+            //     var isPasswordMatched = BCrypt.Net.BCrypt.Verify(password, adminUser.Password);
+            //     if (isPasswordMatched)
+            //     {
+            //         return adminUser;
+            //     }
+            // }
 
             // 2. ตรวจสอบในฐานข้อมูล User
             var user = await _adminRepository.GetUserByEmailAsync(username);
