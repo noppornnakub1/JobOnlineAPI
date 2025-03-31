@@ -41,7 +41,8 @@ namespace JobOnlineAPI.Controllers
                 return Ok(new {
                     AdminID = result.AdminID,
                     Username = result.Username,
-                    Role = result.Role
+                    Role = result.Role,
+                    Department = result.Department
                 });
             }
             catch (Exception ex)

@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
 using Microsoft.AspNetCore.Mvc;
-
+using Dapper;
+using System.Data;
+using JobOnlineAPI.DAL;
 namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
@@ -11,10 +13,12 @@ namespace JobOnlineAPI.Controllers
     public class JobsController : ControllerBase
     {
         private readonly IJobRepository _jobRepository;
+        private readonly DapperContext _context;
 
-        public JobsController(IJobRepository jobRepository)
+        public JobsController(IJobRepository jobRepository, DapperContext context)
         {
             _jobRepository = jobRepository;
+            _context = context;
         }
 
         [HttpGet]
@@ -79,5 +83,36 @@ namespace JobOnlineAPI.Controllers
             await _jobRepository.DeleteJobAsync(id);
             return NoContent();
         }
+
+
+        [HttpDelete("deleteJob/{id}")]
+        public async Task<IActionResult> DeleteJobByJobID(int id)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+                parameters.Add("@JobID", id);
+
+                var remainingJobs = await connection.QueryAsync<Job>(
+                    "sp_DeleteJobByJobID",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return Ok(new
+                {
+                    Message = "Job deleted successfully.",
+                    RemainingJobs = remainingJobs
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = "Failed to delete job", ex.Message });
+            }
+        }
+          
+
+
     }
 }
