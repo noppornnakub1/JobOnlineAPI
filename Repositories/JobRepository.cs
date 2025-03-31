@@ -50,6 +50,7 @@ namespace JobOnlineAPI.Repositories
                 job.NumberOfPositions,
                 job.Department,
                 job.JobStatus,
+                job.ApprovalStatus,
                 ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
                 job.CreatedBy,
                 job.CreatedByRole
