@@ -194,7 +194,7 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("@ApplicantID", id);
 
                 var result = await connection.QueryAsync(
-                    "sp_GetApplicantData",
+                    "sp_GetApplicantDataV2",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
