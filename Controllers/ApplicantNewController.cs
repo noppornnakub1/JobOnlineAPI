@@ -206,5 +206,71 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
+
+
+
+        [HttpPut("updateApplicantStatus")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateApplicantStatus([FromBody] ExpandoObject request)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+
+                var data = request as IDictionary<string, object>;
+                if (!data.ContainsKey("ApplicantID") || !data.ContainsKey("Status"))
+                    return BadRequest("Missing required fields: ApplicantID or Status");
+
+                var applicantId = ((JsonElement)data["ApplicantID"]).GetInt32();
+                var status = ((JsonElement)data["Status"]).GetString();
+
+                parameters.Add("@ApplicantID", applicantId);
+                parameters.Add("@Status", status);
+
+                var query = "EXEC sp_UpdateApplicantStatus @ApplicantID, @Status";
+                await connection.ExecuteAsync(query, parameters);
+
+                return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpPut("updateJobApprovalStatus")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateJobApprovalStatus([FromBody] ExpandoObject request)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+
+                var data = request as IDictionary<string, object>;
+                if (!data.ContainsKey("JobID") || !data.ContainsKey("ApprovalStatus"))
+                    return BadRequest("Missing required fields: JobID or ApprovalStatus");
+
+                var jobId = ((JsonElement)data["JobID"]).GetInt32();
+                var approvalStatus = ((JsonElement)data["ApprovalStatus"]).GetString();
+
+                parameters.Add("@JobID", jobId);
+                parameters.Add("@ApprovalStatus", approvalStatus);
+
+                var query = "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus";
+                await connection.ExecuteAsync(query, parameters);
+
+                return Ok(new { message = "อัปเดตสถานะของงานเรียบร้อย" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+
     }
 }

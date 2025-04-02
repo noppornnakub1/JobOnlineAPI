@@ -29,6 +29,7 @@ namespace JobOnlineAPI.Models
         [Required(ErrorMessage = "Job status is required.")]
         public string JobStatus { get; set; } = "Open";
         public string ApprovalStatus { get; set; } = "Pending";
+        public int? ApplicantCount { get; set; }
         public DateTime PostedDate { get; set; } = DateTime.Now;
 
         public DateTime? ClosingDate { get; set; }
