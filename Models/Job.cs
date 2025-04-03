@@ -18,8 +18,10 @@ namespace JobOnlineAPI.Models
         [Required(ErrorMessage = "Location is required.")]
         public string Location { get; set; } = string.Empty;
 
-        [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50.")]
-        public int ExperienceYears { get; set; }
+        // [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50.")]
+        // public int ExperienceYears { get; set; }
+        [Required(ErrorMessage = "ExperienceYears is required.")]
+        public string ExperienceYears { get; set; } = string.Empty;
 
         [Range(0, 100, ErrorMessage = "Number of positions must be between 0 and 100.")]
         public int NumberOfPositions { get; set; }

@@ -27,6 +27,7 @@ builder.Services.AddCors(options =>
 });
 
 //builder.Services.AddOpenApi();
+builder.Services.AddSingleton<DapperContextHRMS>();
 builder.Services.AddSingleton<DapperContext>();
 
 AppContext.SetSwitch("Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows", true);

@@ -14,11 +14,13 @@ namespace JobOnlineAPI.Controllers
     {
         private readonly IJobRepository _jobRepository;
         private readonly DapperContext _context;
+        private readonly DapperContextHRMS _contextHRMS;
 
-        public JobsController(IJobRepository jobRepository, DapperContext context)
+        public JobsController(IJobRepository jobRepository, DapperContext context, DapperContextHRMS contextHRMS)
         {
             _jobRepository = jobRepository;
             _context = context;
+            _contextHRMS = contextHRMS;
         }
 
         [HttpGet]
@@ -111,8 +113,31 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = "Failed to delete job", ex.Message });
             }
         }
-          
 
+        [HttpGet("GetDepartment")]
+        public async Task<IActionResult> GetDepartmentFromHRMS([FromQuery] string? comCode)
+        {
+            try
+            {
+                using var connection = _contextHRMS.CreateConnection();
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@COMPANY_CODE", comCode);
+
+                var result = await connection.QueryAsync(
+                    "sp_GetDepartmentBycomCode",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+          
 
     }
 }
