@@ -60,16 +60,22 @@ namespace JobOnlineAPI.Controllers
         {
             if (id != job.JobID)
             {
-                return BadRequest();
+                return BadRequest("Job ID mismatch.");
             }
 
             var existingJob = await _jobRepository.GetJobByIdAsync(id);
             if (existingJob == null)
             {
-                return NotFound();
+                return NotFound("Job not found.");
             }
 
-            await _jobRepository.UpdateJobAsync(job);
+            int rowsAffected = await _jobRepository.UpdateJobAsync(job);
+
+            if (rowsAffected <= 0)
+            {
+                return StatusCode(500, "Update failed.");
+            }
+
             return NoContent();
         }
 
