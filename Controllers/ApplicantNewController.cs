@@ -130,25 +130,26 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                await conn.ExecuteAsync("InsertApplicantDataV3", param, commandType: CommandType.StoredProcedure);
+                // await conn.ExecuteAsync("InsertApplicantDataV3", param, commandType: CommandType.StoredProcedure);
+                await conn.ExecuteAsync("InsertApplicantDataV4", param, commandType: CommandType.StoredProcedure);
 
                 var id = param.Get<int>("ApplicantID");
                 var email = param.Get<string>("ApplicantEmail");
                 var hrEmails = param.Get<string>("HRManagerEmails");
                 var jobEmails = param.Get<string>("JobManagerEmails");
 
-                if (!string.IsNullOrWhiteSpace(email))
-                {
-                    await _emailService.SendEmailAsync(email, "Application Received",
-                        $"<p>Your application (ID: {id}) has been submitted.</p>", true);
-                }
+                // if (!string.IsNullOrWhiteSpace(email))
+                // {
+                //     await _emailService.SendEmailAsync(email, "Application Received",
+                //         $"<p>Your application (ID: {id}) has been submitted.</p>", true);
+                // }
 
-                foreach (var e in $"{hrEmails},{jobEmails}".Split(',').Distinct())
-                {
-                    if (!string.IsNullOrWhiteSpace(e))
-                        await _emailService.SendEmailAsync(e.Trim(), "New Job Application",
-                            $"<p>New application submitted for JobID: {jobIdObj}.</p>", true);
-                }
+                // foreach (var e in $"{hrEmails},{jobEmails}".Split(',').Distinct())
+                // {
+                //     if (!string.IsNullOrWhiteSpace(e))
+                //         await _emailService.SendEmailAsync(e.Trim(), "New Job Application",
+                //             $"<p>New application submitted for JobID: {jobIdObj}.</p>", true);
+                // }
 
                 return Ok(new { ApplicantID = id, Message = "Submitted successfully." });
             }
