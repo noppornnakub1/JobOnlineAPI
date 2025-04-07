@@ -35,5 +35,12 @@ namespace JobOnlineAPI.Controllers
 
             return hrStaff;
         }
+
+        [HttpGet("GetStaffNew")]
+        public async Task<IActionResult> GetStaffNew([FromQuery] string? email)
+        {
+            var result = await _hrStaffRepository.GetAllStaffAsyncNew(email);
+            return Ok(result);
+        }
     }
 }

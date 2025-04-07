@@ -8,5 +8,7 @@ namespace JobOnlineAPI.Repositories
     {
         Task<IEnumerable<HRStaff>> GetAllHRStaffAsync();
         Task<HRStaff?> GetHRStaffByEmailAsync(string email);
+        Task<IEnumerable<dynamic>> GetAllStaffAsyncNew(string? email);
+        
     }
 }

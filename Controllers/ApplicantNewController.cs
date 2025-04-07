@@ -138,6 +138,11 @@ namespace JobOnlineAPI.Controllers
                 var hrEmails = param.Get<string>("HRManagerEmails");
                 var jobEmails = param.Get<string>("JobManagerEmails");
 
+                Console.WriteLine($"Applicant id: {id}");
+                Console.WriteLine($"Applicant Email: {email}");
+                Console.WriteLine($"HR Manager Emails: {hrEmails}");
+                Console.WriteLine($"Job Manager Emails: {jobEmails}");
+
                 // if (!string.IsNullOrWhiteSpace(email))
                 // {
                 //     await _emailService.SendEmailAsync(email, "Application Received",
@@ -227,13 +232,77 @@ namespace JobOnlineAPI.Controllers
                 var applicantId = ((JsonElement)data["ApplicantID"]).GetInt32();
                 var status = ((JsonElement)data["Status"]).GetString();
 
+                var candidateJson = data.ContainsKey("Candidate") ? data["Candidate"].ToString() : null;
+                    dynamic? candidate = !string.IsNullOrEmpty(candidateJson) 
+                        ? JsonSerializer.Deserialize<ExpandoObject>(candidateJson) 
+                        : null;
+                var EmailSend = data.ContainsKey("EmailSend") ? ((JsonElement)data["EmailSend"]).GetString() : null;
+
+
                 parameters.Add("@ApplicantID", applicantId);
                 parameters.Add("@Status", status);
 
                 var query = "EXEC sp_UpdateApplicantStatus @ApplicantID, @Status";
                 await connection.ExecuteAsync(query, parameters);
 
-                return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
+
+
+                string hrBody = $@"
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                        <table style='width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
+                            <tr>
+                                <td style='background-color: #2E86C1; padding: 20px; text-align: center; color: #ffffff;'>
+                                    <h2 style='margin: 0; font-size: 24px;'>Application Status Updated</h2>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style='padding: 20px; color: #333;'>
+                                    <p style='font-size: 16px;'>มีการอัปเดตสถานะของผู้สมัครงานในตำแหน่ง <strong>{candidate?.jobTitle}</strong>.</p>
+                                    <p style='font-size: 14px;'><strong>ข้อมูลผู้สมัคร:</strong></p>
+                                    <ul style='font-size: 14px; line-height: 1.6;'>
+                                        <li><strong>ชื่อ:</strong> {candidate?.firstNameThai} {candidate?.lastNameThai}</li>
+                                        <li><strong>ชื่ออังกฤษ:</strong> {candidate?.firstNameEng} {candidate?.lastNameEng}</li>
+                                        <li><strong>อีเมล:</strong> {candidate?.email}</li>
+                                        <li><strong>เบอร์โทร:</strong> {candidate?.mobilePhone}</li>
+                                        <li><strong>สถานะใหม่:</strong> {status}</li>
+                                        <li><strong>ผู้ดำเนินการ:</strong> {EmailSend}</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style='background-color: #2E86C1; padding: 10px; text-align: center; color: #ffffff;'>
+                                    <p style='margin: 0; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>";
+                // <p style='font-size: 14px;'>กรุณาตรวจสอบข้อมูลเพิ่มเติมที่ระบบ HR.</p>
+                // <p style='font-size: 14px;'>
+                //     <a href='https://yourdomain.com/ApplicationForm/ApplicationFormView?id={candidate?.applicantID}' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อดูข้อมูลผู้สมัคร</a>
+                // </p>
+                var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
+                var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR Manager" });
+                int successCount = 0;
+                int failCount = 0;
+                foreach (var staff in staffList)
+                {
+                    var hrEmail = staff.Email;
+                    if (!string.IsNullOrWhiteSpace(hrEmail))
+                    {
+                        try
+                        {
+                            await _emailService.SendEmailAsync(hrEmail, "New Job Application", hrBody, true);
+                            successCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            failCount++;
+                            Console.WriteLine($"❌ Failed to send email to {hrEmail}: {ex.Message}");
+                        }
+                    }
+                }
+                
+                return Ok(new { message = "อัปเดตสถานะเรียบร้อย", sendMail = successCount });
             }
             catch (Exception ex)
             {

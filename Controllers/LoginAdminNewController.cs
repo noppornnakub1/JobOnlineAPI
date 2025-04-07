@@ -41,6 +41,7 @@ namespace JobOnlineAPI.Controllers
                 return Ok(new {
                     AdminID = result.AdminID,
                     Username = result.Username,
+                    Email = result.EMAIL,
                     Role = result.Role,
                     Department = result.Department
                 });
@@ -50,7 +51,45 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-    }
+
+        [HttpPost("LoginAD")]
+        [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> LoginAdminAD([FromBody] LoginRequest request)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+                if (string.IsNullOrEmpty(request.Username)) {
+                    return BadRequest("Username and Password are required.");
+                }
+
+                parameters.Add("@Username", request.Username);
+
+                var query = "EXEC sp_GetAdminUsersWithRole @Username";
+                var result = await connection.QueryFirstOrDefaultAsync(query, parameters);
+
+                if (result == null) return Unauthorized("User or password is Invalid.");
+                // string hashedPassword = result.Password;
+                // bool isPasswordMatch = BCrypt.Net.BCrypt.Verify(request.Password, hashedPassword);
+                // if(!isPasswordMatch) return Unauthorized("User or password is Invalid.");
+                // result.Password = "";
+                
+                return Ok(new {
+                    AdminID = result.AdminID,
+                    Username = result.Username,
+                    Email = result.EMAIL,
+                    Role = result.Role,
+                    Department = result.Department
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+    }  
 }
 
 public class LoginRequest

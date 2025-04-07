@@ -35,5 +35,14 @@ namespace JobOnlineAPI.Repositories
 
             return hrStaff;
         }
+
+        public async Task<IEnumerable<dynamic>> GetAllStaffAsyncNew(string? email) 
+        {
+            using IDbConnection db = new SqlConnection(_connectionString);
+
+            var parameters = new { Email = string.IsNullOrWhiteSpace(email) ? null : email };
+
+            return await db.QueryAsync("GetStaffByEmail", parameters, commandType: CommandType.StoredProcedure);
+        }
     }
 }
