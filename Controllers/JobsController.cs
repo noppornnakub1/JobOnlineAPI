@@ -48,7 +48,7 @@ namespace JobOnlineAPI.Controllers
             {
                 return BadRequest();
             }
-
+            
             int newId = await _jobRepository.AddJobAsync(job);
             job.JobID = newId;
 

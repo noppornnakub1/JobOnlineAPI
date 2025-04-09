@@ -5,15 +5,23 @@ using Dapper;
 using JobOnlineAPI.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Mvc;
+using JobOnlineAPI.DAL;
+using System.Text;
+using System.Text.Json;
+using JobOnlineAPI.Services;
+using System.Dynamic;
 
 namespace JobOnlineAPI.Repositories
 {
     public class JobRepository : IJobRepository
-    {
+    {        
         private readonly string _connectionString;
+        private readonly IEmailService _emailService;
 
-        public JobRepository(IConfiguration configuration)
+        public JobRepository(IConfiguration configuration, IEmailService emailService)
         {
+            _emailService = emailService;
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
         }
@@ -45,6 +53,7 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> AddJobAsync(Job job)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
 
             string sql = "sp_AddJob";
 
@@ -70,8 +79,64 @@ namespace JobOnlineAPI.Repositories
             {
                 throw new InvalidOperationException("Failed to retrieve JobID after inserting the job.");
             }
+                
+                var email = job.Email;
+                string hrBody = $@"
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                        <table style='width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
+                            <tr>
+                                <td style='background-color: #2E86C1; padding: 20px; text-align: center; color: #ffffff;'>
+                                    <h2 style='margin: 0; font-size: 24px;'>Request open job</h2>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style='padding: 20px; color: #333;'>
+                                    <p style='font-size: 16px;'>เปิดรับสมัครงานในตำแหน่ง <strong>{job?.JobTitle}</strong>.</p>
+                                    <p style='font-size: 14px;'><strong>รายละเอียดตำแหน่ง:</strong></p>
+                                    <ul style='font-size: 14px; line-height: 1.6;'>
+                                        <li><strong>ชื่อตำแหน่ง:</strong> {job?.JobTitle}</li>
+                                        <li><strong>หน้าที่หลักของงาน:</strong> {job?.JobDescription}</li>
+                                        <li><strong>หน้าที่คุณสมบัติเพิ่มเติม:</strong> {job?.Requirements}</li>
+                                        <li><strong>อัตรา:</strong> {job?.NumberOfPositions}</li>
+                                        <li><strong>ประสบการณ์:</strong> {job?.ExperienceYears} ปี</li>
+                                        <li><strong>ผู้ดำเนินการ:</strong> {email}</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style='background-color: #2E86C1; padding: 10px; text-align: center; color: #ffffff;'>
+                                    <p style='margin: 0; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>";
+                
 
-            return id;
+                var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
+                var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR Manager" });
+                int successCount = 0;
+                int failCount = 0;
+                foreach (var staff in staffList)
+                {
+                    var hrEmail = staff.Email;
+                    if (!string.IsNullOrWhiteSpace(hrEmail))
+                    {
+                        try
+                        {
+                            await _emailService.SendEmailAsync(hrEmail, "New Job Application", hrBody, true);
+                            successCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            failCount++;
+                            Console.WriteLine($"❌ Failed to send email to {hrEmail}: {ex.Message}");
+                        }
+                    }
+                }
+                
+                // return Ok(new { message = "สร้างตำแหน่งงานสำเร็จ", sendMail = successCount });
+             
+                return id;
         }
 
         public async Task<int> UpdateJobAsync(Job job)

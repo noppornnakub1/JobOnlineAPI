@@ -20,17 +20,18 @@ namespace JobOnlineAPI.Services
         public async Task SendEmailAsync(string to, string subject, string body, bool isHtml)
         {
 
-         var emailMessage = new MimeMessage();
-         emailMessage.To.Add(new MailboxAddress("", to));
-         emailMessage.Subject = subject;
+        var emailMessage = new MimeMessage();
+            emailMessage.From.Add(new MailboxAddress(_emailSettings.SenderName, _emailSettings.FromEmail)); // ✅ สำคัญ!!
+            emailMessage.To.Add(new MailboxAddress("", to));
+            emailMessage.Subject = subject;
 
-         var bodyBuilder = new BodyBuilder
-         {
-             HtmlBody = isHtml ? body : null,
-             TextBody = !isHtml ? body : null
-         };
+            var bodyBuilder = new BodyBuilder
+            {
+                HtmlBody = isHtml ? body : null,
+                TextBody = !isHtml ? body : null
+            };
 
-         emailMessage.Body = bodyBuilder.ToMessageBody();
+            emailMessage.Body = bodyBuilder.ToMessageBody();
          try
          {
 
@@ -75,5 +76,6 @@ namespace JobOnlineAPI.Services
             // }
        
         }
+    
     }
 }

@@ -45,5 +45,10 @@ namespace JobOnlineAPI.Models
         public string? HighlightedLocation { get; set; }
         public string? HighlightedDescription { get; set; }
         public string? HighlightedRequirements { get; set; }
+        public string? Email { get; set; }
+        public int? AdminID { get; set; }
+
+        
+        
     }
 }

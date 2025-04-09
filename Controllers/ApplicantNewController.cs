@@ -246,13 +246,13 @@ namespace JobOnlineAPI.Controllers
                 await connection.ExecuteAsync(query, parameters);
 
 
-
+                // Application Status Updated
                 string hrBody = $@"
                     <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
                         <table style='width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
                             <tr>
                                 <td style='background-color: #2E86C1; padding: 20px; text-align: center; color: #ffffff;'>
-                                    <h2 style='margin: 0; font-size: 24px;'>Application Status Updated</h2>
+                                    <h2 style='margin: 0; font-size: 24px;'>Selected cantidate list</h2>
                                 </td>
                             </tr>
                             <tr>
@@ -264,7 +264,7 @@ namespace JobOnlineAPI.Controllers
                                         <li><strong>ชื่ออังกฤษ:</strong> {candidate?.firstNameEng} {candidate?.lastNameEng}</li>
                                         <li><strong>อีเมล:</strong> {candidate?.email}</li>
                                         <li><strong>เบอร์โทร:</strong> {candidate?.mobilePhone}</li>
-                                        <li><strong>สถานะใหม่:</strong> {status}</li>
+                                        <li><strong>สถานะใหม่:</strong> {(status == "In progress" ? "Submitted" : "")}</li>
                                         <li><strong>ผู้ดำเนินการ:</strong> {EmailSend}</li>
                                     </ul>
                                 </td>
@@ -276,6 +276,7 @@ namespace JobOnlineAPI.Controllers
                             </tr>
                         </table>
                     </div>";
+                
                 // <p style='font-size: 14px;'>กรุณาตรวจสอบข้อมูลเพิ่มเติมที่ระบบ HR.</p>
                 // <p style='font-size: 14px;'>
                 //     <a href='https://yourdomain.com/ApplicationForm/ApplicationFormView?id={candidate?.applicantID}' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อดูข้อมูลผู้สมัคร</a>
@@ -291,7 +292,7 @@ namespace JobOnlineAPI.Controllers
                     {
                         try
                         {
-                            await _emailService.SendEmailAsync(hrEmail, "New Job Application", hrBody, true);
+                            await _emailService.SendEmailAsync(hrEmail, "Selected cantidate list", hrBody, true);
                             successCount++;
                         }
                         catch (Exception ex)
