@@ -112,14 +112,21 @@ namespace JobOnlineAPI.Repositories
                     </div>";
                 
 
-                var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
-                var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR Manager" });
+                // var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
+                // var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR" });
+                var emailParameters = new DynamicParameters();
+                emailParameters .Add("@Role", 2);
+                emailParameters .Add("@Department", null);
+                // emailParameters .Add("@Department", job?.Department);
+
+                var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
+                var staffList = await connection.QueryAsync<dynamic>(queryStaff, emailParameters);
                 int successCount = 0;
                 int failCount = 0;
                 foreach (var staff in staffList)
                 {
-                    var hrEmail = staff.Email;
-                    if (!string.IsNullOrWhiteSpace(hrEmail))
+                    var hrEmail = staff.EMAIL;
+                if (!string.IsNullOrWhiteSpace(hrEmail))
                     {
                         try
                         {

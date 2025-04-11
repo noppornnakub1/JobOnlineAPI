@@ -66,7 +66,8 @@ namespace JobOnlineAPI.Controllers
 
                 parameters.Add("@Username", request.Username);
 
-                var query = "EXEC sp_GetAdminUsersWithRole @Username";
+                // var query = "EXEC sp_GetAdminUsersWithRole @Username";
+                var query = "EXEC sp_GetAdminUsersWithRoleV2 @Username";
                 var result = await connection.QueryFirstOrDefaultAsync(query, parameters);
 
                 if (result == null) return Unauthorized("User or password is Invalid.");

@@ -98,7 +98,7 @@ namespace JobOnlineAPI.Controllers
             if (request is not IDictionary<string, object?> req || !req.TryGetValue("JobID", out var jobIdObj))
                 return BadRequest("Invalid or missing JobID.");
 
-            using var conn = _context.CreateConnection(); // ✅ แก้ตรงนี้
+            using var conn = _context.CreateConnection();
             var param = new DynamicParameters();
 
             // Extract list fields
@@ -138,10 +138,45 @@ namespace JobOnlineAPI.Controllers
                 var hrEmails = param.Get<string>("HRManagerEmails");
                 var jobEmails = param.Get<string>("JobManagerEmails");
 
-                Console.WriteLine($"Applicant id: {id}");
-                Console.WriteLine($"Applicant Email: {email}");
-                Console.WriteLine($"HR Manager Emails: {hrEmails}");
-                Console.WriteLine($"Job Manager Emails: {jobEmails}");
+                req.TryGetValue("jobDepartment", out var jobDepartmentObj);
+                var jobDepartment = JsonSerializer.Deserialize<string>(jobDepartmentObj?.ToString() ?? "");
+
+                var emailParameters = new DynamicParameters();
+                emailParameters.Add("@Role", null);
+                emailParameters.Add("@Department", jobDepartment);
+                emailParameters.Add("@Type", "Register");
+
+
+                var queryStaff = "EXEC sp_GetDateSendEmailV2 @Role = @Role, @Department = @Department, @Type = @Type";
+                var staffList = await conn.QueryAsync<dynamic>(queryStaff, emailParameters);
+                int successCount = 0;
+                int failCount = 0;
+                var hrBody = $"<p>New application submitted for JobID: {jobIdObj}.</p>";
+                var candidateBody = $"<p>Your application (ID: {id}) has been submitted.</p>";
+
+                if (!string.IsNullOrWhiteSpace(email))
+                    await _emailService.SendEmailAsync(email, "Application Received",candidateBody, true);
+
+                foreach (var staff in staffList)
+                {
+                    var staffEmail = staff.EMAIL;
+
+                    if (string.IsNullOrWhiteSpace(staffEmail))
+                        continue;
+
+                    try {
+
+                        await _emailService.SendEmailAsync(staffEmail, "Selected candidate list", hrBody, true);
+                        successCount++;
+
+                    } catch (Exception ex)
+                    {
+                        failCount++;
+                        Console.WriteLine($"❌ Failed to send email to {staffEmail}: {ex.Message}");
+                    }
+                }
+                
+                // return Ok(new { message = "อัปเดตสถานะเรียบร้อย", sendMail = successCount });
 
                 // if (!string.IsNullOrWhiteSpace(email))
                 // {
@@ -281,13 +316,20 @@ namespace JobOnlineAPI.Controllers
                 // <p style='font-size: 14px;'>
                 //     <a href='https://yourdomain.com/ApplicationForm/ApplicationFormView?id={candidate?.applicantID}' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อดูข้อมูลผู้สมัคร</a>
                 // </p>
-                var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
-                var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR Manager" });
+                // var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
+                // var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR Manager" });
+                var emailParameters = new DynamicParameters();
+                emailParameters .Add("@Role", 2);
+                emailParameters .Add("@Department", null);
+
+
+                var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
+                var staffList = await connection.QueryAsync<dynamic>(queryStaff, emailParameters);
                 int successCount = 0;
                 int failCount = 0;
                 foreach (var staff in staffList)
                 {
-                    var hrEmail = staff.Email;
+                    var hrEmail = staff.EMAIL;
                     if (!string.IsNullOrWhiteSpace(hrEmail))
                     {
                         try
