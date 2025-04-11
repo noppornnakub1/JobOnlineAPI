@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Dapper;
 using System.Data;
 using JobOnlineAPI.DAL;
+using JobOnlineAPI.Filters;
 namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
