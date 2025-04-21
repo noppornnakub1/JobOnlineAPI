@@ -115,12 +115,8 @@ namespace JobOnlineAPI.Controllers
 
                 var filePath = Path.Combine(resumesFolder, resume.FileName);
 
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await resume.CopyToAsync(stream);
-                }
-
-                 //applicant.Resume = filePath;
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await resume.CopyToAsync(stream);
             }
 
             int applicantId = await _applicantRepository.AddApplicantAsync(applicant);
