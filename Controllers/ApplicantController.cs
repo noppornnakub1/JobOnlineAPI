@@ -231,9 +231,23 @@ namespace JobOnlineAPI.Controllers
                 var applicantEmail = parameters.Get<string>("ApplicantEmail");
                 var hrManagerEmails = parameters.Get<string>("HRManagerEmails");
                 var jobManagerEmails = parameters.Get<string>("JobManagerEmails");
+                var JobTitle = parameters.Get<string>("JobTitle");
+                var FullNameEng = $"{parameters.Get<string>("FirstNameEng")} {parameters.Get<string>("LastNameEng")}";
+                var FullNameThai = $"{parameters.Get<string>("FirstNameThai")} {parameters.Get<string>("LastNameThai")}";
+
 
                 if (!string.IsNullOrEmpty(applicantEmail))
                 {
+                    string managerBody = $@"
+                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                            <p style='font-size: 18px'><span style='color:red;'>**</span>Do not reply<span style='color:red;'>**</span></p>
+                            <br>
+                            <p style='font-size: 18px'>Hi All,</p>
+                            <br>
+                            <p style='font-size: 16px'>We’ve received a new job application from <strong style='font-size: 18px; font-weight: bold'>[{FullNameEng}]</strong> for the <strong style='font-size: 18px; font-weight: bold'>[{JobTitle}]</strong> position.</p>
+                            <br>
+                            <p style='font-size: 16px'>For more details, please click <strong>[link]</strong> </p>
+                        </div>";
                     var applicantBody = $"<p>Dear Applicant, Your application (ID: {applicantId}) has been submitted successfully.</p>";
                     await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
                 }
@@ -243,8 +257,15 @@ namespace JobOnlineAPI.Controllers
                 {
                     if (!string.IsNullOrWhiteSpace(email))
                     {
-                        var managerBody = $"<p>A new application has been submitted for JobID: {jobIdObj}.</p>";
-                        await _emailService.SendEmailAsync(email.Trim(), "New Job Application", managerBody, true);
+                        string managerBody = $@"
+                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                            <p style='font-size: 22px'>**Do not reply**</p>
+                            <p style='font-size: 20px'>Hi All,</p>
+                            <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>[{FullNameEng}]</strong> for the <strong style='font-weight: bold'>[{JobTitle}]</strong> position.</p>
+                            <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id=47'>https://oneejobs.oneeclick.co</a></p>
+                        </div>";
+                        // var managerBody = $"<p>A new application has been submitted for JobID: {jobIdObj}.</p>";
+                        await _emailService.SendEmailAsync(email.Trim(), "New Job Application Received", managerBody, true);
                     }
                 }
 

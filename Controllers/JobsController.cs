@@ -132,7 +132,7 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("@COMPANY_CODE", comCode);
 
                 var result = await connection.QueryAsync(
-                    "sp_GetDepartmentBycomCode",
+                    "sp_GetDepartmentBycomCodeV2",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );

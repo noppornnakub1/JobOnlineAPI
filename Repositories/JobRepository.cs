@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using JobOnlineAPI.Services;
 using System.Dynamic;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace JobOnlineAPI.Repositories
 {
@@ -79,53 +80,67 @@ namespace JobOnlineAPI.Repositories
             {
                 throw new InvalidOperationException("Failed to retrieve JobID after inserting the job.");
             }
-                
-                var email = job.Email;
-                string hrBody = $@"
-                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                        <table style='width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
-                            <tr>
-                                <td style='background-color: #2E86C1; padding: 20px; text-align: center; color: #ffffff;'>
-                                    <h2 style='margin: 0; font-size: 24px;'>Request open job</h2>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style='padding: 20px; color: #333;'>
-                                    <p style='font-size: 16px;'>เปิดรับสมัครงานในตำแหน่ง <strong>{job?.JobTitle}</strong>.</p>
-                                    <p style='font-size: 14px;'><strong>รายละเอียดตำแหน่ง:</strong></p>
-                                    <ul style='font-size: 14px; line-height: 1.6;'>
-                                        <li><strong>ชื่อตำแหน่ง:</strong> {job?.JobTitle}</li>
-                                        <li><strong>หน้าที่หลักของงาน:</strong> {job?.JobDescription}</li>
-                                        <li><strong>หน้าที่คุณสมบัติเพิ่มเติม:</strong> {job?.Requirements}</li>
-                                        <li><strong>อัตรา:</strong> {job?.NumberOfPositions}</li>
-                                        <li><strong>ประสบการณ์:</strong> {job?.ExperienceYears} ปี</li>
-                                        <li><strong>ผู้ดำเนินการ:</strong> {email}</li>
-                                    </ul>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style='background-color: #2E86C1; padding: 10px; text-align: center; color: #ffffff;'>
-                                    <p style='margin: 0; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>";
-                
 
-                // var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
-                // var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR" });
-                var emailParameters = new DynamicParameters();
-                emailParameters .Add("@Role", 2);
-                emailParameters .Add("@Department", null);
+            var email = job.Email;
+            string requesterInfo = string.Empty;
+            string linkLogin = string.Empty;
+            var RoleSendMail = job?.Role == "1" ? "<Admin>" : job?.Role == "2" ? "<HR>" : "";
+            if (job?.Role == "1" || job?.Role == "2")
+                requesterInfo = $"<listyle='color: #333;'><strong>ผู้ขอ:</strong> {job?.NAMETHAI} {RoleSendMail}</li>";
+            else {
+                requesterInfo = $"<listyle='color: #333;'><strong>ผู้ขอ:</strong> {job?.NAMETHAI} Requester : {job?.NAMECOSTCENT}</li>";
+                linkLogin = $"<p style='font-size: 14px;'>กรุณา Login เข้าระบบเพื่อดูรายละเอียดและดำเนินการพิจารณา <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อ Login </a></p>";
+            }
+
+            string hrBody = $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                    <table style='width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
+                        <tr>
+                            <td style='background-color: #2E86C1; padding: 20px; text-align: center; color: #ffffff;'>
+                                <h2 style='margin: 0; font-size: 24px;'>Request open New job</h2>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style='padding: 20px; color: #333;'>
+                                <p style='font-size: 16px;'>เปิดรับสมัครงานในตำแหน่ง <strong>{job?.JobTitle}</strong>.</p>
+                                <ul style='font-size: 14px; line-height: 1.6;'>
+                                    {requesterInfo}
+                                    <li><strong>หน่วยงาน:</strong>{job?.NAMECOSTCENT}</li>
+                                    <li><strong>เบอร์โทร:</strong>{job?.TELOFF}</li>
+                                    <li><strong>Email:</strong> {email}</li>
+                                    <li><strong>อัตรา:</strong> {job?.NumberOfPositions}</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style='background-color: #2E86C1; padding: 10px; text-align: center; color: #ffffff;'>
+                                <p style='margin: 0; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
+                            </td>
+                        </tr>
+                    </table>
+                    {linkLogin}
+                </div>";
+                    // <p style='font-size: 14px;'>
+                    //     <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อ Login </a>
+                    // </p>
+                
+            var emailParameters = new DynamicParameters();
+            if (job?.Role != "2") {
+                emailParameters.Add("@Role", 2);
+                emailParameters.Add("@Department", null);
                 // emailParameters .Add("@Department", job?.Department);
+            } else {
+                emailParameters.Add("@Role", null);
+                emailParameters.Add("@Department", job?.Department);
+            }
 
-                var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
-                var staffList = await connection.QueryAsync<dynamic>(queryStaff, emailParameters);
-                int successCount = 0;
-                int failCount = 0;
-                foreach (var staff in staffList)
-                {
-                    var hrEmail = staff.EMAIL;
+            var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
+            var staffList = await connection.QueryAsync<dynamic>(queryStaff, emailParameters);
+            int successCount = 0;
+            int failCount = 0;
+            foreach (var staff in staffList)
+            {
+                var hrEmail = staff.EMAIL;
                 if (!string.IsNullOrWhiteSpace(hrEmail))
                     {
                         try
@@ -139,11 +154,10 @@ namespace JobOnlineAPI.Repositories
                             Console.WriteLine($"❌ Failed to send email to {hrEmail}: {ex.Message}");
                         }
                     }
-                }
-                
-                // return Ok(new { message = "สร้างตำแหน่งงานสำเร็จ", sendMail = successCount });
-             
-                return id;
+            }
+
+            return id;
+
         }
 
         public async Task<int> UpdateJobAsync(Job job)

@@ -384,6 +384,25 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        [HttpGet("GetPDPAContent")]
+        public async Task<IActionResult> GetPDPAContent()
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
 
+                var result = await connection.QueryFirstOrDefaultAsync(
+                    "sp_GetDataPDPA",
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+        
     }
 }

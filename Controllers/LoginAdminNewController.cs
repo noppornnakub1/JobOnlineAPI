@@ -75,14 +75,18 @@ namespace JobOnlineAPI.Controllers
                 // bool isPasswordMatch = BCrypt.Net.BCrypt.Verify(request.Password, hashedPassword);
                 // if(!isPasswordMatch) return Unauthorized("User or password is Invalid.");
                 // result.Password = "";
-                
+                // var deptName = result.NAMECOSTCENT;
                 return Ok(new {
                     AdminID = result.AdminID,
                     Username = result.Username,
+                    NAMETHAI = result.NAMETHAI,
                     Email = result.EMAIL,
                     Role = result.Role,
-                    Department = result.Department
+                    TELOFF = result.TELOFF,
+                    Department = result.Department,
+                    deptName = result.NAMECOSTCENT,
                 });
+
             }
             catch (Exception ex)
             {
