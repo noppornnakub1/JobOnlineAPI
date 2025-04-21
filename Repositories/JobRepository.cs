@@ -87,10 +87,8 @@ namespace JobOnlineAPI.Repositories
             var RoleSendMail = job?.Role == "1" ? "<Admin>" : job?.Role == "2" ? "<HR>" : "";
             if (job?.Role == "1" || job?.Role == "2")
                 requesterInfo = $"<listyle='color: #333;'><strong>ผู้ขอ:</strong> {job?.NAMETHAI} {RoleSendMail}</li>";
-            else {
+            else 
                 requesterInfo = $"<listyle='color: #333;'><strong>ผู้ขอ:</strong> {job?.NAMETHAI} Requester : {job?.NAMECOSTCENT}</li>";
-                linkLogin = $"<p style='font-size: 14px;'>กรุณา Login เข้าระบบเพื่อดูรายละเอียดและดำเนินการพิจารณา <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อ Login </a></p>";
-            }
 
             string hrBody = $@"
                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
@@ -118,12 +116,9 @@ namespace JobOnlineAPI.Repositories
                             </td>
                         </tr>
                     </table>
-                    {linkLogin}
+                    <p style='font-size: 14px;'>กรุณา Link:<a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs.oneeclick.co</a> เข้าระบบเพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                 </div>";
-                    // <p style='font-size: 14px;'>
-                    //     <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อ Login </a>
-                    // </p>
-                
+
             var emailParameters = new DynamicParameters();
             if (job?.Role != "2") {
                 emailParameters.Add("@Role", 2);
