@@ -26,7 +26,14 @@ builder.Services.AddCors(options =>
     });
 });
 
-//builder.Services.AddOpenApi();
+builder.Services.AddLogging(logging =>
+{
+    logging.AddConsole();
+    logging.AddDebug();
+});
+
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddSingleton<DapperContextHRMS>();
 builder.Services.AddSingleton<DapperContext>();
 
