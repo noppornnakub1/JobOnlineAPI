@@ -153,27 +153,36 @@ namespace JobOnlineAPI.Controllers
                 var FullNameEng = $"{param.Get<string>("FirstNameEng")} {param.Get<string>("LastNameEng")}";
                 var FullNameThai = $"{param.Get<string>("FirstNameThai")} {param.Get<string>("LastNameThai")}";
                 var CompanyName = param.Get<string>("comName");
-                var Tel = "09785849824";
+                var Tel = param.Get<string>("Tel") ?? "-";
+                var DeptName = param.Get<string>("DeptName") ?? "-";
+                var Mobile = param.Get<string>("Mobile") ?? "-";
+                var POST = param.Get<string>("POST") ?? "-";
 
                 if (!string.IsNullOrEmpty(applicantEmail))
-                { // Send to cadidate
+                {
                     string applicantBody = $@"
-                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                            <p style='font-size: 20px'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
-                            <p style='font-size: 20px'>เรียน คุณ {FullNameThai}</p>
-                            <p style='font-size: 20px'>
-                            ขอบคุณสำหรับความสนใจในตำแหน่ง {JobTitle} ที่บริษัท {CompanyName} ของเรา
-                            เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่านและจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา
-                            หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล <span style='color: blue;'>{hrManagerEmails}</span> หรือโทร <span style='color: blue;'>{Tel}</span>
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                        <p style='margin: 0; font-weight: bold;'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                        <p style='margin: 0;'>เรียน คุณ {FullNameThai}</p>
+
+                        <p>
+                            ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{JobTitle}</strong> ที่บริษัท <strong>{CompanyName}</strong> ของเรา<br>
+                            เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
+                            หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
+                            <span style='color: blue;'>{hrManagerEmails}</span> หรือโทร 
+                            <span style='color: blue;'>{Tel}</span><br><br>
                             ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
-                            </p>
-                            <h2 style='font-size: 20px'>ด้วยความเคารพ,</h2>
-                            <h2 style='font-size: 20px'>{FullNameThai}</h2>
-                            <h2 style='font-size: 20px'>ฝ่ายทรัพยากรบุคคล</h2>
-                            <h2 style='font-size: 20px'>{CompanyName}</h2>
-                            <h2 style='font-size: 20px'>**อีเมลล์นี้ คือ ข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</h2>
-                        </div>";
-                    // var applicantBody = $"<p>Dear Applicant, Your application (ID: {applicantId}) has been submitted successfully.</p>";
+                        </p>
+
+                        <p style='margin-top: 30px;'>ด้วยความเคารพ,</p>
+                        <p style='margin: 0;'>{FullNameThai}</p>
+                        <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                        <p style='margin: 0;'>{CompanyName}</p>
+
+                        <br>
+
+                        <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    </div>";
                    await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
                 }
 
@@ -181,15 +190,29 @@ namespace JobOnlineAPI.Controllers
                 foreach (var emailStaff in managerEmails.Distinct())
                 {
                     if (!string.IsNullOrWhiteSpace(emailStaff))
-                    {  // Send to HR and Requester
+                    {
                         string managerBody = $@"
-                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                            <p style='font-size: 22px'>**Do not reply**</p>
-                            <p style='font-size: 20px'>Hi All,</p>
-                            <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{FullNameEng}</strong> for the <strong style='font-weight: bold'>{JobTitle}</strong> position.</p>
-                            <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={id}'>https://oneejobs.oneeclick.co</a></p>
+                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                            <p style='margin: 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล) และ คุณคนขอเปิดตำแหน่ง ({POST})</p>
+                            <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{JobTitle}</strong></p>
+
+                            <br>
+
+                            <p style='margin: 0;'>เรียนทุกท่าน</p>
+                            <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{FullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{JobTitle}</strong></p>
+
+                            <p style='margin: 0;'>กรุณาคลิก Link:
+                                <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={id}' 
+                                style='color: #007bff; text-decoration: underline;'>
+                                https://oneejobs.oneeclick.co
+                                </a>
+                                เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
+                            </p>
+
+                            <br>
+
+                            <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                         </div>";
-                        // var managerBody = $"<p>A new application has been submitted for JobID: {jobIdObj}.</p>";
                         await _emailService.SendEmailAsync(email.Trim(), "New Job Application Received", managerBody, true);
                     }
                 }
@@ -276,6 +299,12 @@ namespace JobOnlineAPI.Controllers
                         : null;
                 var EmailSend = data.ContainsKey("EmailSend") ? ((JsonElement)data["EmailSend"]).GetString() : null;
 
+                var requesterMail = ((JsonElement)data["Email"]).GetString() ?? "-";
+                var requesterName = ((JsonElement)data["NAMETHAI"]).GetString() ?? "-";
+                var Tel = ((JsonElement)data["Mobile"]).GetString() ?? "-";
+                var requesterPost = ((JsonElement)data["POST"]).GetString() ?? "-";
+                var TelOff = ((JsonElement)data["TELOFF"]).GetString() ?? "-";
+                var JobTitle = ((JsonElement)data["Department"]).GetString() ?? "-";
 
                 parameters.Add("@ApplicantID", applicantId);
                 parameters.Add("@Status", status);
@@ -286,41 +315,33 @@ namespace JobOnlineAPI.Controllers
 
                 // Application Status Updated
                 string hrBody = $@"
-                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                        <table style='width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
-                            <tr>
-                                <td style='background-color: #2E86C1; padding: 20px; text-align: center; color: #ffffff;'>
-                                    <h2 style='margin: 0; font-size: 24px;'>Selected cantidate list</h2>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style='padding: 20px; color: #333;'>
-                                    <p style='font-size: 16px;'>มีการอัปเดตสถานะของผู้สมัครงานในตำแหน่ง <strong>{candidate?.jobTitle}</strong>.</p>
-                                    <p style='font-size: 14px;'><strong>ข้อมูลผู้สมัคร:</strong></p>
-                                    <ul style='font-size: 14px; line-height: 1.6;'>
-                                        <li><strong>ชื่อ:</strong> {candidate?.firstNameThai} {candidate?.lastNameThai}</li>
-                                        <li><strong>ชื่ออังกฤษ:</strong> {candidate?.firstNameEng} {candidate?.lastNameEng}</li>
-                                        <li><strong>อีเมล:</strong> {candidate?.email}</li>
-                                        <li><strong>เบอร์โทร:</strong> {candidate?.mobilePhone}</li>
-                                        <li><strong>สถานะใหม่:</strong> {(status == "In progress" ? "Submitted" : "")}</li>
-                                        <li><strong>ผู้ดำเนินการ:</strong> {EmailSend}</li>
-                                    </ul>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style='background-color: #2E86C1; padding: 10px; text-align: center; color: #ffffff;'>
-                                    <p style='margin: 0; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>";
-                
-                // <p style='font-size: 14px;'>กรุณาตรวจสอบข้อมูลเพิ่มเติมที่ระบบ HR.</p>
-                // <p style='font-size: 14px;'>
-                //     <a href='https://yourdomain.com/ApplicationForm/ApplicationFormView?id={candidate?.applicantID}' target='_blank' style='color: #2E86C1; text-decoration: underline;'>คลิกที่นี่เพื่อดูข้อมูลผู้สมัคร</a>
-                // </p>
-                // var queryStaff = "EXEC GetStaffByEmail @Role = @Role";
-                // var staffList = await connection.QueryAsync<dynamic>(queryStaff, new { Role = "HR Manager" });
+                  <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>
+                        เรียน ฝ่ายบุคคล<br>
+                        ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน 3 ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
+                    </p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>คุณวิภาดา สุขสวัสดิ์</p>
+                    <p style='margin: 0 0 10px 0;'>
+                        จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่าคุณวิภาดามีประสบการณ์ด้านการตลาดดิจิทัลที่ตรงกับความต้องการของตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
+                    </p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>ช่วงเวลาที่สะดวกในการสัมภาษณ์</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>วันอังคารที่ 22 เมษายน 2568 เวลา 10.00-11.30 น.</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์ตามช่วงเวลาที่แจ้งไว้</p>
+                    <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
+                    <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
+                    <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
+                    <p style='margin: 0 0 10px 0;'>{requesterName}</p>
+                    <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
+                    <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
+                    <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
+
                 var emailParameters = new DynamicParameters();
                 emailParameters .Add("@Role", 2);
                 emailParameters .Add("@Department", null);

@@ -66,25 +66,22 @@ namespace JobOnlineAPI.Controllers
 
                 parameters.Add("@Username", request.Username);
 
-                // var query = "EXEC sp_GetAdminUsersWithRole @Username";
                 var query = "EXEC sp_GetAdminUsersWithRoleV2 @Username";
                 var result = await connection.QueryFirstOrDefaultAsync(query, parameters);
 
                 if (result == null) return Unauthorized("User or password is Invalid.");
-                // string hashedPassword = result.Password;
-                // bool isPasswordMatch = BCrypt.Net.BCrypt.Verify(request.Password, hashedPassword);
-                // if(!isPasswordMatch) return Unauthorized("User or password is Invalid.");
-                // result.Password = "";
-                // var deptName = result.NAMECOSTCENT;
                 return Ok(new {
                     AdminID = result.AdminID,
                     Username = result.Username,
                     NAMETHAI = result.NAMETHAI,
                     Email = result.EMAIL,
                     Role = result.Role,
+                    Mobile = result.MOBILE,
+                    POST = result.POST,
+                    ComName = result.COMPANY_NAME,
                     TELOFF = result.TELOFF,
                     Department = result.Department,
-                    deptName = result.NAMECOSTCENT,
+                    deptName = result.NAMECOSTCENT
                 });
 
             }
