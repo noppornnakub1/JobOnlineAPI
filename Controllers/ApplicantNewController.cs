@@ -153,11 +153,17 @@ namespace JobOnlineAPI.Controllers
                 var FullNameEng = $"{param.Get<string>("FirstNameEng")} {param.Get<string>("LastNameEng")}";
                 var FullNameThai = $"{param.Get<string>("FirstNameThai")} {param.Get<string>("LastNameThai")}";
                 var CompanyName = param.Get<string>("comName");
-                var Tel = param.Get<string>("Tel") ?? "-";
                 var DeptName = param.Get<string>("DeptName") ?? "-";
                 var Mobile = param.Get<string>("Mobile") ?? "-";
                 var POST = param.Get<string>("POST") ?? "-";
-
+                var results = await conn.QueryAsync<dynamic>(
+                    "sp_GetDateSendEmailV2",
+                    new { Role = 2, Department = "10807", Type = "" },
+                    commandType: CommandType.StoredProcedure
+                );
+                var first = results.FirstOrDefault();
+                string Tel = first?.TELOFF ?? "-";
+                string resultMail = first?.EMAIL ?? "-";
                 if (!string.IsNullOrEmpty(applicantEmail))
                 {
                     string applicantBody = $@"
@@ -169,8 +175,8 @@ namespace JobOnlineAPI.Controllers
                             ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{JobTitle}</strong> ที่บริษัท <strong>{CompanyName}</strong> ของเรา<br>
                             เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
                             หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
-                            <span style='color: blue;'>{hrManagerEmails}</span> หรือโทร 
-                            <span style='color: blue;'>{Tel}</span><br><br>
+                            <span style='color: blue;'>{resultMail}</span> หรือโทร 
+                            <span style='color: blue;'>{Tel}</span><br>
                             ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
                         </p>
 
@@ -178,7 +184,6 @@ namespace JobOnlineAPI.Controllers
                         <p style='margin: 0;'>{FullNameThai}</p>
                         <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
                         <p style='margin: 0;'>{CompanyName}</p>
-
                         <br>
 
                         <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
