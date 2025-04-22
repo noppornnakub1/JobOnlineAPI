@@ -146,52 +146,55 @@ namespace JobOnlineAPI.Controllers
                 emailParameters.Add("@Department", jobDepartment);
                 emailParameters.Add("@Type", "Register");
 
+                var applicantEmail = param.Get<string>("ApplicantEmail");
+                var hrManagerEmails = param.Get<string>("HRManagerEmails");
+                var jobManagerEmails = param.Get<string>("JobManagerEmails");
+                var JobTitle = param.Get<string>("JobTitle");
+                var FullNameEng = $"{param.Get<string>("FirstNameEng")} {param.Get<string>("LastNameEng")}";
+                var FullNameThai = $"{param.Get<string>("FirstNameThai")} {param.Get<string>("LastNameThai")}";
+                var CompanyName = param.Get<string>("comName");
+                var Tel = "09785849824";
 
-                var queryStaff = "EXEC sp_GetDateSendEmailV2 @Role = @Role, @Department = @Department, @Type = @Type";
-                var staffList = await conn.QueryAsync<dynamic>(queryStaff, emailParameters);
-                int successCount = 0;
-                int failCount = 0;
-                var hrBody = $"<p>New application submitted for JobID: {jobIdObj}.</p>";
-                var candidateBody = $"<p>Your application (ID: {id}) has been submitted.</p>";
+                if (!string.IsNullOrEmpty(applicantEmail))
+                { // Send to cadidate
+                    string applicantBody = $@"
+                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                            <p style='font-size: 20px'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                            <p style='font-size: 20px'>เรียน คุณ {FullNameThai}</p>
+                            <p style='font-size: 20px'>
+                            ขอบคุณสำหรับความสนใจในตำแหน่ง {JobTitle} ที่บริษัท {CompanyName} ของเรา
+                            เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่านและจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา
+                            หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล <span style='color: blue;'>{hrManagerEmails}</span> หรือโทร <span style='color: blue;'>{Tel}</span>
+                            ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                            </p>
+                            <h2 style='font-size: 20px'>ด้วยความเคารพ,</h2>
+                            <h2 style='font-size: 20px'>{FullNameThai}</h2>
+                            <h2 style='font-size: 20px'>ฝ่ายทรัพยากรบุคคล</h2>
+                            <h2 style='font-size: 20px'>{CompanyName}</h2>
+                            <h2 style='font-size: 20px'>**อีเมลล์นี้ คือ ข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</h2>
+                        </div>";
+                    // var applicantBody = $"<p>Dear Applicant, Your application (ID: {applicantId}) has been submitted successfully.</p>";
+                   await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
+                }
 
-                if (!string.IsNullOrWhiteSpace(email))
-                    await _emailService.SendEmailAsync(email, "Application Received",candidateBody, true);
-
-                foreach (var staff in staffList)
+                var managerEmails = $"{hrManagerEmails},{jobManagerEmails}".Split(',');
+                foreach (var emailStaff in managerEmails.Distinct())
                 {
-                    var staffEmail = staff.EMAIL;
-
-                    if (string.IsNullOrWhiteSpace(staffEmail))
-                        continue;
-
-                    try {
-
-                        await _emailService.SendEmailAsync(staffEmail, "Selected candidate list", hrBody, true);
-                        successCount++;
-
-                    } catch (Exception ex)
-                    {
-                        failCount++;
-                        Console.WriteLine($"❌ Failed to send email to {staffEmail}: {ex.Message}");
+                    if (!string.IsNullOrWhiteSpace(emailStaff))
+                    {  // Send to HR and Requester
+                        string managerBody = $@"
+                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                            <p style='font-size: 22px'>**Do not reply**</p>
+                            <p style='font-size: 20px'>Hi All,</p>
+                            <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{FullNameEng}</strong> for the <strong style='font-weight: bold'>{JobTitle}</strong> position.</p>
+                            <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={id}'>https://oneejobs.oneeclick.co</a></p>
+                        </div>";
+                        // var managerBody = $"<p>A new application has been submitted for JobID: {jobIdObj}.</p>";
+                        await _emailService.SendEmailAsync(email.Trim(), "New Job Application Received", managerBody, true);
                     }
                 }
-                
-                // return Ok(new { message = "อัปเดตสถานะเรียบร้อย", sendMail = successCount });
 
-                // if (!string.IsNullOrWhiteSpace(email))
-                // {
-                //     await _emailService.SendEmailAsync(email, "Application Received",
-                //         $"<p>Your application (ID: {id}) has been submitted.</p>", true);
-                // }
-
-                // foreach (var e in $"{hrEmails},{jobEmails}".Split(',').Distinct())
-                // {
-                //     if (!string.IsNullOrWhiteSpace(e))
-                //         await _emailService.SendEmailAsync(e.Trim(), "New Job Application",
-                //             $"<p>New application submitted for JobID: {jobIdObj}.</p>", true);
-                // }
-
-                return Ok(new { ApplicantID = id, Message = "Submitted successfully." });
+                return Ok(new { ApplicantID = id, Message = "Application submitted and emails sent successfully." });
             }
             catch (Exception ex)
             {
