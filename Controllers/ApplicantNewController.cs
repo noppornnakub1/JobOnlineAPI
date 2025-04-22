@@ -523,12 +523,14 @@ namespace JobOnlineAPI.Controllers
                 try
                 {
                     var fileMetadatas = new List<Dictionary<string, object>>();
-                    if (files != null && files.Count > 0)
+
+                    if (files != null && files.Count != 0)
                     {
                         foreach (var file in files)
                         {
                             if (file.Length == 0)
                             {
+                                _logger.LogWarning("Skipping empty file: {FileName}", file.FileName);
                                 continue;
                             }
 
@@ -562,7 +564,7 @@ namespace JobOnlineAPI.Controllers
                             fileMetadatas.Add(new Dictionary<string, object>
                             {
                                 { "FilePath", filePath.Replace('\\', '/') },
-                                { "FileName", file.FileName },
+                                { "FileName", fileName },
                                 { "FileSize", file.Length },
                                 { "FileType", file.ContentType }
                             });
@@ -586,9 +588,12 @@ namespace JobOnlineAPI.Controllers
                         }
                     }
 
-                    param.Add("JobID", jobId);
                     param.Add("JsonInput", JsonSerializer.Serialize(req));
+                    param.Add("EducationList", param.Get<string>("EducationList"));
+                    param.Add("WorkExperienceList", param.Get<string>("WorkExperienceList"));
+                    param.Add("SkillsList", param.Get<string>("SkillsList"));
                     param.Add("FilesList", JsonSerializer.Serialize(fileMetadatas));
+                    param.Add("JobID", jobId);
                     param.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
                     param.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
                     param.Add("HRManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
@@ -596,7 +601,7 @@ namespace JobOnlineAPI.Controllers
                     param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
                     param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
 
-                    await conn.ExecuteAsync("InsertApplicantDataV5", param, commandType: CommandType.StoredProcedure);
+                    await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
 
                     var applicantId = param.Get<int>("ApplicantID");
                     var applicantEmail = param.Get<string>("ApplicantEmail");
@@ -607,14 +612,13 @@ namespace JobOnlineAPI.Controllers
 
                     if (fileMetadatas.Count != 0 && applicantId > 0)
                     {
-                        var updatedMetadatas = new List<Dictionary<string, object>>();
-                        string applicantPath = Path.Combine(_basePath, $"applicant_{applicantId}");
+                        var applicantPath = Path.Combine(_basePath, $"applicant_{applicantId}");
                         if (Directory.Exists(applicantPath))
                         {
                             foreach (var oldFile in Directory.GetFiles(applicantPath))
                             {
                                 System.IO.File.Delete(oldFile);
-                                _logger.LogInformation("Deleted old file: {OldFile}", oldFile);
+                                _logger.LogInformation("Deleted old file in directory: {OldFile}", oldFile);
                             }
                         }
                         else
@@ -632,28 +636,17 @@ namespace JobOnlineAPI.Controllers
                                 continue;
                             }
 
-                            var fileName = Path.GetFileName(oldFilePath);
+                            var fileName = metadata["FileName"]?.ToString();
                             if (string.IsNullOrEmpty(fileName))
                             {
-                                _logger.LogWarning("Skipping file with invalid FilePath (no filename): {OldFilePath}", oldFilePath);
+                                _logger.LogWarning("Skipping file with invalid FileName in metadata: {Metadata}", JsonSerializer.Serialize(metadata));
                                 continue;
                             }
 
-                            string newFileSubPath = Path.Combine(_basePath, $"applicant_{applicantId}", fileName);
-                            var newPhysicalPath = _useNetworkShare ? newFileSubPath : newFileSubPath;
-                            var newDirectoryPath = Path.GetDirectoryName(newPhysicalPath);
-
-                            if (!string.IsNullOrEmpty(newDirectoryPath))
-                            {
-                                Directory.CreateDirectory(newDirectoryPath);
-                            }
-                            else
-                            {
-                                _logger.LogError("Cannot create directory for new path: {NewPhysicalPath}", newPhysicalPath);
-                                continue;
-                            }
-
+                            var newFilePath = Path.Combine(_basePath, $"applicant_{applicantId}", fileName);
+                            var newPhysicalPath = _useNetworkShare ? newFilePath : newFilePath;
                             var oldPhysicalPath = _useNetworkShare ? oldFilePath : oldFilePath;
+
                             if (System.IO.File.Exists(oldPhysicalPath))
                             {
                                 System.IO.File.Move(oldPhysicalPath, newPhysicalPath, overwrite: true);
@@ -664,23 +657,7 @@ namespace JobOnlineAPI.Controllers
                                 _logger.LogWarning("File not found for moving: {OldPhysicalPath}", oldPhysicalPath);
                                 continue;
                             }
-
-                            updatedMetadatas.Add(new Dictionary<string, object>
-                            {
-                                { "FilePath", newFileSubPath.Replace('\\', '/') },
-                                { "FileName", metadata["FileName"] },
-                                { "FileSize", metadata["FileSize"] },
-                                { "FileType", metadata["FileType"] }
-                            });
                         }
-
-                        using var updateConn = _context.CreateConnection();
-                        var updateParam = new DynamicParameters();
-                        updateParam.Add("ApplicantID", applicantId);
-                        updateParam.Add("FilesList", JsonSerializer.Serialize(updatedMetadatas));
-                        await updateConn.ExecuteAsync(
-                            "UPDATE ApplicantFiles SET FilePath = f.FilePath FROM OPENJSON(@FilesList) WITH (FilePath NVARCHAR(500)) f WHERE ApplicantID = @ApplicantID",
-                            updateParam);
                     }
 
                     req.TryGetValue("FirstNameThai", out var firstNameThaiObj);
@@ -696,21 +673,21 @@ namespace JobOnlineAPI.Controllers
                         var tel = "09785849824";
 
                         string applicantBody = $@"
-                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                        <p style='font-size: 20px'>{companyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
-                        <p style='font-size: 20px'>เรียน คุณ {fullNameThai}</p>
-                        <p style='font-size: 20px'>
-                            ขอบคุณสำหรับความสนใจในตำแหน่ง {jobTitle} ที่บริษัท {companyName} ของเรา
-                            เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่านและจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา
-                            หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล <span style='color: blue;'>{hrManagerEmails}</span> หรือโทร <span style='color: blue;'>{tel}</span>
-                            ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
-                        </p>
-                        <h2 style='font-size: 20px'>ด้วยความเคารพ,</h2>
-                        <h2 style='font-size: 20px'>{fullNameThai}</h2>
-                        <h2 style='font-size: 20px'>ฝ่ายทรัพยากรบุคคล</h2>
-                        <h2 style='font-size: 20px'>{companyName}</h2>
-                        <h2 style='font-size: 20px'>**อีเมลล์นี้ คือ ข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</h2>
-                    </div>";
+                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                            <p style='font-size: 20px'>{companyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                            <p style='font-size: 20px'>เรียน คุณ {fullNameThai}</p>
+                            <p style='font-size: 20px'>
+                                ขอบคุณสำหรับความสนใจในตำแหน่ง {jobTitle} ที่บริษัท {companyName} ของเรา
+                                เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่านและจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา
+                                หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล <span style='color: blue;'>{hrManagerEmails}</span> หรือโทร <span style='color: blue;'>{tel}</span>
+                                ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                            </p>
+                            <h2 style='font-size: 20px'>ด้วยความเคารพ,</h2>
+                            <h2 style='font-size: 20px'>{fullNameThai}</h2>
+                            <h2 style='font-size: 20px'>ฝ่ายทรัพยากรบุคคล</h2>
+                            <h2 style='font-size: 20px'>{companyName}</h2>
+                            <h2 style='font-size: 20px'>**อีเมลล์นี้ คือ ข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</h2>
+                        </div>";
                         await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
                     }
 
@@ -720,12 +697,12 @@ namespace JobOnlineAPI.Controllers
                         if (!string.IsNullOrWhiteSpace(email))
                         {
                             string managerBody = $@"
-                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                            <p style='font-size: 22px'>**Do not reply**</p>
-                            <p style='font-size: 20px'>Hi All,</p>
-                            <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{fullNameEng}</strong> for the <strong style='font-weight: bold'>{jobTitle}</strong> position.</p>
-                            <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={applicantId}'>https://oneejobs.oneeclick.co</a></p>
-                        </div>";
+                            <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                                <p style='font-size: 22px'>**Do not reply**</p>
+                                <p style='font-size: 20px'>Hi All,</p>
+                                <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{fullNameEng}</strong> for the <strong style='font-weight: bold'>{jobTitle}</strong> position.</p>
+                                <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={applicantId}'>https://oneejobs.oneeclick.co</a></p>
+                            </div>";
                             await _emailService.SendEmailAsync(email.Trim(), "New Job Application Received", managerBody, true);
                         }
                     }
