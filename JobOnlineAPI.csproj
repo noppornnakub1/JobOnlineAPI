@@ -5,6 +5,8 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<EnableDefaultStaticWebAssets>true</EnableDefaultStaticWebAssets>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<NoWarn>$(NoWarn);SYSLIB1054</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

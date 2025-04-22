@@ -7,11 +7,12 @@ namespace JobOnlineAPI.DAL
     {
         private readonly IConfiguration _configuration;
         private readonly string _connectionString;
-        // Constructor รับ IConfiguration เพื่อดึง Connection String จาก appsettings.json
+
         public DapperContext(IConfiguration configuration)
         {
-            _configuration = configuration;
-            _connectionString = _configuration.GetConnectionString("DefaultConnection");
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _connectionString = _configuration.GetConnectionString("DefaultConnection")
+                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is missing in configuration.");
         }
 
         public IDbConnection CreateConnection() => new SqlConnection(_connectionString);
@@ -21,11 +22,12 @@ namespace JobOnlineAPI.DAL
     {
         private readonly IConfiguration _configuration;
         private readonly string _connectionString;
-        // Constructor รับ IConfiguration เพื่อดึง Connection String จาก appsettings.json
+
         public DapperContextHRMS(IConfiguration configuration)
         {
-            _configuration = configuration;
-            _connectionString = _configuration.GetConnectionString("DefaultConnectionHRMS");
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _connectionString = _configuration.GetConnectionString("DefaultConnectionHRMS")
+                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnectionHRMS' is missing in configuration.");
         }
 
         public IDbConnection CreateConnection() => new SqlConnection(_connectionString);
