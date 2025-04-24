@@ -1080,10 +1080,11 @@ namespace JobOnlineAPI.Controllers
                 var applicantId = ((JsonElement)data["ApplicantID"]).GetInt32();
                 var status = ((JsonElement)data["Status"]).GetString();
 
-                var candidateJson = data.ContainsKey("Candidate") ? data["Candidate"].ToString() : null;
-                    dynamic? candidate = !string.IsNullOrEmpty(candidateJson) 
-                        ? JsonSerializer.Deserialize<ExpandoObject>(candidateJson) 
-                        : null;
+                var candidatesJson = data.ContainsKey("Candidates") ? data["Candidates"].ToString() : null;
+                List<ExpandoObject> candidates = !string.IsNullOrEmpty(candidatesJson)
+                    ? JsonSerializer.Deserialize<List<ExpandoObject>>(candidatesJson)
+                    : new List<ExpandoObject>();
+
                 var EmailSend = data.ContainsKey("EmailSend") ? ((JsonElement)data["EmailSend"]).GetString() : null;
 
                 var requesterMail = ((JsonElement)data["Email"]).GetString() ?? "-";
@@ -1091,7 +1092,7 @@ namespace JobOnlineAPI.Controllers
                 var Tel = ((JsonElement)data["Mobile"]).GetString() ?? "-";
                 var requesterPost = ((JsonElement)data["POST"]).GetString() ?? "-";
                 var TelOff = ((JsonElement)data["TELOFF"]).GetString() ?? "-";
-                var JobTitle = ((JsonElement)data["Department"]).GetString() ?? "-";
+                var JobTitle = ((JsonElement)data["JobTitle"]).GetString() ?? "-";
 
                 parameters.Add("@ApplicantID", applicantId);
                 parameters.Add("@Status", status);
@@ -1099,35 +1100,43 @@ namespace JobOnlineAPI.Controllers
                 var query = "EXEC sp_UpdateApplicantStatus @ApplicantID, @Status";
                 await connection.ExecuteAsync(query, parameters);
 
+                // รวมชื่อผู้สมัครทั้งหมดเป็นสตริงเดียว
+                var candidateNames = candidates.Select(candidateObj =>
+                {
+                    var candidateDict = candidateObj as IDictionary<string, object>;
+                    var title = candidateDict.ContainsKey("title") ? candidateDict["title"].ToString() : "";
+                    var firstNameThai = candidateDict.ContainsKey("firstNameThai") ? candidateDict["firstNameThai"].ToString() : "";
+                    var lastNameThai = candidateDict.ContainsKey("lastNameThai") ? candidateDict["lastNameThai"].ToString() : "";
+                    return $"{title} {firstNameThai} {lastNameThai}".Trim();
+                }).ToList();
 
-                // Application Status Updated
+                
+                var candidateNamesString = string.Join(" ", candidateNames);
+
                 string hrBody = $@"
-                  <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
-                    <br>
-                    <p style='margin: 0 0 10px 0;'>
-                        เรียน ฝ่ายบุคคล<br>
-                        ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน 3 ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
-                    </p>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>คุณวิภาดา สุขสวัสดิ์</p>
-                    <p style='margin: 0 0 10px 0;'>
-                        จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่าคุณวิภาดามีประสบการณ์ด้านการตลาดดิจิทัลที่ตรงกับความต้องการของตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
-                    </p>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>ช่วงเวลาที่สะดวกในการสัมภาษณ์</p>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>วันอังคารที่ 22 เมษายน 2568 เวลา 10.00-11.30 น.</p>
-                    <br>
-                    <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์ตามช่วงเวลาที่แจ้งไว้</p>
-                    <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
-                    <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
-                    <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
-                    <p style='margin: 0 0 10px 0;'>{requesterName}</p>
-                    <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
-                    <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
-                    <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
-                    <br>
-                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                </div>";
+          <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+            <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
+            <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
+            <br>
+            <p style='margin: 0 0 10px 0;'>
+                เรียน ฝ่ายบุคคล<br>
+                ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates.Count} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
+            </p>
+            <p style='margin: 0 0 10px 0;'>
+                จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
+            </p>
+            <br>
+            <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
+            <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
+            <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
+            <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
+            <p style='margin: 0 0 10px 0;'>{requesterName}</p>
+            <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
+            <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
+            <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
+            <br>
+            <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+        </div>";
 
                 var emailParameters = new DynamicParameters();
                 emailParameters .Add("@Role", 2);
