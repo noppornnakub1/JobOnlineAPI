@@ -1110,7 +1110,7 @@
 //                     {
 //                         try
 //                         {
-//                             await _emailService.SendEmailAsync(hrEmail, "Selected cantidate list", hrBody, true);
+//                             await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true);
 //                             successCount++;
 //                         }
 //                         catch (Exception ex)

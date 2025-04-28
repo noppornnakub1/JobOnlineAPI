@@ -52,6 +52,6 @@ namespace JobOnlineAPI.Models
         public string? NAMETHAI { get; set; }
         public string? Role { get; set; }
         public string? NAMECOSTCENT { get; set; }     
- 
+        public string? Remark { get; set; }
     }
 }

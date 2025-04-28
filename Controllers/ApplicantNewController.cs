@@ -278,11 +278,11 @@ namespace JobOnlineAPI.Controllers
                                 continue;
                             }
 
-                            var allowedExtensions = new[] { ".pdf", ".doc", ".docx" };
+                            var allowedExtensions = new[] { ".pdf", ".doc", ".docx",".png",".jpg" };
                             var extension = Path.GetExtension(file.FileName).ToLower();
                             if (!allowedExtensions.Contains(extension))
                             {
-                                return BadRequest($"Invalid file type for {file.FileName}. Only PDF, DOC, and DOCX are allowed.");
+                                return BadRequest($"Invalid file type for {file.FileName}. Only PNG, JPG, PDF, DOC, and DOCX are allowed.");
                             }
 
                             var fileName = $"{Guid.NewGuid()}_{file.FileName}";
@@ -463,12 +463,9 @@ namespace JobOnlineAPI.Controllers
                         {
                             string managerBody = $@"
                             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                                <p style='margin: 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล) และ คุณ{posterName} ({postName})</p>
+                                <p style='margin: 0;'>เรียนทุกท่าน</p>
                                 <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{JobTitle}</strong></p>
 
-                                <br>
-
-                                <p style='margin: 0;'>เรียนทุกท่าน</p>
                                 <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{JobTitle}</strong></p>
 
                                 <p style='margin: 0;'>กรุณาคลิก Link:
@@ -483,7 +480,7 @@ namespace JobOnlineAPI.Controllers
 
                                 <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                             </div>";
-                            await _emailService.SendEmailAsync(emailStaff.Trim(), "New Job Application Received", managerBody, true);
+                            await _emailService.SendEmailAsync(emailStaff.Trim(), "ONEE Jobs - You've got the new candidate", managerBody, true);
                         }
                     }
                     return Ok(new { ApplicantID = applicantId, Message = "Application and files submitted successfully." });
@@ -654,8 +651,8 @@ namespace JobOnlineAPI.Controllers
 
                 var candidatesJson = data.ContainsKey("Candidates") ? data["Candidates"].ToString() : null;
                 List<ExpandoObject> candidates = !string.IsNullOrEmpty(candidatesJson)
-                    ? JsonSerializer.Deserialize<List<ExpandoObject>>(candidatesJson)
-                    : new List<ExpandoObject>();
+                ? JsonSerializer.Deserialize<List<ExpandoObject>>(candidatesJson)
+                                    : new List<ExpandoObject>();
 
                 var EmailSend = data.ContainsKey("EmailSend") ? ((JsonElement)data["EmailSend"]).GetString() : null;
 
@@ -672,7 +669,6 @@ namespace JobOnlineAPI.Controllers
                 var query = "EXEC sp_UpdateApplicantStatus @ApplicantID, @Status";
                 await connection.ExecuteAsync(query, parameters);
 
-                // รวมชื่อผู้สมัครทั้งหมดเป็นสตริงเดียว
                 var candidateNames = candidates.Select(candidateObj =>
                 {
                     var candidateDict = candidateObj as IDictionary<string, object>;
@@ -686,29 +682,29 @@ namespace JobOnlineAPI.Controllers
                 var candidateNamesString = string.Join(" ", candidateNames);
 
                 string hrBody = $@"
-          <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-            <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
-            <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
-            <br>
-            <p style='margin: 0 0 10px 0;'>
-                เรียน ฝ่ายบุคคล<br>
-                ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates.Count} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
-            </p>
-            <p style='margin: 0 0 10px 0;'>
-                จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
-            </p>
-            <br>
-            <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
-            <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
-            <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
-            <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
-            <p style='margin: 0 0 10px 0;'>{requesterName}</p>
-            <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
-            <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
-            <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
-            <br>
-            <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-        </div>";
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
+                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
+                        <br>
+                        <p style='margin: 0 0 10px 0;'>
+                            เรียน ฝ่ายบุคคล<br>
+                            ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates.Count} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
+                        </p>
+                        <p style='margin: 0 0 10px 0;'>
+                            จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
+                        </p>
+                        <br>
+                        <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
+                        <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
+                        <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
+                        <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
+                        <p style='margin: 0 0 10px 0;'>{requesterName}</p>
+                        <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
+                        <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
+                        <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
+                        <br>
+                        <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    </div>";
 
                 var emailParameters = new DynamicParameters();
                 emailParameters .Add("@Role", 2);
@@ -726,7 +722,7 @@ namespace JobOnlineAPI.Controllers
                     {
                         try
                         {
-                            await _emailService.SendEmailAsync(hrEmail, "Selected cantidate list", hrBody, true);
+                            await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true);
                             successCount++;
                         }
                         catch (Exception ex)
@@ -756,19 +752,21 @@ namespace JobOnlineAPI.Controllers
                 var parameters = new DynamicParameters();
 
                 var data = request as IDictionary<string, object>;
-                if (!data.TryGetValue("JobID", out var jobIdObj) || !data.TryGetValue("ApprovalStatus", out var approvalStatusObj))
+                if (!data.TryGetValue("JobID", out var jobIdObj) || !data.TryGetValue("ApprovalStatus", out var approvalStatusObj) || !data.TryGetValue("Remark", out var RemarkObj))
                     return BadRequest("Missing required fields: JobID or ApprovalStatus");
 
                 var jobId = ((JsonElement)jobIdObj).GetInt32();
                 var approvalStatus = ((JsonElement)approvalStatusObj).GetString();
+                var Remark = ((JsonElement)RemarkObj).GetString();
 
                 if (approvalStatus == null)
                     return BadRequest("ApprovalStatus cannot be null.");
 
                 parameters.Add("@JobID", jobId);
                 parameters.Add("@ApprovalStatus", approvalStatus);
+                parameters.Add("@Remark", Remark);
 
-                var query = "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus";
+                var query = "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus, @Remark";
                 await connection.ExecuteAsync(query, parameters);
 
                 return Ok(new { message = "อัปเดตสถานะของงานเรียบร้อย" });
