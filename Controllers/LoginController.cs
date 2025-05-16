@@ -26,12 +26,14 @@ namespace JobOnlineAPI.Controllers
                     var userModel = new UserModel
                     {
                         Username = adminUser.Username,
-                        Role = adminUser.Role
+                        Role = adminUser.Role,
+                        ConfirmConsent = adminUser.ConfirmConsent,
+                        UserId = adminUser.UserId
                     };
 
                     var token = GenerateJwtToken(userModel);
 
-                    return Ok(new { Token = token, userModel.Username, userModel.Role });
+                    return Ok(new { Token = token, userModel.Username, userModel.Role, userModel.ConfirmConsent, userModel.UserId });
                 }
 
                 return Unauthorized("Invalid username or password.");
@@ -83,5 +85,7 @@ namespace JobOnlineAPI.Controllers
     {
         public string Username { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
+        public int UserId { get; set; }
+        public string ConfirmConsent { get; set; } = string.Empty;
     }
 }

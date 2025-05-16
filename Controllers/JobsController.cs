@@ -57,6 +57,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         public async Task<IActionResult> UpdateJob(int id, Job job)
         {
             if (id != job.JobID)
@@ -81,6 +82,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         public async Task<IActionResult> DeleteJob(int id)
         {
             var existingJob = await _jobRepository.GetJobByIdAsync(id);
@@ -95,6 +97,7 @@ namespace JobOnlineAPI.Controllers
 
 
         [HttpDelete("deleteJob/{id}")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         public async Task<IActionResult> DeleteJobByJobID(int id)
         {
             try

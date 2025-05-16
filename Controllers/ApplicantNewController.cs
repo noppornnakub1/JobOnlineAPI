@@ -6,6 +6,7 @@ using JobOnlineAPI.Services;
 using System.Dynamic;
 using System.Data;
 using System.Runtime.InteropServices;
+using JobOnlineAPI.Filters;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -508,6 +509,7 @@ namespace JobOnlineAPI.Controllers
         }
   
         [HttpGet("applicant")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetApplicants()
         {
@@ -526,6 +528,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpGet("applicantByID")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetApplicantsyById([FromQuery] int? ApplicantID)
         {
@@ -548,6 +551,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpPost("addApplicant")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         public async Task<IActionResult> PostApplicant([FromBody] Dictionary<string, object?> payload)
         {
@@ -582,6 +586,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpGet("GetCandidate")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetFilteredCandidates([FromQuery] string? department, [FromQuery] int? jobId)
         {
@@ -608,6 +613,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpGet("GetCandidateData")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetApplicantData([FromQuery] int? id)
         {
@@ -633,6 +639,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpPut("updateApplicantStatus")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateApplicantStatus([FromBody] ExpandoObject request)
@@ -742,6 +749,7 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpPut("updateJobApprovalStatus")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateJobApprovalStatus([FromBody] ExpandoObject request)
@@ -795,6 +803,49 @@ namespace JobOnlineAPI.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+        [HttpPut("UpdateConfirmConsent")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateConfirmConsent ([FromBody] ExpandoObject request)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+
+                var data = request as IDictionary<string, object>;
+                if (!data.TryGetValue("UserId", out var UserIdObj) || !data.TryGetValue("confirmConsent", out var confirmConsentObj))
+                    return BadRequest("Missing required fields: User ID or ConfirmConsent");
+
+                var confirmConsent = ((JsonElement)confirmConsentObj).GetString() ?? string.Empty;
+
+                var userIdElement = (JsonElement)UserIdObj;
+                var UserId = userIdElement.ValueKind == JsonValueKind.Number
+                    ? userIdElement.GetInt32()
+                    : int.TryParse(userIdElement.GetString(), out var id) ? id : 0;
+
+                if (UserId == 0)
+                    return BadRequest("Invalid User ID format.");
+
+                if (string.IsNullOrEmpty(confirmConsent))
+                    return BadRequest("ConfirmConsent cannot be null or empty.");
+
+                parameters.Add("@UserId", UserId);
+                parameters.Add("@ConfirmConsent", confirmConsent);
+
+                var query = "EXEC UpdateUserConsent @UserId, @confirmConsent";
+                var result = await connection.QuerySingleOrDefaultAsync<dynamic>(query, parameters);
+
+                if (result == null)
+                    return NotFound("User not found or update failed.");
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }

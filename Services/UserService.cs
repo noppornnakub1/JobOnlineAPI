@@ -50,7 +50,9 @@ namespace JobOnlineAPI.Services
                     {
                         Username = user.Email,
                         Password = user.PasswordHash,
-                        Role = "User"
+                        Role = "User",
+                        UserId = user.UserId,
+                        ConfirmConsent = user.ConfirmConsent
                     };
                 }
             }
