@@ -55,8 +55,8 @@ jobs:
           dotnet tool install --global coverlet.console
           if ($LASTEXITCODE -ne 0) { throw "Coverlet installation failed" }
 
-      # เริ่มการสแกน SonarCloud
-      - name: Start SonarCloud Scan
+      # เริ่มการสแกน SonarCloud และรอ Quality Gate
+      - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
@@ -68,13 +68,10 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml" `
             /d:sonar.coverage.exclusions="**Tests/**/*,**/Test/**/*" `
+            /d:sonar.qualitygate.wait=true `
+            /d:sonar.qualitygate.timeout=600 `
             /d:sonar.verbose=true
           if ($LASTEXITCODE -ne 0) { throw "SonarCloud scan start failed" }
-
-      # สร้างและทดสอบโปรเจกต์
-      - name: Build and Test
-        shell: powershell
-        run: |
           dotnet build JobOnlineAPI.sln --configuration Release
           if ($LASTEXITCODE -ne 0) { throw "Build failed" }
           $testProjects = Get-ChildItem -Path . -Recurse -Include *.Tests.csproj
@@ -86,22 +83,6 @@ jobs:
           } else {
             echo "No test projects found, skipping tests"
           }
-        continue-on-error: true # ดำเนินการต่อแม้ test ล้มเหลว เพื่อให้สแกนต่อ
-
-      # สิ้นสุดการสแกน SonarCloud
-      - name: Complete SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
-        run: |
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           if ($LASTEXITCODE -ne 0) { throw "SonarCloud scan completion failed" }
-
-      # ตรวจสอบ SonarCloud Quality Gate
-      - name: Check SonarCloud Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v2.0.0 # อัปเดตเป็นเวอร์ชันล่าสุด
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scan: true
-          pollingTimeoutSec: 600
+        continue-on-error: false # หยุดถ้า Quality Gate ไม่ผ่าน
