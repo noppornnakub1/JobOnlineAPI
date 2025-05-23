@@ -27,7 +27,7 @@ jobs:
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
-          path: ~\sonar\cache
+          path: ~/sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
@@ -36,7 +36,7 @@ jobs:
         id: cache-sonar-scanner
         uses: actions/cache@v4
         with:
-          path: .\.sonar\scanner
+          path: ./.sonar/scanner
           key: ${{ runner.os }}-sonar-scanner
           restore-keys: ${{ runner.os }}-sonar-scanner
 
@@ -45,8 +45,8 @@ jobs:
         if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
         shell: powershell
         run: |
-          New-Item -Path .\.sonar\scanner -ItemType Directory
-          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+          New-Item -Path ./.sonar/scanner -ItemType Directory
+          dotnet tool update dotnet-sonarscanner --tool-path ./.sonar/scanner
 
       # ติดตั้ง Coverlet สำหรับ coverage
       - name: Install Coverlet
@@ -60,7 +60,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin `
+          ./.sonar/scanner/dotnet-sonarscanner begin `
             /k:"noppornnakub1_JobOnlineAPI" `
             /o:"noppornnakub1" `
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
@@ -83,7 +83,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       # ตรวจสอบ SonarCloud Quality Gate
       - name: Check SonarCloud Quality Gate
