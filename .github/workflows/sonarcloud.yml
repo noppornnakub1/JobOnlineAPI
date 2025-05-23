@@ -3,7 +3,6 @@ name: SonarCloud Scan for JobOnlineAPI
 on:
   push:
     branches:
-      - feature/Copter
       - master
 
 jobs:
