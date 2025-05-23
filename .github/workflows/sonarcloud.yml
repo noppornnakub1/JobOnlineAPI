@@ -1,0 +1,95 @@
+```yaml
+name: SonarCloud Scan for JobOnlineAPI
+
+on:
+  push:
+    branches:
+      - feature/Copter
+
+jobs:
+  build-and-analyze:
+    name: Build and Analyze with SonarCloud
+    runs-on: windows-latest
+    steps:
+      # Checkout โค้ดจาก branch feature/Copter
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # ปิด shallow clone เพื่อให้ SonarCloud วิเคราะห์ได้ดีขึ้น
+
+      # ตั้งค่า .NET SDK
+      - name: Set up .NET 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # แคช SonarCloud packages
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~\sonar\cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      # แคช SonarScanner
+      - name: Cache SonarScanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: .\.sonar\scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+
+      # ติดตั้ง SonarScanner ถ้าไม่พบในแคช
+      - name: Install SonarScanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          New-Item -Path .\.sonar\scanner -ItemType Directory
+          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+
+      # ติดตั้ง Coverlet สำหรับ coverage
+      - name: Install Coverlet
+        shell: powershell
+        run: |
+          dotnet tool install --global coverlet.console
+
+      # เริ่มการสแกน SonarCloud
+      - name: Start SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: powershell
+        run: |
+          .\.sonar\scanner\dotnet-sonarscanner begin `
+            /k:"noppornnakub1_JobOnlineAPI" `
+            /o:"noppornnakub1" `
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml" `
+            /d:sonar.coverage.exclusions="**Tests/**/*,**/Test/**/*" `
+            /d:sonar.verbose=true
+
+      # สร้างและทดสอบโปรเจกต์
+      - name: Build and Test
+        shell: powershell
+        run: |
+          dotnet build JobOnlineAPI.sln --configuration Release
+          dotnet test JobOnlineAPI.sln --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=coverage.opencover.xml
+        continue-on-error: true # ดำเนินการต่อแม้ test ล้มเหลว เพื่อให้สแกนต่อ
+
+      # สิ้นสุดการสแกน SonarCloud
+      - name: Complete SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: powershell
+        run: |
+          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+      # ตรวจสอบ SonarCloud Quality Gate
+      - name: Check SonarCloud Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scan: true
+```
