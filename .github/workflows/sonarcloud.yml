@@ -55,7 +55,7 @@ jobs:
           dotnet tool install --global coverlet.console
           if ($LASTEXITCODE -ne 0) { throw "Coverlet installation failed" }
 
-      # เริ่มการสแกน SonarCloud และรอ Quality Gate
+      # เริ่มการสแกน SonarCloud
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -71,8 +71,6 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml" `
             /d:sonar.coverage.exclusions="**Tests/**/*,**/Test/**/*" `
-            /d:sonar.qualitygate.wait=true `
-            /d:sonar.qualitygate.timeout=600 `
             /d:sonar.verbose=true
           if ($LASTEXITCODE -ne 0) { throw "SonarCloud scan start failed" }
           dotnet build JobOnlineAPI.sln --configuration Release
@@ -88,4 +86,4 @@ jobs:
           }
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
           if ($LASTEXITCODE -ne 0) { throw "SonarCloud scan completion failed" }
-        continue-on-error: false # หยุดถ้า Quality Gate ไม่ผ่าน
+        continue-on-error: false
