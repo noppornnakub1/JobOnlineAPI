@@ -23,13 +23,13 @@ namespace JobOnlineAPI.Controllers
         private readonly bool _useNetworkShare;
 
         [DllImport("mpr.dll", EntryPoint = "WNetAddConnection2W", CharSet = CharSet.Unicode)]
-        private static extern int WNetAddConnection2(ref NETRESOURCE netResource, string? password, string? username, int flags);
+        private static extern int WNetAddConnection2(ref NetResource netResource, string? password, string? username, int flags);
 
         [DllImport("mpr.dll", EntryPoint = "WNetCancelConnection2W", CharSet = CharSet.Unicode)]
         private static extern int WNetCancelConnection2(string lpName, int dwFlags, [MarshalAs(UnmanagedType.Bool)] bool fForce);
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct NETRESOURCE
+        private struct NetResource
         {
             public int dwScope;
             public int dwType;
@@ -131,7 +131,7 @@ namespace JobOnlineAPI.Controllers
                         _logger.LogInformation("Successfully disconnected or no existing connection to {ServerName} (Result: {DisconnectResult})", serverName, disconnectResult);
                     }
 
-                    NETRESOURCE netResource = new()
+                    NetResource netResource = new()
                     {
                         dwType = 1,
                         lpRemoteName = _basePath,
