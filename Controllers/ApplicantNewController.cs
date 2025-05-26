@@ -17,7 +17,6 @@ namespace JobOnlineAPI.Controllers
         private readonly DapperContext _context;
         private readonly IEmailService _emailService;
         private readonly ILogger<ApplicantNewController> _logger;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _basePath;
         private readonly string? _username;
         private readonly string? _password;
@@ -50,7 +49,6 @@ namespace JobOnlineAPI.Controllers
             DapperContext context,
             IEmailService emailService,
             ILogger<ApplicantNewController> logger,
-            IHttpContextAccessor httpContextAccessor,
             string environmentName,
             string? networkPath,
             string? networkUsername,
@@ -59,15 +57,12 @@ namespace JobOnlineAPI.Controllers
             _context = context;
             _emailService = emailService;
             _logger = logger;
-            _httpContextAccessor = httpContextAccessor;
 
             environmentName ??= "Development";
-            string? origin = httpContextAccessor.HttpContext?.Request.Headers.Origin;
             string hostname = System.Net.Dns.GetHostName();
-            _logger.LogInformation("Detected environment: {Environment}, Origin: {Origin}, Hostname: {Hostname}", environmentName, origin ?? "Not provided", hostname);
+            _logger.LogInformation("Detected environment: {Environment}, Hostname: {Hostname}", environmentName, hostname);
 
-            bool isProduction = (origin != null && origin.Contains("10.10.0.27")) ||
-                                environmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
+            bool isProduction = environmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
 
             if (isProduction)
             {
