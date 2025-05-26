@@ -71,6 +71,7 @@ namespace JobOnlineAPI.Controllers
 
                 if (result == null) return Unauthorized("User or password is Invalid.");
                 return Ok(new {
+                    Empno = result.CODEMPID,
                     AdminID = result.AdminID,
                     Username = result.Username,
                     NAMETHAI = result.NAMETHAI,
