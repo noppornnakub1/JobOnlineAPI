@@ -207,7 +207,7 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        private DynamicParameters CreateDynamicParameters(IDictionary<string, object?> requestDictionary)
+        private static DynamicParameters CreateDynamicParameters(IDictionary<string, object?> requestDictionary)
         {
             var parameters = new DynamicParameters();
             foreach (var kvp in requestDictionary)
@@ -251,7 +251,7 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        private void AddNonJsonParameter(DynamicParameters parameters, string key, object? value)
+        private static void AddNonJsonParameter(DynamicParameters parameters, string key, object? value)
         {
             if (value is string strValue)
                 parameters.Add(key, strValue, DbType.String, size: strValue.Length > 0 ? strValue.Length : 1);
@@ -259,7 +259,7 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add(key, value);
         }
 
-        private void AddOutputParameters(DynamicParameters parameters)
+        private static void AddOutputParameters(DynamicParameters parameters)
         {
             parameters.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
             parameters.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
@@ -273,7 +273,7 @@ namespace JobOnlineAPI.Controllers
             parameters.Add("comName", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
         }
 
-        private (int? ApplicantId, string ApplicantEmail, string HRManagerEmails, string JobManagerEmails, string JobTitle, string FullNameEng, string FullNameThai, string CompanyName) ExtractApplicationResult(DynamicParameters parameters)
+        private static (int? ApplicantId, string ApplicantEmail, string HRManagerEmails, string JobManagerEmails, string JobTitle, string FullNameEng, string FullNameThai, string CompanyName) ExtractApplicationResult(DynamicParameters parameters)
         {
             return (
                 parameters.Get<int?>("ApplicantID"),
