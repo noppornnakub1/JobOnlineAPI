@@ -16,7 +16,6 @@ namespace JobOnlineAPI.Controllers
     {
         private readonly DapperContext _context;
         private readonly IEmailService _emailService;
-        private readonly IConfiguration _configuration;
         private readonly ILogger<ApplicantNewController> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _basePath;
@@ -50,17 +49,19 @@ namespace JobOnlineAPI.Controllers
         public ApplicantNewController(
             DapperContext context,
             IEmailService emailService,
-            IConfiguration configuration,
             ILogger<ApplicantNewController> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            string environmentName,
+            string? networkPath,
+            string? networkUsername,
+            string? networkPassword)
         {
             _context = context;
             _emailService = emailService;
-            _configuration = configuration;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
 
-            string? environmentName = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Development";
+            environmentName ??= "Development";
             string? origin = httpContextAccessor.HttpContext?.Request.Headers.Origin;
             string hostname = System.Net.Dns.GetHostName();
             _logger.LogInformation("Detected environment: {Environment}, Origin: {Origin}, Hostname: {Hostname}", environmentName, origin ?? "Not provided", hostname);
@@ -77,10 +78,10 @@ namespace JobOnlineAPI.Controllers
             }
             else
             {
-                _basePath = configuration.GetValue<string>("FileStorage:NetworkPath") ?? @"C:\AppFiles\Applicants";
-                _username = configuration.GetValue<string>("FileStorage:Username");
-                _password = configuration.GetValue<string>("FileStorage:Password");
-                _useNetworkShare = configuration.GetValue<string>("FileStorage:NetworkPath") != null && _username != null && _password != null;
+                _basePath = networkPath ?? @"C:\AppFiles\Applicants";
+                _username = networkUsername;
+                _password = networkPassword;
+                _useNetworkShare = networkPath != null && _username != null && _password != null;
             }
 
             if (!_useNetworkShare && !Directory.Exists(_basePath))
