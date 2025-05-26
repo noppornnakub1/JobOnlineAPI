@@ -11,12 +11,25 @@ namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-
-    public class ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService) : ControllerBase
+    public class ApplicantsController : ControllerBase
     {
-        private readonly IApplicantRepository _applicantRepository = applicantRepository;
-        private readonly IJobApplicationRepository _jobApplicationRepository = jobApplicationRepository;
-        private readonly IEmailService _emailService = emailService;
+        private readonly IApplicantRepository _applicantRepository;
+        private readonly IJobApplicationRepository _jobApplicationRepository;
+        private readonly IEmailService _emailService;
+        private readonly string _resumeBasePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "resumes");
+        private readonly string[] _allowedExtensions = [".pdf", ".doc", ".docx"];
+
+        public ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService)
+        {
+            _applicantRepository = applicantRepository;
+            _jobApplicationRepository = jobApplicationRepository;
+            _emailService = emailService;
+
+            if (!Directory.Exists(_resumeBasePath))
+            {
+                Directory.CreateDirectory(_resumeBasePath);
+            }
+        }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Applicant>>> GetAllApplicants()
@@ -81,14 +94,28 @@ namespace JobOnlineAPI.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 
-            var filePath = Path.Combine("wwwroot/resumes", file.FileName);
+            var extension = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(extension) || !_allowedExtensions.Contains(extension))
+                return BadRequest("Invalid file type. Only PDF, DOC, and DOCX are allowed.");
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(_resumeBasePath, uniqueFileName);
+
+            var fullPath = Path.GetFullPath(filePath);
+            if (!fullPath.StartsWith(Path.GetFullPath(_resumeBasePath)))
+                return BadRequest("Invalid file path.");
+
+            try
             {
+                using var stream = new FileStream(fullPath, FileMode.Create);
                 await file.CopyToAsync(stream);
             }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error saving file: {ex.Message}");
+            }
 
-            return Ok(new { filePath });
+            return Ok(new { filePath = $"/resumes/{uniqueFileName}" });
         }
 
         [HttpPost("submit-application")]
@@ -104,19 +131,32 @@ namespace JobOnlineAPI.Controllers
                 return BadRequest("JobID is required.");
             }
 
+            string? resumePath = null;
             if (resume != null && resume.Length > 0)
             {
-                var resumesFolder = Path.Combine("wwwroot", "resumes");
+                var extension = Path.GetExtension(resume.FileName)?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(extension) || !_allowedExtensions.Contains(extension))
+                    return BadRequest("Invalid file type. Only PDF, DOC, and DOCX are allowed.");
 
-                if (!Directory.Exists(resumesFolder))
+                var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+                var filePath = Path.Combine(_resumeBasePath, uniqueFileName);
+
+                var fullPath = Path.GetFullPath(filePath);
+                if (!fullPath.StartsWith(Path.GetFullPath(_resumeBasePath)))
+                    return BadRequest("Invalid file path.");
+
+                try
                 {
-                    Directory.CreateDirectory(resumesFolder);
+                    using (var stream = new FileStream(fullPath, FileMode.Create))
+                    {
+                        await resume.CopyToAsync(stream);
+                    }
+                    resumePath = $"/resumes/{uniqueFileName}";
                 }
-
-                var filePath = Path.Combine(resumesFolder, resume.FileName);
-
-                using var stream = new FileStream(filePath, FileMode.Create);
-                await resume.CopyToAsync(stream);
+                catch (Exception ex)
+                {
+                    return StatusCode(500, $"Error saving resume: {ex.Message}");
+                }
             }
 
             int applicantId = await _applicantRepository.AddApplicantAsync(applicant);
@@ -131,7 +171,7 @@ namespace JobOnlineAPI.Controllers
 
             await _jobApplicationRepository.AddJobApplicationAsync(jobApplication);
 
-            return Ok(new { applicantId, jobApplication });
+            return Ok(new { applicantId, jobApplication, resumePath });
         }
 
         [HttpPost("submit-application-dynamic")]
@@ -235,7 +275,7 @@ namespace JobOnlineAPI.Controllers
                 var Tel = "09785849824";
 
                 if (!string.IsNullOrEmpty(applicantEmail))
-                { // Send to cadidate
+                {
                     string applicantBody = $@"
                         <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
                             <p style='font-size: 20px'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
@@ -252,7 +292,7 @@ namespace JobOnlineAPI.Controllers
                             <h2 style='font-size: 20px'>{CompanyName}</h2>
                             <h2 style='font-size: 20px'>**อีเมลล์นี้ คือ ข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</h2>
                         </div>";
-                    // var applicantBody = $"<p>Dear Applicant, Your application (ID: {applicantId}) has been submitted successfully.</p>";
+
                     await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
                 }
 
@@ -260,7 +300,7 @@ namespace JobOnlineAPI.Controllers
                 foreach (var email in managerEmails.Distinct())
                 {
                     if (!string.IsNullOrWhiteSpace(email))
-                    {  // Send to HR and Requester
+                    {
                         string managerBody = $@"
                         <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
                             <p style='font-size: 22px'>**Do not reply**</p>
@@ -268,7 +308,6 @@ namespace JobOnlineAPI.Controllers
                             <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{FullNameEng}</strong> for the <strong style='font-weight: bold'>{JobTitle}</strong> position.</p>
                             <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={applicantId}'>https://oneejobs.oneeclick.co</a></p>
                         </div>";
-                        // var managerBody = $"<p>A new application has been submitted for JobID: {jobIdObj}.</p>";
                         await _emailService.SendEmailAsync(email.Trim(), "New Job Application Received", managerBody, true);
                     }
                 }
