@@ -16,7 +16,6 @@ namespace JobOnlineAPI.Controllers
     {
         private readonly DapperContext _context;
         private readonly IEmailService _emailService;
-        private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
         private readonly ILogger<ApplicantNewController> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -51,14 +50,12 @@ namespace JobOnlineAPI.Controllers
         public ApplicantNewController(
             DapperContext context,
             IEmailService emailService,
-            IWebHostEnvironment environment,
             IConfiguration configuration,
             ILogger<ApplicantNewController> logger,
             IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _emailService = emailService;
-            _environment = environment;
             _configuration = configuration;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
