@@ -16,11 +16,13 @@ namespace JobOnlineAPI.Controllers
     {
         private readonly DapperContext _context;
         private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<ApplicantNewController> _logger;
         private readonly string _basePath;
         private readonly string? _username;
         private readonly string? _password;
         private readonly bool _useNetworkShare;
+        private readonly string _applicationFormUri;
 
         [DllImport("mpr.dll", EntryPoint = "WNetAddConnection2W", CharSet = CharSet.Unicode)]
         private static extern int WNetAddConnection2(ref NetResource netResource, string? password, string? username, int flags);
@@ -48,17 +50,15 @@ namespace JobOnlineAPI.Controllers
         public ApplicantNewController(
             DapperContext context,
             IEmailService emailService,
-            ILogger<ApplicantNewController> logger,
-            string environmentName,
-            string? networkPath,
-            string? networkUsername,
-            string? networkPassword)
+            IConfiguration configuration,
+            ILogger<ApplicantNewController> logger)
         {
             _context = context;
             _emailService = emailService;
+            _configuration = configuration;
             _logger = logger;
 
-            environmentName ??= "Development";
+            var environmentName = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Development";
             string hostname = System.Net.Dns.GetHostName();
             _logger.LogInformation("Detected environment: {Environment}, Hostname: {Hostname}", environmentName, hostname);
 
@@ -66,18 +66,24 @@ namespace JobOnlineAPI.Controllers
 
             if (isProduction)
             {
-                _basePath = @"C:\AppFiles\Applicants";
+                _basePath = configuration.GetValue<string>("FileStorage:ProductionPath")
+                    ?? throw new InvalidOperationException("Production file storage path is not configured.");
                 _username = null;
                 _password = null;
                 _useNetworkShare = false;
             }
             else
             {
-                _basePath = networkPath ?? @"C:\AppFiles\Applicants";
-                _username = networkUsername;
-                _password = networkPassword;
-                _useNetworkShare = networkPath != null && _username != null && _password != null;
+                _basePath = configuration.GetValue<string>("FileStorage:NetworkPath")
+                    ?? configuration.GetValue<string>("FileStorage:DefaultPath")
+                    ?? throw new InvalidOperationException("File storage path is not configured.");
+                _username = configuration.GetValue<string>("FileStorage:Username");
+                _password = configuration.GetValue<string>("FileStorage:Password");
+                _useNetworkShare = !string.IsNullOrEmpty(_basePath) && _username != null && _password != null;
             }
+
+            _applicationFormUri = configuration.GetValue<string>("Application:FormUri")
+                ?? throw new InvalidOperationException("Application form URI is not configured.");
 
             if (!_useNetworkShare && !Directory.Exists(_basePath))
             {
@@ -298,12 +304,12 @@ namespace JobOnlineAPI.Controllers
                             }
 
                             fileMetadatas.Add(new Dictionary<string, object>
-                    {
-                        { "FilePath", filePath.Replace('\\', '/') },
-                        { "FileName", fileName },
-                        { "FileSize", file.Length },
-                        { "FileType", file.ContentType }
-                    });
+                            {
+                                { "FilePath", filePath.Replace('\\', '/') },
+                                { "FileName", fileName },
+                                { "FileSize", file.Length },
+                                { "FileType", file.ContentType }
+                            });
                         }
                     }
 
@@ -420,24 +426,24 @@ namespace JobOnlineAPI.Controllers
                     if (!string.IsNullOrEmpty(applicantEmail))
                     {
                         string applicantBody = $@"
-                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                        <p style='margin: 0; font-weight: bold;'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
-                        <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
-                        <p>
-                            ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{JobTitle}</strong> ที่บริษัท <strong>{CompanyName}</strong> ของเรา<br>
-                            เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
-                            หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
-                            <span style='color: blue;'>{resultMail}</span> หรือโทร 
-                            <span style='color: blue;'>{Tel}</span><br>
-                            ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
-                        </p>
-                        <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
-                        <p style='margin: 0;'>{hrName}</p>
-                        <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
-                        <p style='margin: 0;'>{CompanyName}</p>
-                        <br>
-                        <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                    </div>";
+                            <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                                <p style='margin: 0; font-weight: bold;'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                                <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
+                                <p>
+                                    ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{JobTitle}</strong> ที่บริษัท <strong>{CompanyName}</strong> ของเรา<br>
+                                    เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
+                                    หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
+                                    <span style='color: blue;'>{resultMail}</span> หรือโทร 
+                                    <span style='color: blue;'>{Tel}</span><br>
+                                    ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                                </p>
+                                <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
+                                <p style='margin: 0;'>{hrName}</p>
+                                <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                                <p style='margin: 0;'>{CompanyName}</p>
+                                <br>
+                                <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                            </div>";
                         await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
                     }
 
@@ -450,20 +456,20 @@ namespace JobOnlineAPI.Controllers
                         if (!string.IsNullOrWhiteSpace(emailStaff))
                         {
                             string managerBody = $@"
-                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                            <p style='margin: 0;'>เรียนทุกท่าน</p>
-                            <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{JobTitle}</strong></p>
-                            <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{JobTitle}</strong></p>
-                            <p style='margin: 0;'>กรุณาคลิก Link:
-                                <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={applicantId}' 
-                                style='color: #007bff; text-decoration: underline;'>
-                                https://oneejobs.oneeclick.co
-                                </a>
-                                เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
-                            </p>
-                            <br>
-                            <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                        </div>";
+                                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                                    <p style='margin: 0;'>เรียนทุกท่าน</p>
+                                    <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{JobTitle}</strong></p>
+                                    <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{JobTitle}</strong></p>
+                                    <p style='margin: 0;'>กรุณาคลิก Link:
+                                        <a target='_blank' href='{_applicationFormUri}?id={applicantId}' 
+                                        style='color: #007bff; text-decoration: underline;'>
+                                        {_applicationFormUri}
+                                        </a>
+                                        เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
+                                    </p>
+                                    <br>
+                                    <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                                </div>";
                             await _emailService.SendEmailAsync(emailStaff.Trim(), "ONEE Jobs - You've got the new candidate", managerBody, true);
                         }
                     }
@@ -706,29 +712,29 @@ namespace JobOnlineAPI.Controllers
                 var candidateNamesString = string.Join(" ", candidateNames);
 
                 string hrBody = $@"
-                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
-                    <br>
-                    <p style='margin: 0 0 10px 0;'>
-                        เรียน ฝ่ายบุคคล<br>
-                        ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates?.Count ?? 0} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
-                    </p>
-                    <p style='margin: 0 0 10px 0;'>
-                        จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
-                    </p>
-                    <br>
-                    <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
-                    <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
-                    <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
-                    <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
-                    <p style='margin: 0 0 10px 0;'>{requesterName}</p>
-                    <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
-                    <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
-                    <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
-                    <br>
-                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                </div>";
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
+                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
+                        <br>
+                        <p style='margin: 0 0 10px 0;'>
+                            เรียน ฝ่ายบุคคล<br>
+                            ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates?.Count ?? 0} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
+                        </p>
+                        <p style='margin: 0 0 10px 0;'>
+                            จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
+                        </p>
+                        <br>
+                        <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
+                        <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
+                        <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
+                        <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
+                        <p style='margin: 0 0 10px 0;'>{requesterName}</p>
+                        <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
+                        <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
+                        <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
+                        <br>
+                        <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    </div>";
 
                 var emailParameters = new DynamicParameters();
                 emailParameters.Add("@Role", 2);
@@ -737,7 +743,6 @@ namespace JobOnlineAPI.Controllers
                 var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
                 var staffList = await connection.QueryAsync<dynamic>(queryStaff, emailParameters);
                 int successCount = 0;
-                int failCount = 0;
                 foreach (var staff in staffList)
                 {
                     var hrEmail = staff.EMAIL;
@@ -750,7 +755,7 @@ namespace JobOnlineAPI.Controllers
                         }
                         catch (Exception)
                         {
-                            failCount++;
+                            
                         }
                     }
                 }
