@@ -220,7 +220,7 @@ namespace JobOnlineAPI.Controllers
             return parameters;
         }
 
-        private void AddJsonElementParameter(DynamicParameters parameters, string key, JsonElement jsonElement)
+        private static void AddJsonElementParameter(DynamicParameters parameters, string key, JsonElement jsonElement)
         {
             switch (jsonElement.ValueKind)
             {
