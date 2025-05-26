@@ -290,16 +290,15 @@ namespace JobOnlineAPI.Controllers
                             var filePath = Path.Combine(_basePath, fileName);
                             var physicalPath = _useNetworkShare ? filePath : filePath;
 
+                            // Ensure the directory exists
                             var directoryPath = Path.GetDirectoryName(physicalPath);
-                            if (!string.IsNullOrEmpty(directoryPath))
+                            if (string.IsNullOrEmpty(directoryPath))
                             {
-                                Directory.CreateDirectory(directoryPath);
+                                _logger.LogError("Invalid directory path for: {PhysicalPath}", physicalPath);
+                                throw new InvalidOperationException($"Invalid directory path for: {physicalPath}");
                             }
-                            else
-                            {
-                                _logger.LogError("Cannot create directory for path: {PhysicalPath}", physicalPath);
-                                throw new InvalidOperationException($"Cannot create directory for path: {physicalPath}");
-                            }
+
+                            Directory.CreateDirectory(directoryPath); // Create directory if it doesn't exist
 
                             using (var stream = new FileStream(physicalPath, FileMode.Create))
                             {
