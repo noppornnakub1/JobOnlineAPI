@@ -255,7 +255,7 @@ namespace JobOnlineAPI.Controllers
                 }
 
                 var request = JsonSerializer.Deserialize<ExpandoObject>(jsonData);
-                if (request is not IDictionary<string, object?> req || !req.TryGetValue("JobID", out var jobIdObj))
+                if (request == null || request is not IDictionary<string, object?> req || !req.TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
                 {
                     return BadRequest("Invalid or missing JobID.");
                 }
@@ -279,7 +279,7 @@ namespace JobOnlineAPI.Controllers
                                 continue;
                             }
 
-                            var allowedExtensions = new[] { ".pdf", ".doc", ".docx",".png",".jpg" };
+                            var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".png", ".jpg" };
                             var extension = Path.GetExtension(file.FileName).ToLower();
                             if (!allowedExtensions.Contains(extension))
                             {
@@ -307,12 +307,12 @@ namespace JobOnlineAPI.Controllers
                             }
 
                             fileMetadatas.Add(new Dictionary<string, object>
-                            {
-                                { "FilePath", filePath.Replace('\\', '/') },
-                                { "FileName", fileName },
-                                { "FileSize", file.Length },
-                                { "FileType", file.ContentType }
-                            });
+                    {
+                        { "FilePath", filePath.Replace('\\', '/') },
+                        { "FileName", fileName },
+                        { "FileSize", file.Length },
+                        { "FileType", file.ContentType }
+                    });
                         }
                     }
 
@@ -412,9 +412,8 @@ namespace JobOnlineAPI.Controllers
 
                     var fullNameThai = $"{firstNameThaiObj?.ToString() ?? ""} {lastNameThaiObj?.ToString() ?? ""}".Trim();
                     var fullNameEng = $"{firstNameEngObj?.ToString() ?? ""} {lastNameEngObj?.ToString() ?? ""}".Trim();
-                    // var JobTitle = param.Get<string>("JobTitle");
-                    var dict = (IDictionary<string, object>)request;
-                    string JobTitle = dict["JobTitle"]?.ToString() ?? "-";
+                    string JobTitle = req.TryGetValue("JobTitle", out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
+
                     var results = await conn.QueryAsync<dynamic>(
                         "sp_GetDateSendEmailV3",
                         new { JobID = jobId },
@@ -426,31 +425,28 @@ namespace JobOnlineAPI.Controllers
                     string CompanyName = firstHr?.COMPANY_NAME ?? "-";
                     string POST = firstHr?.POST ?? "-";
                     string hrName = firstHr?.NAMETHAI ?? "-";
-                    
+
                     if (!string.IsNullOrEmpty(applicantEmail))
                     {
                         string applicantBody = $@"
-                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                            <p style='margin: 0; font-weight: bold;'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
-                            <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
-
-                            <p>
-                                ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{JobTitle}</strong> ที่บริษัท <strong>{CompanyName}</strong> ของเรา<br>
-                                เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
-                                หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
-                                <span style='color: blue;'>{resultMail}</span> หรือโทร 
-                                <span style='color: blue;'>{Tel}</span><br>
-                                ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
-                            </p>
-
-                            <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
-                            <p style='margin: 0;'>{hrName}</p>
-                            <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
-                            <p style='margin: 0;'>{CompanyName}</p>
-                            <br>
-
-                            <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                        </div>";
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                        <p style='margin: 0; font-weight: bold;'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                        <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
+                        <p>
+                            ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{JobTitle}</strong> ที่บริษัท <strong>{CompanyName}</strong> ของเรา<br>
+                            เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
+                            หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
+                            <span style='color: blue;'>{resultMail}</span> หรือโทร 
+                            <span style='color: blue;'>{Tel}</span><br>
+                            ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                        </p>
+                        <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
+                        <p style='margin: 0;'>{hrName}</p>
+                        <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                        <p style='margin: 0;'>{CompanyName}</p>
+                        <br>
+                        <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    </div>";
                         await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
                     }
 
@@ -463,24 +459,20 @@ namespace JobOnlineAPI.Controllers
                         if (!string.IsNullOrWhiteSpace(emailStaff))
                         {
                             string managerBody = $@"
-                            <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                                <p style='margin: 0;'>เรียนทุกท่าน</p>
-                                <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{JobTitle}</strong></p>
-
-                                <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{JobTitle}</strong></p>
-
-                                <p style='margin: 0;'>กรุณาคลิก Link:
-                                    <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={applicantId}' 
-                                    style='color: #007bff; text-decoration: underline;'>
-                                    https://oneejobs.oneeclick.co
-                                    </a>
-                                    เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
-                                </p>
-
-                                <br>
-
-                                <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                            </div>";
+                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                            <p style='margin: 0;'>เรียนทุกท่าน</p>
+                            <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{JobTitle}</strong></p>
+                            <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{JobTitle}</strong></p>
+                            <p style='margin: 0;'>กรุณาคลิก Link:
+                                <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={applicantId}' 
+                                style='color: #007bff; text-decoration: underline;'>
+                                https://oneejobs.oneeclick.co
+                                </a>
+                                เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
+                            </p>
+                            <br>
+                            <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                        </div>";
                             await _emailService.SendEmailAsync(emailStaff.Trim(), "ONEE Jobs - You've got the new candidate", managerBody, true);
                         }
                     }
@@ -490,6 +482,11 @@ namespace JobOnlineAPI.Controllers
                 {
                     DisconnectFromNetworkShare();
                 }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to deserialize JSON data: {Message}", ex.Message);
+                return BadRequest("Invalid JSON data.");
             }
             catch (System.ComponentModel.Win32Exception win32Ex)
             {
@@ -507,7 +504,7 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = "Server error", ex.Message });
             }
         }
-  
+
         [HttpGet("applicant")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
@@ -642,81 +639,109 @@ namespace JobOnlineAPI.Controllers
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateApplicantStatus([FromBody] ExpandoObject request)
+        public async Task<IActionResult> UpdateApplicantStatus([FromBody] ExpandoObject? request)
         {
             try
             {
-                using var connection = _context.CreateConnection();
-                var parameters = new DynamicParameters();
+                if (request == null)
+                    return BadRequest("Request cannot be null.");
 
-                var data = request as IDictionary<string, object>;
-                if (!data.ContainsKey("ApplicantID") || !data.ContainsKey("Status"))
+                IDictionary<string, object?> data = request;
+                if (data == null || !data.TryGetValue("ApplicantID", out object? value) || !data.TryGetValue("Status", out object? statusObj))
                     return BadRequest("Missing required fields: ApplicantID or Status");
 
-                var applicantId = ((JsonElement)data["ApplicantID"]).GetInt32();
-                var status = ((JsonElement)data["Status"]).GetString();
+                var applicantId = ((JsonElement)value!).GetInt32();
+                var status = ((JsonElement)statusObj!).GetString();
 
-                var candidatesJson = data.ContainsKey("Candidates") ? data["Candidates"].ToString() : null;
-                List<ExpandoObject> candidates = !string.IsNullOrEmpty(candidatesJson)
-                ? JsonSerializer.Deserialize<List<ExpandoObject>>(candidatesJson)
-                                    : new List<ExpandoObject>();
+                if (!data.TryGetValue("Candidates", out object? candidatesObj))
+                    candidatesObj = null;
+                var candidatesJson = candidatesObj?.ToString();
+                List<ExpandoObject> candidates;
+                try
+                {
+                    candidates = !string.IsNullOrEmpty(candidatesJson)
+                        ? JsonSerializer.Deserialize<List<ExpandoObject>>(candidatesJson) ?? []
+                        : [];
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize Candidates JSON: {Message}", ex.Message);
+                    candidates = [];
+                }
 
-                var EmailSend = data.ContainsKey("EmailSend") ? ((JsonElement)data["EmailSend"]).GetString() : null;
+                data.TryGetValue("EmailSend", out object? emailSendObj);
+                var EmailSend = emailSendObj != null ? ((JsonElement)emailSendObj).GetString() : null;
 
-                var requesterMail = ((JsonElement)data["Email"]).GetString() ?? "-";
-                var requesterName = ((JsonElement)data["NAMETHAI"]).GetString() ?? "-";
-                var Tel = ((JsonElement)data["Mobile"]).GetString() ?? "-";
-                var requesterPost = ((JsonElement)data["POST"]).GetString() ?? "-";
-                var TelOff = ((JsonElement)data["TELOFF"]).GetString() ?? "-";
-                var JobTitle = ((JsonElement)data["JobTitle"]).GetString() ?? "-";
+                data.TryGetValue("Email", out object? requesterMailObj);
+                var requesterMail = requesterMailObj != null ? ((JsonElement)requesterMailObj).GetString() ?? "-" : "-";
 
+                data.TryGetValue("NAMETHAI", out object? requesterNameObj);
+                var requesterName = requesterNameObj != null ? ((JsonElement)requesterNameObj).GetString() ?? "-" : "-";
+
+                data.TryGetValue("POST", out object? requesterPostObj);
+                var requesterPost = requesterPostObj != null ? ((JsonElement)requesterPostObj).GetString() ?? "-" : "-";
+
+                data.TryGetValue("Mobile", out object? telObj);
+                var Tel = telObj != null ? ((JsonElement)telObj).GetString() ?? "-" : "-";
+
+                data.TryGetValue("TELOFF", out object? telOffObj);
+                var TelOff = telOffObj != null ? ((JsonElement)telOffObj).GetString() ?? "-" : "-";
+
+                data.TryGetValue("JobTitle", out object? jobTitleObj);
+                var JobTitle = jobTitleObj != null ? ((JsonElement)jobTitleObj).GetString() ?? "-" : "-";
+
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
                 parameters.Add("@ApplicantID", applicantId);
                 parameters.Add("@Status", status);
 
                 var query = "EXEC sp_UpdateApplicantStatus @ApplicantID, @Status";
                 await connection.ExecuteAsync(query, parameters);
 
-                var candidateNames = candidates.Select(candidateObj =>
-                {
-                    var candidateDict = candidateObj as IDictionary<string, object>;
-                    var title = candidateDict.ContainsKey("title") ? candidateDict["title"].ToString() : "";
-                    var firstNameThai = candidateDict.ContainsKey("firstNameThai") ? candidateDict["firstNameThai"].ToString() : "";
-                    var lastNameThai = candidateDict.ContainsKey("lastNameThai") ? candidateDict["lastNameThai"].ToString() : "";
-                    return $"{title} {firstNameThai} {lastNameThai}".Trim();
-                }).ToList();
+                var candidateNames = candidates != null
+                    ? candidates.Select(candidateObj =>
+                    {
+                        var candidateDict = candidateObj as IDictionary<string, object>;
+                        candidateDict.TryGetValue("title", out object? titleObj);
+                        var title = titleObj?.ToString() ?? "";
+                        candidateDict.TryGetValue("firstNameThai", out object? firstNameThaiObj);
+                        var firstNameThai = firstNameThaiObj?.ToString() ?? "";
+                        candidateDict.TryGetValue("lastNameThai", out object? lastNameThaiObj);
+                        var lastNameThai = lastNameThaiObj?.ToString() ?? "";
+                        return $"{title} {firstNameThai} {lastNameThai}".Trim();
+                    }).ToList()
+                    : [];
 
-                
                 var candidateNamesString = string.Join(" ", candidateNames);
 
                 string hrBody = $@"
-                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
-                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
-                        <br>
-                        <p style='margin: 0 0 10px 0;'>
-                            เรียน ฝ่ายบุคคล<br>
-                            ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates.Count} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
-                        </p>
-                        <p style='margin: 0 0 10px 0;'>
-                            จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
-                        </p>
-                        <br>
-                        <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
-                        <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
-                        <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
-                        <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
-                        <p style='margin: 0 0 10px 0;'>{requesterName}</p>
-                        <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
-                        <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
-                        <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
-                        <br>
-                        <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                    </div>";
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>
+                        เรียน ฝ่ายบุคคล<br>
+                        ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates?.Count ?? 0} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
+                    </p>
+                    <p style='margin: 0 0 10px 0;'>
+                        จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
+                    </p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
+                    <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
+                    <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
+                    <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
+                    <p style='margin: 0 0 10px 0;'>{requesterName}</p>
+                    <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
+                    <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
+                    <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
 
                 var emailParameters = new DynamicParameters();
-                emailParameters .Add("@Role", 2);
-                emailParameters .Add("@Department", null);
-
+                emailParameters.Add("@Role", 2);
+                emailParameters.Add("@Department", null);
 
                 var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
                 var staffList = await connection.QueryAsync<dynamic>(queryStaff, emailParameters);
@@ -732,18 +757,18 @@ namespace JobOnlineAPI.Controllers
                             await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true);
                             successCount++;
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             failCount++;
-                            Console.WriteLine($"❌ Failed to send email to {hrEmail}: {ex.Message}");
                         }
                     }
                 }
-                
+
                 return Ok(new { message = "อัปเดตสถานะเรียบร้อย", sendMail = successCount });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating applicant status: {Message}", ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -752,27 +777,29 @@ namespace JobOnlineAPI.Controllers
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateJobApprovalStatus([FromBody] ExpandoObject request)
+        public async Task<IActionResult> UpdateJobApprovalStatus([FromBody] ExpandoObject? request)
         {
             try
             {
+                if (request == null)
+                    return BadRequest("Request cannot be null.");
+
+                IDictionary<string, object?> data = request;
+                if (data == null || !data.TryGetValue("JobID", out object? jobIdObj) || !data.TryGetValue("ApprovalStatus", out object? approvalStatusObj) || !data.TryGetValue("Remark", out object? remarkObj))
+                    return BadRequest("Missing required fields: JobID, ApprovalStatus, or Remark");
+
+                var jobId = jobIdObj != null ? ((JsonElement)jobIdObj).GetInt32() : 0;
+                var approvalStatus = approvalStatusObj != null ? ((JsonElement)approvalStatusObj).GetString() : null;
+                var remark = remarkObj != null ? ((JsonElement)remarkObj).GetString() : null;
+
+                if (jobId == 0 || approvalStatus == null)
+                    return BadRequest("JobID or ApprovalStatus cannot be null or invalid.");
+
                 using var connection = _context.CreateConnection();
                 var parameters = new DynamicParameters();
-
-                var data = request as IDictionary<string, object>;
-                if (!data.TryGetValue("JobID", out var jobIdObj) || !data.TryGetValue("ApprovalStatus", out var approvalStatusObj) || !data.TryGetValue("Remark", out var RemarkObj))
-                    return BadRequest("Missing required fields: JobID or ApprovalStatus");
-
-                var jobId = ((JsonElement)jobIdObj).GetInt32();
-                var approvalStatus = ((JsonElement)approvalStatusObj).GetString();
-                var Remark = ((JsonElement)RemarkObj).GetString();
-
-                if (approvalStatus == null)
-                    return BadRequest("ApprovalStatus cannot be null.");
-
                 parameters.Add("@JobID", jobId);
                 parameters.Add("@ApprovalStatus", approvalStatus);
-                parameters.Add("@Remark", Remark);
+                parameters.Add("@Remark", remark);
 
                 var query = "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus, @Remark";
                 await connection.ExecuteAsync(query, parameters);
@@ -781,6 +808,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating job approval status: {Message}", ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -802,40 +830,44 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving PDPA content: {Message}", ex.Message);
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
+
         [HttpPut("UpdateConfirmConsent")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateConfirmConsent ([FromBody] ExpandoObject request)
+        public async Task<IActionResult> UpdateConfirmConsent([FromBody] ExpandoObject? request)
         {
             try
             {
-                using var connection = _context.CreateConnection();
-                var parameters = new DynamicParameters();
+                if (request == null)
+                    return BadRequest("Request cannot be null.");
 
-                var data = request as IDictionary<string, object>;
-                if (!data.TryGetValue("UserId", out var UserIdObj) || !data.TryGetValue("confirmConsent", out var confirmConsentObj))
-                    return BadRequest("Missing required fields: User ID or ConfirmConsent");
+                IDictionary<string, object?> data = request;
+                if (data == null || !data.TryGetValue("UserId", out object? userIdObj) || !data.TryGetValue("confirmConsent", out object? confirmConsentObj))
+                    return BadRequest("Missing required fields: UserId or ConfirmConsent");
 
-                var confirmConsent = ((JsonElement)confirmConsentObj).GetString() ?? string.Empty;
+                var confirmConsent = confirmConsentObj != null ? ((JsonElement)confirmConsentObj).GetString() ?? string.Empty : string.Empty;
 
-                var userIdElement = (JsonElement)UserIdObj;
-                var UserId = userIdElement.ValueKind == JsonValueKind.Number
+                var userIdElement = (JsonElement)userIdObj!;
+                var userId = userIdElement.ValueKind == JsonValueKind.Number
                     ? userIdElement.GetInt32()
                     : int.TryParse(userIdElement.GetString(), out var id) ? id : 0;
 
-                if (UserId == 0)
-                    return BadRequest("Invalid User ID format.");
+                if (userId == 0)
+                    return BadRequest("Invalid UserId format.");
 
                 if (string.IsNullOrEmpty(confirmConsent))
                     return BadRequest("ConfirmConsent cannot be null or empty.");
 
-                parameters.Add("@UserId", UserId);
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+                parameters.Add("@UserId", userId);
                 parameters.Add("@ConfirmConsent", confirmConsent);
 
-                var query = "EXEC UpdateUserConsent @UserId, @confirmConsent";
+                var query = "EXEC UpdateUserConsent @UserId, @ConfirmConsent";
                 var result = await connection.QuerySingleOrDefaultAsync<dynamic>(query, parameters);
 
                 if (result == null)
@@ -845,6 +877,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating consent: {Message}", ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
