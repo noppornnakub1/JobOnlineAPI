@@ -46,46 +46,51 @@ namespace JobOnlineAPI.Controllers
             public string? lpProvider;
         }
 
+        public class FileStorageConfig
+        {
+            public string EnvironmentName { get; set; } = "Development";
+            public string BasePath { get; set; } = string.Empty;
+            public string? NetworkUsername { get; set; }
+            public string? NetworkPassword { get; set; }
+            public string ApplicationFormUri { get; set; } = string.Empty;
+        }
+
         public ApplicantNewController(
             DapperContext context,
             IEmailService emailService,
             ILogger<ApplicantNewController> logger,
-            string environmentName,
-            string basePath,
-            string? networkUsername,
-            string? networkPassword,
-            string applicationFormUri)
+            FileStorageConfig config)
         {
             _context = context;
             _emailService = emailService;
             _logger = logger;
 
-            environmentName ??= "Development";
+            config.EnvironmentName ??= "Development";
             string hostname = System.Net.Dns.GetHostName();
-            _logger.LogInformation("Detected environment: {Environment}, Hostname: {Hostname}", environmentName, hostname);
+            _logger.LogInformation("Detected environment: {Environment}, Hostname: {Hostname}", config.EnvironmentName, hostname);
 
-            bool isProduction = environmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
+            bool isProduction = config.EnvironmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
 
             if (isProduction)
             {
-                if (string.IsNullOrEmpty(basePath))
+                if (string.IsNullOrEmpty(config.BasePath))
                     throw new InvalidOperationException("Production file storage path is not configured.");
-                _basePath = basePath;
+                _basePath = config.BasePath;
                 _username = null;
                 _password = null;
                 _useNetworkShare = false;
             }
             else
             {
-                if (string.IsNullOrEmpty(basePath))
+                if (string.IsNullOrEmpty(config.BasePath))
                     throw new InvalidOperationException("File storage path is not configured.");
-                _basePath = basePath;
-                _username = networkUsername;
-                _password = networkPassword;
+                _basePath = config.BasePath;
+                _username = config.NetworkUsername;
+                _password = config.NetworkPassword;
                 _useNetworkShare = !string.IsNullOrEmpty(_basePath) && _username != null && _password != null;
             }
 
-            _applicationFormUri = applicationFormUri
+            _applicationFormUri = config.ApplicationFormUri
                 ?? throw new InvalidOperationException("Application form URI is not configured.");
 
             if (!_useNetworkShare && !Directory.Exists(_basePath))
