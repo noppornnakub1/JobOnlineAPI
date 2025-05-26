@@ -11,12 +11,25 @@ namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-
-    public class ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService) : ControllerBase
+    public class ApplicantsController : ControllerBase
     {
-        private readonly IApplicantRepository _applicantRepository = applicantRepository;
-        private readonly IJobApplicationRepository _jobApplicationRepository = jobApplicationRepository;
-        private readonly IEmailService _emailService = emailService;
+        private readonly IApplicantRepository _applicantRepository;
+        private readonly IJobApplicationRepository _jobApplicationRepository;
+        private readonly IEmailService _emailService;
+        private readonly string _resumeBasePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "resumes");
+        private readonly string[] _allowedExtensions = [".pdf", ".doc", ".docx"];
+
+        public ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService)
+        {
+            _applicantRepository = applicantRepository;
+            _jobApplicationRepository = jobApplicationRepository;
+            _emailService = emailService;
+
+            if (!Directory.Exists(_resumeBasePath))
+            {
+                Directory.CreateDirectory(_resumeBasePath);
+            }
+        }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Applicant>>> GetAllApplicants()
@@ -81,14 +94,28 @@ namespace JobOnlineAPI.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 
-            var filePath = Path.Combine("wwwroot/resumes", file.FileName);
+            var extension = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(extension) || !_allowedExtensions.Contains(extension))
+                return BadRequest("Invalid file type. Only PDF, DOC, and DOCX are allowed.");
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(_resumeBasePath, uniqueFileName);
+
+            var fullPath = Path.GetFullPath(filePath);
+            if (!fullPath.StartsWith(Path.GetFullPath(_resumeBasePath)))
+                return BadRequest("Invalid file path.");
+
+            try
             {
+                using var stream = new FileStream(fullPath, FileMode.Create);
                 await file.CopyToAsync(stream);
             }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error saving file: {ex.Message}");
+            }
 
-            return Ok(new { filePath });
+            return Ok(new { filePath = $"/resumes/{uniqueFileName}" });
         }
 
         [HttpPost("submit-application")]
@@ -104,19 +131,32 @@ namespace JobOnlineAPI.Controllers
                 return BadRequest("JobID is required.");
             }
 
+            string? resumePath = null;
             if (resume != null && resume.Length > 0)
             {
-                var resumesFolder = Path.Combine("wwwroot", "resumes");
+                var extension = Path.GetExtension(resume.FileName)?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(extension) || !_allowedExtensions.Contains(extension))
+                    return BadRequest("Invalid file type. Only PDF, DOC, and DOCX are allowed.");
 
-                if (!Directory.Exists(resumesFolder))
+                var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+                var filePath = Path.Combine(_resumeBasePath, uniqueFileName);
+
+                var fullPath = Path.GetFullPath(filePath);
+                if (!fullPath.StartsWith(Path.GetFullPath(_resumeBasePath)))
+                    return BadRequest("Invalid file path.");
+
+                try
                 {
-                    Directory.CreateDirectory(resumesFolder);
+                    using (var stream = new FileStream(fullPath, FileMode.Create))
+                    {
+                        await resume.CopyToAsync(stream);
+                    }
+                    resumePath = $"/resumes/{uniqueFileName}";
                 }
-
-                var filePath = Path.Combine(resumesFolder, resume.FileName);
-
-                using var stream = new FileStream(filePath, FileMode.Create);
-                await resume.CopyToAsync(stream);
+                catch (Exception ex)
+                {
+                    return StatusCode(500, $"Error saving resume: {ex.Message}");
+                }
             }
 
             int applicantId = await _applicantRepository.AddApplicantAsync(applicant);
@@ -131,7 +171,7 @@ namespace JobOnlineAPI.Controllers
 
             await _jobApplicationRepository.AddJobApplicationAsync(jobApplication);
 
-            return Ok(new { applicantId, jobApplication });
+            return Ok(new { applicantId, jobApplication, resumePath });
         }
 
         [HttpPost("submit-application-dynamic")]
@@ -141,144 +181,155 @@ namespace JobOnlineAPI.Controllers
                 return BadRequest("Invalid input.");
 
             var requestDictionary = (IDictionary<string, object?>)request;
-
             if (!requestDictionary.TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
                 return BadRequest("JobID is required.");
 
-            using var connection = _applicantRepository.GetConnection();
-
-            var parameters = new DynamicParameters();
-
-            foreach (var kvp in requestDictionary)
-            {
-                if (kvp.Value is JsonElement jsonElement)
-                {
-                    switch (jsonElement.ValueKind)
-                    {
-                        case JsonValueKind.String:
-                            var stringValue = jsonElement.GetString();
-                            parameters.Add(
-                                kvp.Key,
-                                stringValue,
-                                dbType: DbType.String,
-                                size: stringValue?.Length > 0 ? stringValue.Length : 1
-                            );
-                            break;
-                        case JsonValueKind.Number:
-                            if (jsonElement.TryGetInt32(out int intValue))
-                                parameters.Add(kvp.Key, intValue, dbType: DbType.Int32);
-                            else if (jsonElement.TryGetDouble(out double doubleValue))
-                                parameters.Add(kvp.Key, doubleValue, dbType: DbType.Double);
-                            break;
-                        case JsonValueKind.True:
-                        case JsonValueKind.False:
-                            parameters.Add(kvp.Key, jsonElement.GetBoolean(), dbType: DbType.Boolean);
-                            break;
-
-                        case JsonValueKind.Array:
-                        case JsonValueKind.Object:
-                            var rawJson = jsonElement.GetRawText();
-                            parameters.Add(kvp.Key, rawJson, DbType.String, size: rawJson.Length);
-                            break;
-                        case JsonValueKind.Null:
-                            parameters.Add(kvp.Key, null);
-                            break;
-                        default:
-                            return BadRequest($"Unsupported JSON value for key '{kvp.Key}'.");
-                    }
-                }
-                else
-                {
-                    if (kvp.Value is string strValue)
-                    {
-                        parameters.Add(
-                            kvp.Key,
-                            strValue,
-                            dbType: DbType.String,
-                            size: strValue.Length > 0 ? strValue.Length : 1
-                        );
-                    }
-                    else
-                    {
-                        parameters.Add(kvp.Key, kvp.Value);
-                    }
-                }
-            }
-
-            parameters.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
-            parameters.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
-            parameters.Add("HRManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-            parameters.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-            
-
             try
             {
-                await connection.ExecuteAsync(
-                    "InsertApplicantDataV2",
-                    parameters,
-                    commandType: CommandType.StoredProcedure
-                );
+                var parameters = CreateDynamicParameters(requestDictionary);
+                AddOutputParameters(parameters);
 
-                var applicantId = parameters.Get<int?>("ApplicantID");
-                if (applicantId == null)
-                {
+                using var connection = _applicantRepository.GetConnection();
+                await connection.ExecuteAsync("InsertApplicantDataV2", parameters, commandType: CommandType.StoredProcedure);
+
+                var result = ExtractApplicationResult(parameters);
+                if (result.ApplicantId == null)
                     return BadRequest("ApplicantID was not generated by the stored procedure.");
-                }
 
-                var applicantEmail = parameters.Get<string>("ApplicantEmail");
-                var hrManagerEmails = parameters.Get<string>("HRManagerEmails");
-                var jobManagerEmails = parameters.Get<string>("JobManagerEmails");
-                var JobTitle = parameters.Get<string>("JobTitle");
-                var FullNameEng = $"{parameters.Get<string>("FirstNameEng")} {parameters.Get<string>("LastNameEng")}";
-                var FullNameThai = $"{parameters.Get<string>("FirstNameThai")} {parameters.Get<string>("LastNameThai")}";
-                var CompanyName = parameters.Get<string>("comName");
-                var Tel = "09785849824";
+                await SendApplicationEmails(result);
 
-                if (!string.IsNullOrEmpty(applicantEmail))
-                { // Send to cadidate
-                    string applicantBody = $@"
-                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                            <p style='font-size: 20px'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
-                            <p style='font-size: 20px'>เรียน คุณ {FullNameThai}</p>
-                            <p style='font-size: 20px'>
-                            ขอบคุณสำหรับความสนใจในตำแหน่ง {JobTitle} ที่บริษัท {CompanyName} ของเรา
-                            เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่านและจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา
-                            หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล <span style='color: blue;'>{hrManagerEmails}</span> หรือโทร <span style='color: blue;'>{Tel}</span>
-                            ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
-                            </p>
-                            <h2 style='font-size: 20px'>ด้วยความเคารพ,</h2>
-                            <h2 style='font-size: 20px'>{FullNameThai}</h2>
-                            <h2 style='font-size: 20px'>ฝ่ายทรัพยากรบุคคล</h2>
-                            <h2 style='font-size: 20px'>{CompanyName}</h2>
-                            <h2 style='font-size: 20px'>**อีเมลล์นี้ คือ ข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</h2>
-                        </div>";
-                    // var applicantBody = $"<p>Dear Applicant, Your application (ID: {applicantId}) has been submitted successfully.</p>";
-                    await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
-                }
-
-                var managerEmails = $"{hrManagerEmails},{jobManagerEmails}".Split(',');
-                foreach (var email in managerEmails.Distinct())
-                {
-                    if (!string.IsNullOrWhiteSpace(email))
-                    {  // Send to HR and Requester
-                        string managerBody = $@"
-                        <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                            <p style='font-size: 22px'>**Do not reply**</p>
-                            <p style='font-size: 20px'>Hi All,</p>
-                            <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{FullNameEng}</strong> for the <strong style='font-weight: bold'>{JobTitle}</strong> position.</p>
-                            <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={applicantId}'>https://oneejobs.oneeclick.co</a></p>
-                        </div>";
-                        // var managerBody = $"<p>A new application has been submitted for JobID: {jobIdObj}.</p>";
-                        await _emailService.SendEmailAsync(email.Trim(), "New Job Application Received", managerBody, true);
-                    }
-                }
-
-                return Ok(new { ApplicantID = applicantId, Message = "Application submitted and emails sent successfully." });
+                return Ok(new { ApplicantID = result.ApplicantId, Message = "Application submitted and emails sent successfully." });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error occurred: {ex.Message}");
                 return StatusCode(500, new { Error = "Internal Server Error", Details = ex.Message });
+            }
+        }
+
+        private static DynamicParameters CreateDynamicParameters(IDictionary<string, object?> requestDictionary)
+        {
+            var parameters = new DynamicParameters();
+            foreach (var kvp in requestDictionary)
+            {
+                if (kvp.Value is JsonElement jsonElement)
+                    AddJsonElementParameter(parameters, kvp.Key, jsonElement);
+                else
+                    AddNonJsonParameter(parameters, kvp.Key, kvp.Value);
+            }
+            return parameters;
+        }
+
+        private static void AddJsonElementParameter(DynamicParameters parameters, string key, JsonElement jsonElement)
+        {
+            switch (jsonElement.ValueKind)
+            {
+                case JsonValueKind.String:
+                    var stringValue = jsonElement.GetString() ?? "";
+                    parameters.Add(key, stringValue, DbType.String, size: stringValue.Length > 0 ? stringValue.Length : 1);
+                    break;
+                case JsonValueKind.Number:
+                    if (jsonElement.TryGetInt32(out int intValue))
+                        parameters.Add(key, intValue, DbType.Int32);
+                    else if (jsonElement.TryGetDouble(out double doubleValue))
+                        parameters.Add(key, doubleValue, DbType.Double);
+                    break;
+                case JsonValueKind.True:
+                case JsonValueKind.False:
+                    parameters.Add(key, jsonElement.GetBoolean(), DbType.Boolean);
+                    break;
+                case JsonValueKind.Array:
+                case JsonValueKind.Object:
+                    var rawJson = jsonElement.GetRawText();
+                    parameters.Add(key, rawJson, DbType.String, size: rawJson.Length);
+                    break;
+                case JsonValueKind.Null:
+                    parameters.Add(key, null);
+                    break;
+                default:
+                    throw new ArgumentException($"Unsupported JSON value for key '{key}'.");
+            }
+        }
+
+        private static void AddNonJsonParameter(DynamicParameters parameters, string key, object? value)
+        {
+            if (value is string strValue)
+                parameters.Add(key, strValue, DbType.String, size: strValue.Length > 0 ? strValue.Length : 1);
+            else
+                parameters.Add(key, value);
+        }
+
+        private static void AddOutputParameters(DynamicParameters parameters)
+        {
+            parameters.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
+            parameters.Add("HRManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+            parameters.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+            parameters.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
+            parameters.Add("FirstNameEng", dbType: DbType.String, direction: ParameterDirection.Output, size: 50);
+            parameters.Add("LastNameEng", dbType: DbType.String, direction: ParameterDirection.Output, size: 50);
+            parameters.Add("FirstNameThai", dbType: DbType.String, direction: ParameterDirection.Output, size: 50);
+            parameters.Add("LastNameThai", dbType: DbType.String, direction: ParameterDirection.Output, size: 50);
+            parameters.Add("comName", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
+        }
+
+        private static (int? ApplicantId, string ApplicantEmail, string HRManagerEmails, string JobManagerEmails, string JobTitle, string FullNameEng, string FullNameThai, string CompanyName) ExtractApplicationResult(DynamicParameters parameters)
+        {
+            return (
+                parameters.Get<int?>("ApplicantID"),
+                parameters.Get<string>("ApplicantEmail") ?? "",
+                parameters.Get<string>("HRManagerEmails") ?? "",
+                parameters.Get<string>("JobManagerEmails") ?? "",
+                parameters.Get<string>("JobTitle") ?? "",
+                $"{parameters.Get<string>("FirstNameEng")} {parameters.Get<string>("LastNameEng")}".Trim(),
+                $"{parameters.Get<string>("FirstNameThai")} {parameters.Get<string>("LastNameThai")}".Trim(),
+                parameters.Get<string>("comName") ?? ""
+            );
+        }
+
+        private async Task SendApplicationEmails((int? ApplicantId, string ApplicantEmail, string HRManagerEmails, string JobManagerEmails, string JobTitle, string FullNameEng, string FullNameThai, string CompanyName) result)
+        {
+            const string Tel = "09785849824";
+            if (!string.IsNullOrEmpty(result.ApplicantEmail))
+            {
+                string applicantBody = $"""
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                        <p style='font-size: 20px'>{result.CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                        <p style='font-size: 20px'>เรียน คุณ {result.FullNameThai}</p>
+                        <p style='font-size: 20px'>
+                        ขอบคุณสำหรับความสนใจในตำแหน่ง {result.JobTitle} ที่บริษัท {result.CompanyName} ของเรา
+                        เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่านและจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา
+                        หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล <span style='color: blue;'>{result.HRManagerEmails}</span> หรือโทร <span style='color: blue;'>{Tel}</span>
+                        ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                        </p>
+                        <h2 style='font-size: 20px'>ด้วยความเคารพ,</h2>
+                        <h2 style='font-size: 20px'>{result.FullNameThai}</h2>
+                        <h2 style='font-size: 20px'>ฝ่ายทรัพยากรบุคคล</h2>
+                        <h2 style='font-size: 20px'>{result.CompanyName}</h2>
+                        <h2 style='font-size: 20px'>**อีเมลล์นี้ คือ ข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</h2>
+                    </div>
+                    """;
+
+                await _emailService.SendEmailAsync(result.ApplicantEmail, "Application Received", applicantBody, true);
+            }
+
+            var managerEmails = $"{result.HRManagerEmails},{result.JobManagerEmails}"
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Distinct()
+                .Where(email => !string.IsNullOrWhiteSpace(email))
+                .Select(email => email.Trim());
+
+            foreach (var email in managerEmails)
+            {
+                string managerBody = $"""
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                        <p style='font-size: 22px'>**Do not reply**</p>
+                        <p style='font-size: 20px'>Hi All,</p>
+                        <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{result.FullNameEng}</strong> for the <strong style='font-weight: bold'>{result.JobTitle}</strong> position.</p>
+                        <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={result.ApplicantId}'>https://oneejobs.oneeclick.co</a></p>
+                    </div>
+                    """;
+                await _emailService.SendEmailAsync(email, "New Job Application Received", managerBody, true);
             }
         }
     }
