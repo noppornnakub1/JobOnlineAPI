@@ -103,119 +103,113 @@ namespace JobOnlineAPI.Controllers
         private async Task<bool> ConnectToNetworkShareAsync()
         {
             if (!_useNetworkShare)
-            {
-                if (Directory.Exists(_basePath))
-                {
-                    _logger.LogInformation("Using local storage at {BasePath}", _basePath);
-                    return true;
-                }
-                _logger.LogError("Local path {BasePath} does not exist or is not accessible.", _basePath);
-                throw new DirectoryNotFoundException($"Local path {_basePath} is not accessible.");
-            }
+                return CheckLocalStorage();
 
             const int maxRetries = 3;
             const int retryDelayMs = 2000;
 
+            string serverName = $"\\\\{new Uri(_basePath).Host}";
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
                 try
                 {
-                    string serverName = $"\\\\{new Uri(_basePath).Host}";
-                    _logger.LogInformation("Attempt {Attempt}/{MaxRetries}: Disconnecting existing connections to {ServerName} and {BasePath}", attempt, maxRetries, serverName, _basePath);
+                    _logger.LogInformation("Attempt {Attempt}/{MaxRetries}: Connecting to {BasePath}", attempt, maxRetries, _basePath);
+                    DisconnectExistingConnections(serverName);
+                    bool connected = AttemptNetworkConnection();
+                    if (!connected)
+                        continue;
 
-                    int disconnectResult = WNetCancelConnection2(_basePath, 0, true);
-                    if (disconnectResult != 0 && disconnectResult != 1219)
-                    {
-                        var errorMessage = new System.ComponentModel.Win32Exception(disconnectResult).Message;
-                        _logger.LogWarning("Failed to disconnect existing connection to {BasePath}: {ErrorMessage} (Error Code: {DisconnectResult})", _basePath, errorMessage, disconnectResult);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Successfully disconnected or no existing connection to {BasePath} (Result: {DisconnectResult})", _basePath, disconnectResult);
-                    }
-
-                    disconnectResult = WNetCancelConnection2(serverName, 0, true);
-                    if (disconnectResult != 0 && disconnectResult != 1219)
-                    {
-                        var errorMessage = new System.ComponentModel.Win32Exception(disconnectResult).Message;
-                        _logger.LogWarning("Failed to disconnect existing connection to {ServerName}: {ErrorMessage} (Error Code: {DisconnectResult})", serverName, errorMessage, disconnectResult);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Successfully disconnected or no existing connection to {ServerName} (Result: {DisconnectResult})", serverName, disconnectResult);
-                    }
-
-                    NetResource netResource = new()
-                    {
-                        dwType = 1,
-                        lpRemoteName = _basePath,
-                        lpLocalName = null,
-                        lpProvider = null
-                    };
-
-                    _logger.LogInformation("Attempt {Attempt}/{MaxRetries}: Connecting to network share {BasePath} with username {Username}", attempt, maxRetries, _basePath, _username);
-
-                    int result = WNetAddConnection2(ref netResource, _password, _username, 0);
-                    if (result != 0)
-                    {
-                        var errorMessage = new System.ComponentModel.Win32Exception(result).Message;
-                        _logger.LogError("Failed to connect to network share {BasePath} with username {Username}: {ErrorMessage} (Error Code: {Result})", _basePath, _username, errorMessage, result);
-                        if (result == 1219 && attempt < maxRetries)
-                        {
-                            _logger.LogInformation("Retrying connection after delay due to ERROR_SESSION_CREDENTIAL_CONFLICT (1219)");
-                            await Task.Delay(retryDelayMs);
-                            continue;
-                        }
-                        throw new System.ComponentModel.Win32Exception(result, $"Error connecting to network share: {errorMessage}");
-                    }
-
-                    if (!Directory.Exists(_basePath))
-                    {
-                        _logger.LogError("Network share {BasePath} does not exist or is not accessible.", _basePath);
-                        throw new DirectoryNotFoundException($"Network share {_basePath} is not accessible.");
-                    }
-
+                    ValidateNetworkShare();
                     _logger.LogInformation("Successfully connected to network share: {BasePath}", _basePath);
                     return true;
                 }
-                catch (System.ComponentModel.Win32Exception win32Ex)
+                catch (System.ComponentModel.Win32Exception win32Ex) when (win32Ex.NativeErrorCode == 1219 && attempt < maxRetries)
                 {
-                    _logger.LogError(win32Ex, "Attempt {Attempt}/{MaxRetries}: Win32 error connecting to network share {BasePath}: {Message}, ErrorCode: {ErrorCode}, StackTrace: {StackTrace}", attempt, maxRetries, _basePath, win32Ex.Message, win32Ex.NativeErrorCode, win32Ex.StackTrace);
-                    if (win32Ex.NativeErrorCode == 1219 && attempt < maxRetries)
-                    {
-                        _logger.LogInformation("Retrying connection after delay due to ERROR_SESSION_CREDENTIAL_CONFLICT (1219)");
-                        await Task.Delay(retryDelayMs);
-                        continue;
-                    }
-                    throw new InvalidOperationException($"Cannot access network share {_basePath}: {win32Ex.Message}", win32Ex);
-                }
-                catch (DirectoryNotFoundException dirEx)
-                {
-                    _logger.LogError(dirEx, "Network share {BasePath} is not accessible: {Message}, StackTrace: {StackTrace}", _basePath, dirEx.Message, dirEx.StackTrace);
-                    throw;
+                    _logger.LogInformation("Retrying after delay due to ERROR_SESSION_CREDENTIAL_CONFLICT (1219)");
+                    await Task.Delay(retryDelayMs);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Attempt {Attempt}/{MaxRetries}: Cannot access network share {BasePath} with username {Username}. StackTrace: {StackTrace}", attempt, maxRetries, _basePath, _username, ex.StackTrace);
-                    if (attempt < maxRetries)
+                    if (attempt == maxRetries)
                     {
-                        _logger.LogInformation("Retrying connection after delay");
-                        await Task.Delay(retryDelayMs);
-                        continue;
+                        _logger.LogError(ex, "Failed to connect to {BasePath} after {MaxRetries} attempts", _basePath, maxRetries);
+                        throw;
                     }
-                    throw new InvalidOperationException($"Cannot access network share {_basePath}: {ex.Message}", ex);
+                    _logger.LogInformation("Retrying after delay");
+                    await Task.Delay(retryDelayMs);
                 }
             }
 
             return false;
         }
 
+        private bool CheckLocalStorage()
+        {
+            if (Directory.Exists(_basePath))
+            {
+                _logger.LogInformation("Using local storage at {BasePath}", _basePath);
+                return true;
+            }
+            _logger.LogError("Local path {BasePath} does not exist or is not accessible.", _basePath);
+            throw new DirectoryNotFoundException($"Local path {_basePath} is not accessible.");
+        }
+
+        private void DisconnectExistingConnections(string serverName)
+        {
+            DisconnectPath(_basePath);
+            DisconnectPath(serverName);
+        }
+
+        private void DisconnectPath(string path)
+        {
+            int result = WNetCancelConnection2(path, 0, true);
+            if (result != 0 && result != 1219)
+            {
+                var errorMessage = new System.ComponentModel.Win32Exception(result).Message;
+                _logger.LogWarning("Failed to disconnect {Path}: {ErrorMessage} (Error Code: {Result})", path, errorMessage, result);
+            }
+            else
+            {
+                _logger.LogInformation("Disconnected or no connection to {Path} (Result: {Result})", path, result);
+            }
+        }
+
+        private bool AttemptNetworkConnection()
+        {
+            NetResource netResource = new()
+            {
+                dwType = 1,
+                lpRemoteName = _basePath,
+                lpLocalName = null,
+                lpProvider = null
+            };
+
+            _logger.LogInformation("Connecting to {BasePath} with username {Username}", _basePath, _username);
+            int result = WNetAddConnection2(ref netResource, _password, _username, 0);
+            if (result == 0)
+                return true;
+
+            var errorMessage = new System.ComponentModel.Win32Exception(result).Message;
+            _logger.LogError("Failed to connect to {BasePath}: {ErrorMessage} (Error Code: {Result})", _basePath, errorMessage, result);
+            if (result == 1219)
+                return false;
+
+            throw new System.ComponentModel.Win32Exception(result, $"Error connecting to network share: {errorMessage}");
+        }
+
+        private void ValidateNetworkShare()
+        {
+            if (!Directory.Exists(_basePath))
+            {
+                _logger.LogError("Network share {BasePath} does not exist or is not accessible.", _basePath);
+                throw new DirectoryNotFoundException($"Network share {_basePath} is not accessible.");
+            }
+        }
+
         private void DisconnectFromNetworkShare()
         {
             if (!_useNetworkShare)
-            {
                 return;
-            }
 
             try
             {
@@ -434,25 +428,18 @@ namespace JobOnlineAPI.Controllers
 
             if (!string.IsNullOrEmpty(dbResult.ApplicantEmail))
             {
-                string applicantBody = GenerateApplicantEmailBody(
-                    dbResult.CompanyName,
-                    fullNameThai,
-                    jobTitle,
-                    firstHr?.EMAIL ?? "-",
-                    firstHr?.TELOFF ?? "-",
-                    firstHr?.NAMETHAI ?? "-"
-                );
+                string applicantBody = GenerateEmailBody(true, dbResult.CompanyName, fullNameThai, jobTitle, firstHr);
                 await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true);
             }
 
             foreach (var x in results)
             {
-                var emailStaff = (x.EMAIL ?? "").ToString();
+                var emailStaff = (x.EMAIL ?? "").Trim();
                 if (string.IsNullOrWhiteSpace(emailStaff))
                     continue;
 
-                string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle, dbResult.ApplicantId);
-                await _emailService.SendEmailAsync(emailStaff.Trim(), "ONEE Jobs - You've got the new candidate", managerBody, true);
+                string managerBody = GenerateEmailBody(false, emailStaff, fullNameThai, jobTitle, null, dbResult.ApplicantId);
+                await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true);
             }
         }
 
@@ -463,41 +450,44 @@ namespace JobOnlineAPI.Controllers
             return $"{firstNameObj?.ToString() ?? ""} {lastNameObj?.ToString() ?? ""}".Trim();
         }
 
-        private static string GenerateApplicantEmailBody(string companyName, string fullNameThai, string jobTitle, string hrEmail, string hrTel, string hrName)
+        private string GenerateEmailBody(bool isApplicant, string recipient, string fullNameThai, string jobTitle, dynamic? hr = null, int applicantId = 0)
         {
+            if (isApplicant)
+            {
+                string companyName = recipient;
+                string hrEmail = hr?.EMAIL ?? "-";
+                string hrTel = hr?.TELOFF ?? "-";
+                string hrName = hr?.NAMETHAI ?? "-";
+                return $@"
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                        <p style='margin: 0; font-weight: bold;'>{companyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                        <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
+                        <p>
+                            ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{jobTitle}</strong> ที่บริษัท <strong>{companyName}</strong> ของเรา<br>
+                            เราได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเราจะพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
+                            หากมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
+                            <span style='color: blue;'>{hrEmail}</span> หรือโทร 
+                            <span style='color: blue;'>{hrTel}</span><br>
+                            ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                        </p>
+                        <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
+                        <p style='margin: 0;'>{hrName}</p>
+                        <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                        <p style='margin: 0;'>{companyName}</p>
+                        <br>
+                        <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    </div>";
+            }
+
             return $@"
                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                    <p style='margin: 0; font-weight: bold;'>{companyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
-                    <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
-                    <p>
-                        ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{jobTitle}</strong> ที่บริษัท <strong>{companyName}</strong> ของเรา<br>
-                        เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
-                        หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
-                        <span style='color: blue;'>{hrEmail}</span> หรือโทร 
-                        <span style='color: blue;'>{hrTel}</span><br>
-                        ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
-                    </p>
-                    <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
-                    <p style='margin: 0;'>{hrName}</p>
-                    <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
-                    <p style='margin: 0;'>{companyName}</p>
-                    <br>
-                    <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                </div>";
-        }
-
-        private string GenerateManagerEmailBody(string fullNameThai, string jobTitle, int applicantId)
-        {
-            return $@"
-                <div style='font-family: Arial, sans-serif; background-color: #ęb
-                f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
                     <p style='margin: 0;'>เรียนทุกท่าน</p>
                     <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{jobTitle}</strong></p>
                     <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{jobTitle}</strong></p>
                     <p style='margin: 0;'>กรุณาคลิก Link:
-                        <a target='_blank' href='{_applicationFormUri}?id={applicantId}' 
-                        style='color: #007bff; text-decoration: underline;'>
-                        {_applicationFormUri}
+                        <a target='_blank' href='{_applicationFormUri}?id={applicantId}'
+                            style='color: #007bff; text-decoration: underline;'>
+                            {_applicationFormUri}
                         </a>
                         เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
                     </p>
@@ -528,7 +518,7 @@ namespace JobOnlineAPI.Controllers
         [HttpGet("applicantByID")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetApplicantsyById([FromQuery] int? ApplicantID)
+        public async Task<IActionResult> GetApplicantsById([FromQuery] int? ApplicantID)
         {
             try
             {
@@ -674,22 +664,22 @@ namespace JobOnlineAPI.Controllers
                 var EmailSend = emailSendObj != null ? ((JsonElement)emailSendObj).GetString() : null;
 
                 data.TryGetValue("Email", out object? requesterMailObj);
-                var requesterMail = requesterMailObj != null ? ((JsonElement)requesterMailObj).GetString() ?? "-" : "-";
+                var requesterMail = requesterMailObj?.ToString() ?? "-";
 
                 data.TryGetValue("NAMETHAI", out object? requesterNameObj);
-                var requesterName = requesterNameObj != null ? ((JsonElement)requesterNameObj).GetString() ?? "-" : "-";
+                var requesterName = requesterNameObj?.ToString() ?? "-";
 
                 data.TryGetValue("POST", out object? requesterPostObj);
-                var requesterPost = requesterPostObj != null ? ((JsonElement)requesterPostObj).GetString() ?? "-" : "-";
+                var requesterPost = requesterPostObj?.ToString() ?? "-";
 
                 data.TryGetValue("Mobile", out object? telObj);
-                var Tel = telObj != null ? ((JsonElement)telObj).GetString() ?? "-" : "-";
+                var Tel = telObj?.ToString() ?? "-";
 
                 data.TryGetValue("TELOFF", out object? telOffObj);
-                var TelOff = telOffObj != null ? ((JsonElement)telOffObj).GetString() ?? "-" : "-";
+                var TelOff = telObj?.ToString() ?? "-";
 
                 data.TryGetValue("JobTitle", out object? jobTitleObj);
-                var JobTitle = jobTitleObj != null ? ((JsonElement)jobTitleObj).GetString() ?? "-" : "-";
+                var JobTitle = jobTitleObj?.ToString() ?? "-";
 
                 using var connection = _context.CreateConnection();
                 var parameters = new DynamicParameters();
@@ -699,19 +689,17 @@ namespace JobOnlineAPI.Controllers
                 var query = "EXEC sp_UpdateApplicantStatus @ApplicantID, @Status";
                 await connection.ExecuteAsync(query, parameters);
 
-                var candidateNames = candidates != null
-                    ? candidates.Select(candidateObj =>
-                    {
-                        var candidateDict = candidateObj as IDictionary<string, object>;
-                        candidateDict.TryGetValue("title", out object? titleObj);
-                        var title = titleObj?.ToString() ?? "";
-                        candidateDict.TryGetValue("firstNameThai", out object? firstNameThaiObj);
-                        var firstNameThai = firstNameThaiObj?.ToString() ?? "";
-                        candidateDict.TryGetValue("lastNameThai", out object? lastNameThaiObj);
-                        var lastNameThai = lastNameThaiObj?.ToString() ?? "";
-                        return $"{title} {firstNameThai} {lastNameThai}".Trim();
-                    }).ToList()
-                    : [];
+                var candidateNames = candidates?.Select(candidateObj =>
+                {
+                    var candidateDict = candidateObj as IDictionary<string, object>;
+                    candidateDict.TryGetValue("title", out var titleObj);
+                    var title = titleObj?.ToString() ?? "";
+                    candidateDict.TryGetValue("firstNameThai", out var firstNameThaiObj);
+                    var firstNameThai = firstNameThaiObj?.ToString() ?? "";
+                    candidateDict.TryGetValue("lastNameThai", out var lastNameThaiObj);
+                    var lastNameThai = lastNameThaiObj?.ToString() ?? "";
+                    return $"{title} {firstNameThai} {lastNameThai}".Trim();
+                }).ToList() ?? [];
 
                 var candidateNamesString = string.Join(" ", candidateNames);
 
