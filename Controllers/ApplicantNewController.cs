@@ -511,6 +511,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to retrieve applicants: {Message}", ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -534,6 +535,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to retrieve applicant by ID {ApplicantID}: {Message}", ApplicantID, ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -569,6 +571,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to insert applicant: {Message}", ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -596,6 +599,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to retrieve candidates for department {Department} and job ID {JobId}: {Message}", department, jobId, ex.Message);
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
@@ -622,6 +626,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to retrieve applicant data for ID {ApplicantID}: {Message}", id, ex.Message);
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
@@ -676,7 +681,7 @@ namespace JobOnlineAPI.Controllers
                 var Tel = telObj?.ToString() ?? "-";
 
                 data.TryGetValue("TELOFF", out object? telOffObj);
-                var TelOff = telObj?.ToString() ?? "-";
+                var TelOff = telOffObj?.ToString() ?? "-";
 
                 data.TryGetValue("JobTitle", out object? jobTitleObj);
                 var JobTitle = jobTitleObj?.ToString() ?? "-";
@@ -747,7 +752,7 @@ namespace JobOnlineAPI.Controllers
                         }
                         catch (Exception)
                         {
-                            
+
                         }
                     }
                 }
@@ -796,7 +801,6 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating job approval status: {Message}", ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -865,7 +869,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating consent: {Message}", ex.Message);
+                _logger.LogError(ex, "Error updating consent for user ID {UserId}: {Message}", User, ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
