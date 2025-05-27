@@ -641,14 +641,46 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 if (request == null)
+                {
+                    _logger.LogWarning("Request is null in UpdateApplicantStatus");
                     return BadRequest("Request cannot be null.");
+                }
 
                 IDictionary<string, object?> data = request;
-                if (data == null || !data.TryGetValue("ApplicantID", out object? value) || !data.TryGetValue("Status", out object? statusObj))
+                if (!data.ContainsKey("ApplicantID") || !data.ContainsKey("Status"))
+                {
+                    _logger.LogWarning("Missing required fields in request: ApplicantID or Status");
                     return BadRequest("Missing required fields: ApplicantID or Status");
+                }
 
-                var applicantId = ((JsonElement)value!).GetInt32();
-                var status = ((JsonElement)statusObj!).GetString();
+                if (!data.TryGetValue("ApplicantID", out object? value) || value == null ||
+                    !data.TryGetValue("Status", out object? statusObj) || statusObj == null)
+                {
+                    _logger.LogWarning("Invalid or null values for ApplicantID or Status");
+                    return BadRequest("Invalid or null values for ApplicantID or Status");
+                }
+
+                int applicantId;
+                string? status;
+                if (value is JsonElement applicantIdElement && applicantIdElement.ValueKind == JsonValueKind.Number)
+                {
+                    applicantId = applicantIdElement.GetInt32();
+                }
+                else
+                {
+                    _logger.LogWarning("ApplicantID is not a valid integer");
+                    return BadRequest("ApplicantID must be a valid integer.");
+                }
+
+                if (statusObj is JsonElement statusElement && statusElement.ValueKind == JsonValueKind.String)
+                {
+                    status = statusElement.GetString();
+                }
+                else
+                {
+                    _logger.LogWarning("Status is not a valid string");
+                    return BadRequest("Status must be a valid string.");
+                }
 
                 if (!data.TryGetValue("Candidates", out object? candidatesObj))
                     candidatesObj = null;
@@ -667,7 +699,11 @@ namespace JobOnlineAPI.Controllers
                 }
 
                 data.TryGetValue("EmailSend", out object? emailSendObj);
-                var EmailSend = emailSendObj != null ? ((JsonElement)emailSendObj).GetString() : null;
+                string? emailSend = null;
+                if (emailSendObj is JsonElement emailSendElement && emailSendElement.ValueKind == JsonValueKind.String)
+                {
+                    emailSend = emailSendElement.GetString();
+                }
 
                 data.TryGetValue("Email", out object? requesterMailObj);
                 var requesterMail = requesterMailObj?.ToString() ?? "-";
@@ -679,13 +715,18 @@ namespace JobOnlineAPI.Controllers
                 var requesterPost = requesterPostObj?.ToString() ?? "-";
 
                 data.TryGetValue("Mobile", out object? telObj);
-                var Tel = telObj?.ToString() ?? "-";
+                var tel = telObj?.ToString() ?? "-";
 
                 data.TryGetValue("TELOFF", out object? telOffObj);
-                var TelOff = telOffObj?.ToString() ?? "-";
+                var telOff = telOffObj?.ToString() ?? "-";
 
                 data.TryGetValue(JobTitleKey, out object? jobTitleObj);
-                var JobTitle = jobTitleObj?.ToString() ?? "-";
+                string? jobTitle = null;
+                if (jobTitleObj is JsonElement jobTitleElement && jobTitleElement.ValueKind == JsonValueKind.String)
+                {
+                    jobTitle = jobTitleElement.GetString();
+                }
+                jobTitle ??= "-";
 
                 using var connection = _context.CreateConnection();
                 var parameters = new DynamicParameters();
@@ -712,11 +753,11 @@ namespace JobOnlineAPI.Controllers
                 string hrBody = $@"
                     <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
                         <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
-                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {JobTitle}</p>
+                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {jobTitle}</p>
                         <br>
                         <p style='margin: 0 0 10px 0;'>
                             เรียน ฝ่ายบุคคล<br>
-                            ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {JobTitle} จำนวน {candidates?.Count ?? 0} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
+                            ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {jobTitle} จำนวน {candidates?.Count ?? 0} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
                         </p>
                         <p style='margin: 0 0 10px 0;'>
                             จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
@@ -728,7 +769,7 @@ namespace JobOnlineAPI.Controllers
                         <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
                         <p style='margin: 0 0 10px 0;'>{requesterName}</p>
                         <p style='margin: 0 0 10px 0;'>{requesterPost}</p>
-                        <p style='margin: 0 0 10px 0;'>โทร: {Tel} ต่อ {TelOff}</p>
+                        <p style='margin: 0 0 10px 0;'>โทร: {tel} ต่อ {telOff}</p>
                         <p style='margin: 0 0 10px 0;'>อีเมล: {requesterMail}</p>
                         <br>
                         <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
@@ -776,17 +817,56 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 if (request == null)
+                {
+                    _logger.LogWarning("Request is null in UpdateJobApprovalStatus");
                     return BadRequest("Request cannot be null.");
+                }
 
                 IDictionary<string, object?> data = request;
-                if (data == null || !data.TryGetValue("JobID", out object? jobIdObj) || !data.TryGetValue("ApprovalStatus", out object? approvalStatusObj) || !data.TryGetValue("Remark", out object? remarkObj))
+                if (!data.ContainsKey("JobID") || !data.ContainsKey("ApprovalStatus") || !data.ContainsKey("Remark"))
+                {
+                    _logger.LogWarning("Missing required fields in request: JobID, ApprovalStatus, or Remark");
                     return BadRequest("Missing required fields: JobID, ApprovalStatus, or Remark");
+                }
 
-                var jobId = jobIdObj != null ? ((JsonElement)jobIdObj).GetInt32() : 0;
-                var approvalStatus = approvalStatusObj != null ? ((JsonElement)approvalStatusObj).GetString() : null;
-                var remark = remarkObj != null ? ((JsonElement)remarkObj).GetString() : null;
+                if (!data.TryGetValue("JobID", out object? jobIdObj) || jobIdObj == null ||
+                    !data.TryGetValue("ApprovalStatus", out object? approvalStatusObj) || approvalStatusObj == null ||
+                    !data.TryGetValue("Remark", out object? remarkObj))
+                {
+                    _logger.LogWarning("Invalid or null values for JobID, ApprovalStatus, or Remark");
+                    return BadRequest("Invalid or null values for JobID, ApprovalStatus, or Remark");
+                }
 
-                if (jobId == 0 || approvalStatus == null)
+                int jobId;
+                string? approvalStatus;
+                string? remark = null;
+
+                if (jobIdObj is JsonElement jobIdElement && jobIdElement.ValueKind == JsonValueKind.Number)
+                {
+                    jobId = jobIdElement.GetInt32();
+                }
+                else
+                {
+                    _logger.LogWarning("JobID is not a valid integer");
+                    return BadRequest("JobID must be a valid integer.");
+                }
+
+                if (approvalStatusObj is JsonElement approvalStatusElement && approvalStatusElement.ValueKind == JsonValueKind.String)
+                {
+                    approvalStatus = approvalStatusElement.GetString();
+                }
+                else
+                {
+                    _logger.LogWarning("ApprovalStatus is not a valid string");
+                    return BadRequest("ApprovalStatus must be a valid string.");
+                }
+
+                if (remarkObj is JsonElement remarkElement && remarkElement.ValueKind == JsonValueKind.String)
+                {
+                    remark = remarkElement.GetString();
+                }
+
+                if (jobId == 0 || string.IsNullOrEmpty(approvalStatus))
                     return BadRequest("JobID or ApprovalStatus cannot be null or invalid.");
 
                 using var connection = _context.CreateConnection();
@@ -836,18 +916,43 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 if (request == null)
+                {
+                    _logger.LogWarning("Request is null in UpdateConfirmConsent");
                     return BadRequest("Request cannot be null.");
+                }
 
                 IDictionary<string, object?> data = request;
-                if (data == null || !data.TryGetValue("UserId", out object? userIdObj) || !data.TryGetValue("confirmConsent", out object? confirmConsentObj))
+                if (!data.ContainsKey("UserId") || !data.ContainsKey("confirmConsent"))
+                {
+                    _logger.LogWarning("Missing required fields in request: UserId or ConfirmConsent");
                     return BadRequest("Missing required fields: UserId or ConfirmConsent");
+                }
 
-                var confirmConsent = confirmConsentObj != null ? ((JsonElement)confirmConsentObj).GetString() ?? string.Empty : string.Empty;
+                if (!data.TryGetValue("UserId", out object? userIdObj) || userIdObj == null ||
+                    !data.TryGetValue("confirmConsent", out object? confirmConsentObj))
+                {
+                    _logger.LogWarning("Invalid or null values for UserId or ConfirmConsent");
+                    return BadRequest("Invalid or null values for UserId or ConfirmConsent");
+                }
 
-                var userIdElement = (JsonElement)userIdObj!;
-                var userId = userIdElement.ValueKind == JsonValueKind.Number
-                    ? userIdElement.GetInt32()
-                    : int.TryParse(userIdElement.GetString(), out var id) ? id : 0;
+                string? confirmConsent = null;
+                if (confirmConsentObj is JsonElement confirmConsentElement && confirmConsentElement.ValueKind == JsonValueKind.String)
+                {
+                    confirmConsent = confirmConsentElement.GetString() ?? string.Empty;
+                }
+
+                int userId;
+                if (userIdObj is JsonElement userIdElement)
+                {
+                    userId = userIdElement.ValueKind == JsonValueKind.Number
+                        ? userIdElement.GetInt32()
+                        : int.TryParse(userIdElement.GetString(), out var id) ? id : 0;
+                }
+                else
+                {
+                    _logger.LogWarning("UserId is not a valid integer or string");
+                    return BadRequest("UserId must be a valid integer.");
+                }
 
                 if (userId == 0)
                     return BadRequest("Invalid UserId format.");
