@@ -27,7 +27,7 @@ namespace JobOnlineAPI.Controllers
         private const string JobIdKey = "JobID";
         private const string ApplicantIdKey = "ApplicantID";
 
-        private record ApplicantRequestData(
+        private sealed record ApplicantRequestData(
             int ApplicantId,
             string Status,
             List<ExpandoObject> Candidates,
