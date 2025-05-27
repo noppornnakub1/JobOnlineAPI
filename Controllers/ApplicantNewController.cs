@@ -7,6 +7,7 @@ using System.Dynamic;
 using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
+using JobOnlineAPI.Models;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -38,6 +39,11 @@ namespace JobOnlineAPI.Controllers
             string Tel,
             string TelOff,
             string JobTitle);
+
+        private sealed record JobApprovalData(
+            int JobId,
+            string ApprovalStatus,
+            string? Remark);
 
         [DllImport("mpr.dll", EntryPoint = "WNetAddConnection2W", CharSet = CharSet.Unicode)]
         private static extern int WNetAddConnection2(ref NetResource netResource, string? password, string? username, int flags);
@@ -859,68 +865,83 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest("Request cannot be null.");
                 }
 
-                IDictionary<string, object?> data = request;
-                if (!data.ContainsKey(JobIdKey) || !data.ContainsKey("ApprovalStatus") || !data.ContainsKey("Remark"))
-                {
-                    _logger.LogWarning("Missing required fields in request: JobID, ApprovalStatus, or Remark");
-                    return BadRequest("Missing required fields: JobID, ApprovalStatus, or Remark");
-                }
+                var data = (IDictionary<string, object?>)request;
+                var validationResult = ValidateJobApprovalInput(data);
+                if (validationResult != null)
+                    return validationResult;
 
-                if (!data.TryGetValue(JobIdKey, out object? jobIdObj) || jobIdObj == null ||
-                    !data.TryGetValue("ApprovalStatus", out object? approvalStatusObj) || approvalStatusObj == null ||
-                    !data.TryGetValue("Remark", out object? remarkObj))
-                {
-                    _logger.LogWarning("Invalid or null values for JobID, ApprovalStatus, or Remark");
-                    return BadRequest("Invalid or null values for JobID, ApprovalStatus, or Remark");
-                }
+                var approvalData = ExtractJobApprovalData(data);
+                if (approvalData == null)
+                    return BadRequest("Invalid JobID or ApprovalStatus format.");
 
-                int jobId;
-                string? approvalStatus;
-                string? remark = null;
-
-                if (jobIdObj is JsonElement jobIdElement && jobIdElement.ValueKind == JsonValueKind.Number)
-                {
-                    jobId = jobIdElement.GetInt32();
-                }
-                else
-                {
-                    _logger.LogWarning("JobID is not a valid integer");
-                    return BadRequest("JobID must be a valid integer.");
-                }
-
-                if (approvalStatusObj is JsonElement approvalStatusElement && approvalStatusElement.ValueKind == JsonValueKind.String)
-                {
-                    approvalStatus = approvalStatusElement.GetString();
-                }
-                else
-                {
-                    _logger.LogWarning("ApprovalStatus is not a valid string");
-                    return BadRequest("ApprovalStatus must be a valid string.");
-                }
-
-                if (remarkObj is JsonElement remarkElement && remarkElement.ValueKind == JsonValueKind.String)
-                {
-                    remark = remarkElement.GetString();
-                }
-
-                if (jobId == 0 || string.IsNullOrEmpty(approvalStatus))
-                    return BadRequest("JobID or ApprovalStatus cannot be null or invalid.");
-
-                using var connection = _context.CreateConnection();
-                var parameters = new DynamicParameters();
-                parameters.Add("@JobID", jobId);
-                parameters.Add("@ApprovalStatus", approvalStatus);
-                parameters.Add("@Remark", remark);
-
-                var query = "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus, @Remark";
-                await connection.ExecuteAsync(query, parameters);
+                await UpdateJobApprovalInDatabase(approvalData);
 
                 return Ok(new { message = "อัปเดตสถานะของงานเรียบร้อย" });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating job approval status: {Message}", ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
+        }
+
+        private BadRequestObjectResult? ValidateJobApprovalInput(IDictionary<string, object?> data)
+        {
+            if (!data.ContainsKey(JobIdKey) || !data.ContainsKey("ApprovalStatus") || !data.ContainsKey("Remark"))
+            {
+                _logger.LogWarning("Missing required fields in request: JobID, ApprovalStatus, or Remark");
+                return new BadRequestObjectResult("Missing required fields: JobID, ApprovalStatus, or Remark");
+            }
+
+            if (!data.TryGetValue(JobIdKey, out object? jobIdObj) || jobIdObj == null ||
+                !data.TryGetValue("ApprovalStatus", out object? approvalStatusObj) || approvalStatusObj == null)
+            {
+                _logger.LogWarning("Invalid or null values for JobID or ApprovalStatus");
+                return new BadRequestObjectResult("Invalid or null values for JobID or ApprovalStatus");
+            }
+
+            return null;
+        }
+
+        private JobApprovalData? ExtractJobApprovalData(IDictionary<string, object?> data)
+        {
+            if (data[JobIdKey] is not JsonElement jobIdElement || jobIdElement.ValueKind != JsonValueKind.Number ||
+                data["ApprovalStatus"] is not JsonElement approvalStatusElement || approvalStatusElement.ValueKind != JsonValueKind.String)
+            {
+                _logger.LogWarning("JobID must be an integer and ApprovalStatus must be a string");
+                return null;
+            }
+
+            int jobId = jobIdElement.GetInt32();
+            string approvalStatus = approvalStatusElement.GetString()!;
+
+            if (jobId == 0 || string.IsNullOrEmpty(approvalStatus))
+            {
+                _logger.LogWarning("JobID or ApprovalStatus cannot be null or invalid");
+                return null;
+            }
+
+            string? remark = data.TryGetValue("Remark", out object? remarkObj) &&
+                            remarkObj is JsonElement remarkElement &&
+                            remarkElement.ValueKind == JsonValueKind.String
+                ? remarkElement.GetString()
+                : null;
+
+            return new JobApprovalData(jobId, approvalStatus, remark);
+        }
+
+        private async Task UpdateJobApprovalInDatabase(JobApprovalData approvalData)
+        {
+            using var connection = _context.CreateConnection();
+            var parameters = new DynamicParameters();
+            parameters.Add("@JobID", approvalData.JobId);
+            parameters.Add("@ApprovalStatus", approvalData.ApprovalStatus);
+            parameters.Add("@Remark", approvalData.Remark);
+
+            await connection.ExecuteAsync(
+                "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus, @Remark",
+                parameters,
+                commandType: CommandType.StoredProcedure);
         }
 
         [HttpGet("GetPDPAContent")]
