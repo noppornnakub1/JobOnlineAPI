@@ -23,6 +23,8 @@ namespace JobOnlineAPI.Controllers
         private readonly bool _useNetworkShare;
         private readonly string _applicationFormUri;
 
+        private const string JobTitleKey = "JobTitle";
+
         [DllImport("mpr.dll", EntryPoint = "WNetAddConnection2W", CharSet = CharSet.Unicode)]
         private static extern int WNetAddConnection2(ref NetResource netResource, string? password, string? username, int flags);
 
@@ -419,7 +421,7 @@ namespace JobOnlineAPI.Controllers
         private async Task SendEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult)
         {
             var fullNameThai = GetFullName(req, "FirstNameThai", "LastNameThai");
-            var jobTitle = req.TryGetValue("JobTitle", out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
+            var jobTitle = req.TryGetValue(JobTitleKey, out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
 
             using var conn = _context.CreateConnection();
             var results = await conn.QueryAsync<dynamic>("sp_GetDateSendEmailV3", new { JobID = dbResult.ApplicantId }, commandType: CommandType.StoredProcedure);
@@ -682,7 +684,7 @@ namespace JobOnlineAPI.Controllers
                 data.TryGetValue("TELOFF", out object? telOffObj);
                 var TelOff = telOffObj?.ToString() ?? "-";
 
-                data.TryGetValue("JobTitle", out object? jobTitleObj);
+                data.TryGetValue(JobTitleKey, out object? jobTitleObj);
                 var JobTitle = jobTitleObj?.ToString() ?? "-";
 
                 using var connection = _context.CreateConnection();
