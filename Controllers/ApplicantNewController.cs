@@ -7,7 +7,6 @@ using System.Dynamic;
 using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
-using JobOnlineAPI.Models;
 
 namespace JobOnlineAPI.Controllers
 {
