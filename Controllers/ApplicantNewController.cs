@@ -257,15 +257,11 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 if (string.IsNullOrEmpty(jsonData))
-                {
                     return BadRequest("JSON data is required.");
-                }
 
                 var request = JsonSerializer.Deserialize<ExpandoObject>(jsonData);
-                if (request == null || request is not IDictionary<string, object?> req || !req.TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
-                {
+                if (request is not IDictionary<string, object?> req || !req.TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
                     return BadRequest("Invalid or missing JobID.");
-                }
 
                 int jobId = jobIdObj is JsonElement j && j.ValueKind == JsonValueKind.Number
                     ? j.GetInt32()
@@ -274,214 +270,12 @@ namespace JobOnlineAPI.Controllers
                 await ConnectToNetworkShareAsync();
                 try
                 {
-                    var fileMetadatas = new List<Dictionary<string, object>>();
+                    var fileMetadatas = await ProcessFilesAsync(files);
+                    var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
+                    MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
+                    await SendEmailsAsync(req, dbResult);
 
-                    if (files != null && files.Count != 0)
-                    {
-                        foreach (var file in files)
-                        {
-                            if (file.Length == 0)
-                            {
-                                _logger.LogWarning("Skipping empty file: {FileName}", file.FileName);
-                                continue;
-                            }
-
-                            var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".png", ".jpg" };
-                            var extension = Path.GetExtension(file.FileName).ToLower();
-                            if (!allowedExtensions.Contains(extension))
-                            {
-                                return BadRequest($"Invalid file type for {file.FileName}. Only PNG, JPG, PDF, DOC, and DOCX are allowed.");
-                            }
-
-                            var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-                            var filePath = Path.Combine(_basePath, fileName);
-                            var physicalPath = _useNetworkShare ? filePath : filePath;
-
-                            var directoryPath = Path.GetDirectoryName(physicalPath);
-                            if (string.IsNullOrEmpty(directoryPath))
-                            {
-                                _logger.LogError("Invalid directory path for: {PhysicalPath}", physicalPath);
-                                throw new InvalidOperationException($"Invalid directory path for: {physicalPath}");
-                            }
-
-                            Directory.CreateDirectory(directoryPath);
-
-                            using (var stream = new FileStream(physicalPath, FileMode.Create))
-                            {
-                                await file.CopyToAsync(stream);
-                            }
-
-                            fileMetadatas.Add(new Dictionary<string, object>
-                            {
-                                { "FilePath", filePath.Replace('\\', '/') },
-                                { "FileName", fileName },
-                                { "FileSize", file.Length },
-                                { "FileType", file.ContentType }
-                            });
-                        }
-                    }
-
-                    using var conn = _context.CreateConnection();
-                    var param = new DynamicParameters();
-
-                    string[] listKeys = ["EducationList", "WorkExperienceList", "SkillsList"];
-                    foreach (var key in listKeys)
-                    {
-                        if (req.TryGetValue(key, out var val) && val is JsonElement je && je.ValueKind == JsonValueKind.Array)
-                        {
-                            param.Add(key, je.GetRawText());
-                            req.Remove(key);
-                        }
-                        else
-                        {
-                            param.Add(key, "[]");
-                        }
-                    }
-
-                    param.Add("JsonInput", JsonSerializer.Serialize(req));
-                    param.Add("EducationList", param.Get<string>("EducationList"));
-                    param.Add("WorkExperienceList", param.Get<string>("WorkExperienceList"));
-                    param.Add("SkillsList", param.Get<string>("SkillsList"));
-                    param.Add("FilesList", JsonSerializer.Serialize(fileMetadatas));
-                    param.Add("JobID", jobId);
-                    param.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
-                    param.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
-                    param.Add("HRManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-                    param.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-                    param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
-                    param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
-
-                    await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
-
-                    var applicantId = param.Get<int>("ApplicantID");
-                    var applicantEmail = param.Get<string>("ApplicantEmail");
-                    var hrManagerEmails = param.Get<string>("HRManagerEmails");
-                    var jobManagerEmails = param.Get<string>("JobManagerEmails");
-                    var jobTitle = param.Get<string>("JobTitle");
-                    var companyName = param.Get<string>("CompanyName");
-
-                    if (fileMetadatas.Count != 0 && applicantId > 0)
-                    {
-                        var applicantPath = Path.Combine(_basePath, $"applicant_{applicantId}");
-                        if (Directory.Exists(applicantPath))
-                        {
-                            foreach (var oldFile in Directory.GetFiles(applicantPath))
-                            {
-                                System.IO.File.Delete(oldFile);
-                                _logger.LogInformation("Deleted old file in directory: {OldFile}", oldFile);
-                            }
-                        }
-                        else
-                        {
-                            Directory.CreateDirectory(applicantPath);
-                            _logger.LogInformation("Created applicant directory: {ApplicantPath}", applicantPath);
-                        }
-
-                        foreach (var metadata in fileMetadatas)
-                        {
-                            var oldFilePath = metadata["FilePath"]?.ToString();
-                            if (string.IsNullOrEmpty(oldFilePath))
-                            {
-                                _logger.LogWarning("Skipping file with null or empty FilePath in metadata: {Metadata}", JsonSerializer.Serialize(metadata));
-                                continue;
-                            }
-
-                            var fileName = metadata["FileName"]?.ToString();
-                            if (string.IsNullOrEmpty(fileName))
-                            {
-                                _logger.LogWarning("Skipping file with invalid FileName in metadata: {Metadata}", JsonSerializer.Serialize(metadata));
-                                continue;
-                            }
-
-                            var newFilePath = Path.Combine(_basePath, $"applicant_{applicantId}", fileName);
-                            var newPhysicalPath = _useNetworkShare ? newFilePath : newFilePath;
-                            var oldPhysicalPath = _useNetworkShare ? oldFilePath : oldFilePath;
-
-                            if (System.IO.File.Exists(oldPhysicalPath))
-                            {
-                                System.IO.File.Move(oldPhysicalPath, newPhysicalPath, overwrite: true);
-                                _logger.LogInformation("Moved file from {OldPhysicalPath} to {NewPhysicalPath}", oldPhysicalPath, newPhysicalPath);
-                            }
-                            else
-                            {
-                                _logger.LogWarning("File not found for moving: {OldPhysicalPath}", oldPhysicalPath);
-                                continue;
-                            }
-                        }
-                    }
-
-                    req.TryGetValue("FirstNameThai", out var firstNameThaiObj);
-                    req.TryGetValue("LastNameThai", out var lastNameThaiObj);
-                    req.TryGetValue("FirstNameEng", out var firstNameEngObj);
-                    req.TryGetValue("LastNameEng", out var lastNameEngObj);
-
-                    var fullNameThai = $"{firstNameThaiObj?.ToString() ?? ""} {lastNameThaiObj?.ToString() ?? ""}".Trim();
-                    var fullNameEng = $"{firstNameEngObj?.ToString() ?? ""} {lastNameEngObj?.ToString() ?? ""}".Trim();
-                    string JobTitle = req.TryGetValue("JobTitle", out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
-
-                    var results = await conn.QueryAsync<dynamic>(
-                        "sp_GetDateSendEmailV3",
-                        new { JobID = jobId },
-                        commandType: CommandType.StoredProcedure
-                    );
-                    var firstHr = results.FirstOrDefault(x => Convert.ToInt32(x.Role) == 2);
-                    string Tel = firstHr?.TELOFF ?? "-";
-                    string resultMail = firstHr?.EMAIL ?? "-";
-                    string CompanyName = firstHr?.COMPANY_NAME ?? "-";
-                    string POST = firstHr?.POST ?? "-";
-                    string hrName = firstHr?.NAMETHAI ?? "-";
-
-                    if (!string.IsNullOrEmpty(applicantEmail))
-                    {
-                        string applicantBody = $@"
-                            <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                                <p style='margin: 0; font-weight: bold;'>{CompanyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
-                                <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
-                                <p>
-                                    ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{JobTitle}</strong> ที่บริษัท <strong>{CompanyName}</strong> ของเรา<br>
-                                    เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
-                                    หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
-                                    <span style='color: blue;'>{resultMail}</span> หรือโทร 
-                                    <span style='color: blue;'>{Tel}</span><br>
-                                    ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
-                                </p>
-                                <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
-                                <p style='margin: 0;'>{hrName}</p>
-                                <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
-                                <p style='margin: 0;'>{CompanyName}</p>
-                                <br>
-                                <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                            </div>";
-                        await _emailService.SendEmailAsync(applicantEmail, "Application Received", applicantBody, true);
-                    }
-
-                    foreach (var x in results)
-                    {
-                        var emailStaff = (x.EMAIL ?? "").ToString();
-                        var posterName = (x.NAMETHAI ?? "-").ToString();
-                        var postName = (x.POST ?? "-").ToString();
-
-                        if (!string.IsNullOrWhiteSpace(emailStaff))
-                        {
-                            string managerBody = $@"
-                                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                                    <p style='margin: 0;'>เรียนทุกท่าน</p>
-                                    <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{JobTitle}</strong></p>
-                                    <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{JobTitle}</strong></p>
-                                    <p style='margin: 0;'>กรุณาคลิก Link:
-                                        <a target='_blank' href='{_applicationFormUri}?id={applicantId}' 
-                                        style='color: #007bff; text-decoration: underline;'>
-                                        {_applicationFormUri}
-                                        </a>
-                                        เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
-                                    </p>
-                                    <br>
-                                    <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                                </div>";
-                            await _emailService.SendEmailAsync(emailStaff.Trim(), "ONEE Jobs - You've got the new candidate", managerBody, true);
-                        }
-                    }
-                    return Ok(new { ApplicantID = applicantId, Message = "Application and files submitted successfully." });
+                    return Ok(new { ApplicantID = dbResult.ApplicantId, Message = "Application and files submitted successfully." });
                 }
                 finally
                 {
@@ -495,19 +289,221 @@ namespace JobOnlineAPI.Controllers
             }
             catch (System.ComponentModel.Win32Exception win32Ex)
             {
-                _logger.LogError(win32Ex, "Win32 error processing application with files: {Message}, ErrorCode: {ErrorCode}, StackTrace: {StackTrace}", win32Ex.Message, win32Ex.NativeErrorCode, win32Ex.StackTrace);
+                _logger.LogError(win32Ex, "Win32 error: {Message}, ErrorCode: {ErrorCode}", win32Ex.Message, win32Ex.NativeErrorCode);
                 return StatusCode(500, new { Error = "Server error", win32Ex.Message, ErrorCode = win32Ex.NativeErrorCode });
             }
             catch (DirectoryNotFoundException dirEx)
             {
-                _logger.LogError(dirEx, "Network share not accessible: {Message}, StackTrace: {StackTrace}", dirEx.Message, dirEx.StackTrace);
+                _logger.LogError(dirEx, "Network share not accessible: {Message}", dirEx.Message);
                 return StatusCode(500, new { Error = "Server error", dirEx.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing application with files: {Message}, StackTrace: {StackTrace}", ex.Message, ex.StackTrace);
+                _logger.LogError(ex, "Error processing application: {Message}", ex.Message);
                 return StatusCode(500, new { Error = "Server error", ex.Message });
             }
+        }
+
+        private async Task<List<Dictionary<string, object>>> ProcessFilesAsync(IFormFileCollection files)
+        {
+            var fileMetadatas = new List<Dictionary<string, object>>();
+            if (files == null || files.Count == 0)
+                return fileMetadatas;
+
+            var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".png", ".jpg" };
+            foreach (var file in files)
+            {
+                if (file.Length == 0)
+                {
+                    _logger.LogWarning("Skipping empty file: {FileName}", file.FileName);
+                    continue;
+                }
+
+                var extension = Path.GetExtension(file.FileName).ToLower();
+                if (!allowedExtensions.Contains(extension))
+                    throw new InvalidOperationException($"Invalid file type for {file.FileName}. Only PNG, JPG, PDF, DOC, and DOCX are allowed.");
+
+                var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+                var filePath = Path.Combine(_basePath, fileName);
+                var directoryPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException($"Invalid directory path for: {filePath}");
+
+                Directory.CreateDirectory(directoryPath);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                fileMetadatas.Add(new Dictionary<string, object>
+                {
+                    { "FilePath", filePath.Replace('\\', '/') },
+                    { "FileName", fileName },
+                    { "FileSize", file.Length },
+                    { "FileType", file.ContentType }
+                });
+            }
+
+            return fileMetadatas;
+        }
+
+        private async Task<(int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName)> SaveApplicationToDatabaseAsync(IDictionary<string, object?> req, int jobId, List<Dictionary<string, object>> fileMetadatas)
+        {
+            using var conn = _context.CreateConnection();
+            var param = new DynamicParameters();
+
+            string[] listKeys = ["EducationList", "WorkExperienceList", "SkillsList"];
+            foreach (var key in listKeys)
+            {
+                param.Add(key, req.TryGetValue(key, out var val) && val is JsonElement je && je.ValueKind == JsonValueKind.Array
+                    ? je.GetRawText()
+                    : "[]");
+            }
+
+            param.Add("JsonInput", JsonSerializer.Serialize(req));
+            param.Add("FilesList", JsonSerializer.Serialize(fileMetadatas));
+            param.Add("JobID", jobId);
+            param.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            param.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
+            param.Add("HRManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+            param.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+            param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
+            param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
+
+            await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
+
+            return (
+                param.Get<int>("ApplicantID"),
+                param.Get<string>("ApplicantEmail"),
+                param.Get<string>("HRManagerEmails"),
+                param.Get<string>("JobManagerEmails"),
+                param.Get<string>("JobTitle"),
+                param.Get<string>("CompanyName")
+            );
+        }
+
+        private void MoveFilesToApplicantDirectory(int applicantId, List<Dictionary<string, object>> fileMetadatas)
+        {
+            if (fileMetadatas.Count == 0 || applicantId <= 0)
+                return;
+
+            var applicantPath = Path.Combine(_basePath, $"applicant_{applicantId}");
+            if (!Directory.Exists(applicantPath))
+            {
+                Directory.CreateDirectory(applicantPath);
+                _logger.LogInformation("Created applicant directory: {ApplicantPath}", applicantPath);
+            }
+            else
+            {
+                foreach (var oldFile in Directory.GetFiles(applicantPath))
+                {
+                    System.IO.File.Delete(oldFile);
+                    _logger.LogInformation("Deleted old file: {OldFile}", oldFile);
+                }
+            }
+
+            foreach (var metadata in fileMetadatas)
+            {
+                var oldFilePath = metadata.GetValueOrDefault("FilePath")?.ToString();
+                var fileName = metadata.GetValueOrDefault("FileName")?.ToString();
+                if (string.IsNullOrEmpty(oldFilePath) || string.IsNullOrEmpty(fileName))
+                {
+                    _logger.LogWarning("Skipping file with invalid metadata: {Metadata}", JsonSerializer.Serialize(metadata));
+                    continue;
+                }
+
+                var newFilePath = Path.Combine(applicantPath, fileName);
+                if (System.IO.File.Exists(oldFilePath))
+                {
+                    System.IO.File.Move(oldFilePath, newFilePath, overwrite: true);
+                    _logger.LogInformation("Moved file from {OldFilePath} to {NewFilePath}", oldFilePath, newFilePath);
+                }
+                else
+                {
+                    _logger.LogWarning("File not found for moving: {OldFilePath}", oldFilePath);
+                }
+            }
+        }
+
+        private async Task SendEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult)
+        {
+            var fullNameThai = GetFullName(req, "FirstNameThai", "LastNameThai");
+            var jobTitle = req.TryGetValue("JobTitle", out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
+
+            using var conn = _context.CreateConnection();
+            var results = await conn.QueryAsync<dynamic>("sp_GetDateSendEmailV3", new { JobID = dbResult.ApplicantId }, commandType: CommandType.StoredProcedure);
+            var firstHr = results.FirstOrDefault(x => Convert.ToInt32(x.Role) == 2);
+
+            if (!string.IsNullOrEmpty(dbResult.ApplicantEmail))
+            {
+                string applicantBody = GenerateApplicantEmailBody(
+                    dbResult.CompanyName,
+                    fullNameThai,
+                    jobTitle,
+                    firstHr?.EMAIL ?? "-",
+                    firstHr?.TELOFF ?? "-",
+                    firstHr?.NAMETHAI ?? "-"
+                );
+                await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true);
+            }
+
+            foreach (var x in results)
+            {
+                var emailStaff = (x.EMAIL ?? "").ToString();
+                if (string.IsNullOrWhiteSpace(emailStaff))
+                    continue;
+
+                string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle, dbResult.ApplicantId);
+                await _emailService.SendEmailAsync(emailStaff.Trim(), "ONEE Jobs - You've got the new candidate", managerBody, true);
+            }
+        }
+
+        private static string GetFullName(IDictionary<string, object?> req, string firstNameKey, string lastNameKey)
+        {
+            req.TryGetValue(firstNameKey, out var firstNameObj);
+            req.TryGetValue(lastNameKey, out var lastNameObj);
+            return $"{firstNameObj?.ToString() ?? ""} {lastNameObj?.ToString() ?? ""}".Trim();
+        }
+
+        private static string GenerateApplicantEmailBody(string companyName, string fullNameThai, string jobTitle, string hrEmail, string hrTel, string hrName)
+        {
+            return $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                    <p style='margin: 0; font-weight: bold;'>{companyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                    <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
+                    <p>
+                        ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{jobTitle}</strong> ที่บริษัท <strong>{companyName}</strong> ของเรา<br>
+                        เราขอยืนยันว่าได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเรากำลังพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
+                        หากท่านมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
+                        <span style='color: blue;'>{hrEmail}</span> หรือโทร 
+                        <span style='color: blue;'>{hrTel}</span><br>
+                        ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                    </p>
+                    <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
+                    <p style='margin: 0;'>{hrName}</p>
+                    <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                    <p style='margin: 0;'>{companyName}</p>
+                    <br>
+                    <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
+        }
+
+        private string GenerateManagerEmailBody(string fullNameThai, string jobTitle, int applicantId)
+        {
+            return $@"
+                <div style='font-family: Arial, sans-serif; background-color: #ęb
+                f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                    <p style='margin: 0;'>เรียนทุกท่าน</p>
+                    <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{jobTitle}</strong></p>
+                    <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{jobTitle}</strong></p>
+                    <p style='margin: 0;'>กรุณาคลิก Link:
+                        <a target='_blank' href='{_applicationFormUri}?id={applicantId}' 
+                        style='color: #007bff; text-decoration: underline;'>
+                        {_applicationFormUri}
+                        </a>
+                        เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
+                    </p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
         }
 
         [HttpGet("applicant")]
