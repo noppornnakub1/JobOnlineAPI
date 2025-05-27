@@ -7,7 +7,6 @@ using System.Dynamic;
 using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
-using JobOnlineAPI.Models;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -26,6 +25,7 @@ namespace JobOnlineAPI.Controllers
 
         private const string JobTitleKey = "JobTitle";
         private const string JobIdKey = "JobID";
+        private const string ApplicantIdKey = "ApplicantID";
 
         [DllImport("mpr.dll", EntryPoint = "WNetAddConnection2W", CharSet = CharSet.Unicode)]
         private static extern int WNetAddConnection2(ref NetResource netResource, string? password, string? username, int flags);
@@ -522,23 +522,23 @@ namespace JobOnlineAPI.Controllers
         [HttpGet("applicantByID")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetApplicantsById([FromQuery] int? ApplicantID)
+        public async Task<IActionResult> GetApplicantsById([FromQuery] int? applicantId)
         {
             try
             {
                 using var connection = _context.CreateConnection();
                 var parameters = new DynamicParameters();
 
-                parameters.Add("@ApplicantID", ApplicantID);
+                parameters.Add($"@{ApplicantIdKey}", applicantId);
 
-                var query = "EXEC spGetAllApplicantsWithJobDetailsNew @ApplicantID";
+                var query = $"EXEC spGetAllApplicantsWithJobDetailsNew @{ApplicantIdKey}";
                 var applicants = await connection.QueryAsync(query, parameters);
 
                 return Ok(applicants);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve applicant by ID {ApplicantID}: {Message}", ApplicantID, ex.Message);
+                _logger.LogError(ex, "Failed to retrieve applicant by ID {ApplicantId}: {Message}", applicantId, ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -617,7 +617,7 @@ namespace JobOnlineAPI.Controllers
                 using var connection = _context.CreateConnection();
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@ApplicantID", id);
+                parameters.Add($"@{ApplicantIdKey}", id);
 
                 var result = await connection.QueryAsync(
                     "sp_GetApplicantDataV2",
@@ -629,7 +629,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve applicant data for ID {ApplicantID}: {Message}", id, ex.Message);
+                _logger.LogError(ex, "Failed to retrieve applicant data for ID {ApplicantId}: {Message}", id, ex.Message);
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
@@ -649,13 +649,13 @@ namespace JobOnlineAPI.Controllers
                 }
 
                 IDictionary<string, object?> data = request;
-                if (!data.ContainsKey("ApplicantID") || !data.ContainsKey("Status"))
+                if (!data.ContainsKey(ApplicantIdKey) || !data.ContainsKey("Status"))
                 {
                     _logger.LogWarning("Missing required fields in request: ApplicantID or Status");
                     return BadRequest("Missing required fields: ApplicantID or Status");
                 }
 
-                if (!data.TryGetValue("ApplicantID", out object? value) || value == null ||
+                if (!data.TryGetValue(ApplicantIdKey, out object? value) || value == null ||
                     !data.TryGetValue("Status", out object? statusObj) || statusObj == null)
                 {
                     _logger.LogWarning("Invalid or null values for ApplicantID or Status");
