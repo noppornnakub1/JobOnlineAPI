@@ -125,7 +125,6 @@ namespace JobOnlineAPI.Controllers
                 }
                 catch (System.ComponentModel.Win32Exception win32Ex) when (win32Ex.NativeErrorCode == 1219 && attempt < maxRetries)
                 {
-                    _logger.LogInformation("Retrying after delay due to ERROR_SESSION_CREDENTIAL_CONFLICT (1219)");
                     await Task.Delay(retryDelayMs);
                 }
                 catch (Exception ex)
