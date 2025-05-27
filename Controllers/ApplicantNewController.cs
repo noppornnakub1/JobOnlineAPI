@@ -135,7 +135,7 @@ namespace JobOnlineAPI.Controllers
                         _logger.LogError(ex, "Failed to connect to {BasePath} after {MaxRetries} attempts", _basePath, maxRetries);
                         throw;
                     }
-                    _logger.LogInformation("Retrying after delay");
+                    _logger.LogWarning(ex, "Retrying after delay for {BasePath}", _basePath);
                     await Task.Delay(retryDelayMs);
                 }
             }
@@ -752,7 +752,7 @@ namespace JobOnlineAPI.Controllers
                         }
                         catch (Exception)
                         {
-
+                            
                         }
                     }
                 }
