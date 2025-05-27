@@ -7,6 +7,7 @@ using System.Dynamic;
 using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
+using JobOnlineAPI.Models;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -24,6 +25,7 @@ namespace JobOnlineAPI.Controllers
         private readonly string _applicationFormUri;
 
         private const string JobTitleKey = "JobTitle";
+        private const string JobIdKey = "JobID";
 
         [DllImport("mpr.dll", EntryPoint = "WNetAddConnection2W", CharSet = CharSet.Unicode)]
         private static extern int WNetAddConnection2(ref NetResource netResource, string? password, string? username, int flags);
@@ -255,7 +257,7 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest("JSON data is required.");
 
                 var request = JsonSerializer.Deserialize<ExpandoObject>(jsonData);
-                if (request is not IDictionary<string, object?> req || !req.TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
+                if (request is not IDictionary<string, object?> req || !req.TryGetValue(JobIdKey, out var jobIdObj) || jobIdObj == null)
                     return BadRequest("Invalid or missing JobID.");
 
                 int jobId = jobIdObj is JsonElement j && j.ValueKind == JsonValueKind.Number
@@ -823,13 +825,13 @@ namespace JobOnlineAPI.Controllers
                 }
 
                 IDictionary<string, object?> data = request;
-                if (!data.ContainsKey("JobID") || !data.ContainsKey("ApprovalStatus") || !data.ContainsKey("Remark"))
+                if (!data.ContainsKey(JobIdKey) || !data.ContainsKey("ApprovalStatus") || !data.ContainsKey("Remark"))
                 {
                     _logger.LogWarning("Missing required fields in request: JobID, ApprovalStatus, or Remark");
                     return BadRequest("Missing required fields: JobID, ApprovalStatus, or Remark");
                 }
 
-                if (!data.TryGetValue("JobID", out object? jobIdObj) || jobIdObj == null ||
+                if (!data.TryGetValue(JobIdKey, out object? jobIdObj) || jobIdObj == null ||
                     !data.TryGetValue("ApprovalStatus", out object? approvalStatusObj) || approvalStatusObj == null ||
                     !data.TryGetValue("Remark", out object? remarkObj))
                 {
