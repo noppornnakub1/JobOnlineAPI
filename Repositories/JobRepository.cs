@@ -106,20 +106,17 @@ namespace JobOnlineAPI.Repositories
 
             int successCount = 0;
             int failCount = 0;
-            foreach (var staff in staffList)
+            foreach (var staff in staffList.Where(s => !string.IsNullOrWhiteSpace(s.Email)))
             {
-                if (!string.IsNullOrWhiteSpace(staff.Email))
+                try
                 {
-                    try
-                    {
-                        await _emailService.SendEmailAsync(staff.Email, "New Job Application", hrBody, true);
-                        successCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failCount++;
-                        Console.WriteLine($"❌ Failed to send email to {staff.Email}: {ex.Message}");
-                    }
+                    await _emailService.SendEmailAsync(staff.Email!, "New Job Application", hrBody, true);
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    failCount++;
+                    Console.WriteLine($"❌ Failed to send email to {staff.Email}: {ex.Message}");
                 }
             }
         }
