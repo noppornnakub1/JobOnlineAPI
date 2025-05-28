@@ -48,9 +48,6 @@ namespace JobOnlineAPI.Filters
                     context.Result = new BadRequestObjectResult(new { message = "Invalid token: 'sub' claim format is incorrect" });
                     return;
                 }
-
-                string cn = parts[0];
-                string samAccountName = parts[1];
             }
             catch (SecurityTokenMalformedException ex)
             {
