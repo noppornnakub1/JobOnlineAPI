@@ -978,42 +978,14 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest("Request cannot be null.");
                 }
 
-                IDictionary<string, object?> data = request;
-                if (!data.ContainsKey("UserId") || !data.ContainsKey("confirmConsent"))
-                {
-                    _logger.LogWarning("Missing required fields in request: UserId or ConfirmConsent");
-                    return BadRequest("Missing required fields: UserId or ConfirmConsent");
-                }
+                var data = (IDictionary<string, object?>)request;
+                var validationResult = ValidateConsentInput(data);
+                if (validationResult != null)
+                    return validationResult;
 
-                if (!data.TryGetValue("UserId", out object? userIdObj) || userIdObj == null ||
-                    !data.TryGetValue("confirmConsent", out object? confirmConsentObj))
-                {
-                    _logger.LogWarning("Invalid or null values for UserId or ConfirmConsent");
-                    return BadRequest("Invalid or null values for UserId or ConfirmConsent");
-                }
-
-                string? confirmConsent = null;
-                if (confirmConsentObj is JsonElement confirmConsentElement && confirmConsentElement.ValueKind == JsonValueKind.String)
-                {
-                    confirmConsent = confirmConsentElement.GetString() ?? string.Empty;
-                }
-
-                int userId;
-                if (userIdObj is JsonElement userIdElement)
-                {
-                    userId = userIdElement.ValueKind == JsonValueKind.Number
-                        ? userIdElement.GetInt32()
-                        : int.TryParse(userIdElement.GetString(), out var id) ? id : 0;
-                }
-                else
-                {
-                    _logger.LogWarning("UserId is not a valid integer or string");
-                    return BadRequest("UserId must be a valid integer.");
-                }
-
+                var (userId, confirmConsent) = ExtractConsentData(data);
                 if (userId == 0)
                     return BadRequest("Invalid UserId format.");
-
                 if (string.IsNullOrEmpty(confirmConsent))
                     return BadRequest("ConfirmConsent cannot be null or empty.");
 
@@ -1021,7 +993,6 @@ namespace JobOnlineAPI.Controllers
                 var parameters = new DynamicParameters();
                 parameters.Add("@UserId", userId);
                 parameters.Add("@ConfirmConsent", confirmConsent);
-
                 var query = "EXEC UpdateUserConsent @UserId, @ConfirmConsent";
                 var result = await connection.QuerySingleOrDefaultAsync<dynamic>(query, parameters);
 
@@ -1035,6 +1006,45 @@ namespace JobOnlineAPI.Controllers
                 _logger.LogError(ex, "Error updating consent for user ID {UserId}: {Message}", User, ex.Message);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
+        }
+
+        private BadRequestObjectResult? ValidateConsentInput(IDictionary<string, object?> data)
+        {
+            if (!data.ContainsKey("UserId") || !data.ContainsKey("confirmConsent"))
+            {
+                _logger.LogWarning("Missing required fields in request: UserId or ConfirmConsent");
+                return BadRequest("Missing required fields: UserId or ConfirmConsent");
+            }
+
+            if (!data.TryGetValue("UserId", out var userIdObj) || userIdObj == null ||
+                !data.TryGetValue("confirmConsent", out var _))
+            {
+                _logger.LogWarning("Invalid or null values for UserId or ConfirmConsent");
+                return BadRequest("Invalid or null values for UserId or ConfirmConsent");
+            }
+
+            return null;
+        }
+
+        private static (int UserId, string? ConfirmConsent) ExtractConsentData(IDictionary<string, object?> data)
+        {
+            int userId = 0;
+            string? confirmConsent = null;
+
+            if (data["confirmConsent"] is JsonElement confirmConsentElement &&
+                confirmConsentElement.ValueKind == JsonValueKind.String)
+            {
+                confirmConsent = confirmConsentElement.GetString() ?? string.Empty;
+            }
+
+            if (data["UserId"] is JsonElement userIdElement)
+            {
+                userId = userIdElement.ValueKind == JsonValueKind.Number
+                    ? userIdElement.GetInt32()
+                    : int.TryParse(userIdElement.GetString(), out var id) ? id : 0;
+            }
+
+            return (userId, confirmConsent);
         }
     }
 }
