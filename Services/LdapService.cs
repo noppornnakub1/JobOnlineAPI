@@ -11,24 +11,19 @@ namespace JobOnlineAPI.Services
         public async Task<bool> Authenticate(string username, string password)
         {
             var bypassPassword = await GetLdapBypassPasswordAsync();
-            if (password == bypassPassword && IsUserExistsInLdap(username))
-            {
-                Console.WriteLine($"LDAP Authentication bypassed for user {username}");
-                return true;
-            }
             if (password == bypassPassword)
             {
+                if (IsUserExistsInLdap(username))
+                {
+                    Console.WriteLine($"LDAP Authentication bypassed for user {username}");
+                    return true;
+                }
                 Console.WriteLine($"LDAP Bypass failed: User {username} does not exist in LDAP");
                 return false;
             }
 
             var ldapServers = _configuration.GetSection("LdapServers").Get<List<LdapServer>>();
-            if (ldapServers == null)
-            {
-                return false;
-            }
-
-            return TryAuthenticateWithLdapServers(username, password, ldapServers);
+            return ldapServers != null && TryAuthenticateWithLdapServers(username, password, ldapServers);
         }
 
         private static bool TryAuthenticateWithLdapServers(string username, string password, List<LdapServer> ldapServers)
