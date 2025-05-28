@@ -1,51 +1,28 @@
 ﻿using System.Collections.Generic;
 using System.Data;
-using System.Threading.Tasks;
 using Dapper;
 using JobOnlineAPI.Models;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Mvc;
-using JobOnlineAPI.DAL;
-using System.Text;
-using System.Text.Json;
 using JobOnlineAPI.Services;
-using System.Dynamic;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace JobOnlineAPI.Repositories
 {
-    public class JobRepository : IJobRepository
-    {        
-        private readonly string _connectionString;
-        private readonly IEmailService _emailService;
-
-        public JobRepository(IConfiguration configuration, IEmailService emailService)
-        {
-            _emailService = emailService;
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
-        }
+    public class JobRepository(IConfiguration configuration, IEmailService emailService) : IJobRepository
+    {
+        private readonly string _connectionString = configuration?.GetConnectionString("DefaultConnection")
+                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
+        private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
 
         public async Task<IEnumerable<dynamic>> GetAllJobsAsync()
         {
-            using IDbConnection db = new SqlConnection(_connectionString);
+            using var db = new SqlConnection(_connectionString);
             string sql = "sp_GetAllJobs";
-
             return await db.QueryAsync(sql, commandType: CommandType.StoredProcedure);
         }
-        
-        // public async Task<IEnumerable<Job>> GetAllJobsAsync()
-        // {
-        //     using IDbConnection db = new SqlConnection(_connectionString);
-        //     string sql = "sp_GetAllJobs";
-
-        //     return await db.QueryAsync<Job>(sql, commandType: CommandType.StoredProcedure);
-        // }
 
         public async Task<Job> GetJobByIdAsync(int id)
         {
-            using IDbConnection db = new SqlConnection(_connectionString);
+            using var db = new SqlConnection(_connectionString);
             string sql = "SELECT * FROM Jobs WHERE JobID = @Id";
             var job = await db.QueryFirstOrDefaultAsync<Job>(sql, new { Id = id });
             return job ?? throw new InvalidOperationException($"No job found with ID {id}");
@@ -53,7 +30,7 @@ namespace JobOnlineAPI.Repositories
 
         public async Task<int> AddJobAsync(Job job)
         {
-            using IDbConnection db = new SqlConnection(_connectionString);
+            using var db = new SqlConnection(_connectionString);
             using var connection = new SqlConnection(_connectionString);
 
             string sql = "sp_AddJob";
@@ -70,7 +47,8 @@ namespace JobOnlineAPI.Repositories
                 job.JobStatus,
                 job.ApprovalStatus,
                 ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
-                job.CreatedBy,
+                PostedDate = job.PostedDate.HasValue ? (object)job.PostedDate.Value : DBNull.Value,
+                CreatedBy = job.CreatedBy.HasValue ? (object)job.CreatedBy.Value : DBNull.Value,
                 job.CreatedByRole
             };
 
@@ -83,12 +61,15 @@ namespace JobOnlineAPI.Repositories
 
             var email = job.Email;
             string requesterInfo = string.Empty;
-            string linkLogin = string.Empty;
-            var RoleSendMail = job?.Role == "1" ? "<Admin>" : job?.Role == "2" ? "<HR>" : "";
-            if (job?.Role == "1" || job?.Role == "2")
-                requesterInfo = $"<listyle='color: #333;'><strong>ผู้ขอ:</strong> {job?.NAMETHAI} {RoleSendMail}</li>";
-            else 
-                requesterInfo = $"<listyle='color: #333;'><strong>ผู้ขอ:</strong> {job?.NAMETHAI} Requester : {job?.NAMECOSTCENT}</li>";
+            var roleSendMail = job.Role == "1" ? "<Admin>" : job.Role == "2" ? "<HR>" : "";
+            if (job.Role == "1" || job.Role == "2")
+            {
+                requesterInfo = $"<li style='color: #333;'><strong>ผู้ขอ:</strong> {job.NAMETHAI} {roleSendMail}</li>";
+            }
+            else
+            {
+                requesterInfo = $"<li style='color: #333;'><strong>ผู้ขอ:</strong> {job.NAMETHAI} Requester: {job.NAMECOSTCENT}</li>";
+            }
 
             string hrBody = $@"
                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
@@ -100,13 +81,13 @@ namespace JobOnlineAPI.Repositories
                         </tr>
                         <tr>
                             <td style='padding: 20px; color: #333;'>
-                                <p style='font-size: 16px;'>เปิดรับสมัครงานในตำแหน่ง <strong>{job?.JobTitle}</strong>.</p>
+                                <p style='font-size: 16px;'>เปิดรับสมัครงานในตำแหน่ง <strong>{job.JobTitle}</strong>.</p>
                                 <ul style='font-size: 14px; line-height: 1.6;'>
                                     {requesterInfo}
-                                    <li><strong>หน่วยงาน:</strong>{job?.NAMECOSTCENT}</li>
-                                    <li><strong>เบอร์โทร:</strong>{job?.TELOFF}</li>
+                                    <li><strong>หน่วยงาน:</strong> {job.NAMECOSTCENT}</li>
+                                    <li><strong>เบอร์โทร:</strong> {job.TELOFF}</li>
                                     <li><strong>Email:</strong> {email}</li>
-                                    <li><strong>อัตรา:</strong> {job?.NumberOfPositions}</li>
+                                    <li><strong>อัตรา:</strong> {job.NumberOfPositions}</li>
                                 </ul>
                             </td>
                         </tr>
@@ -116,17 +97,19 @@ namespace JobOnlineAPI.Repositories
                             </td>
                         </tr>
                     </table>
-                    <p style='font-size: 14px;'>กรุณา Link:<a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs.oneeclick.co</a> เข้าระบบเพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
+                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs.oneeclick.co</a> เข้าระบบเพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                 </div>";
 
             var emailParameters = new DynamicParameters();
-            if (job?.Role != "2") {
+            if (job.Role != "2")
+            {
                 emailParameters.Add("@Role", 2);
                 emailParameters.Add("@Department", null);
-                // emailParameters .Add("@Department", job?.Department);
-            } else {
+            }
+            else
+            {
                 emailParameters.Add("@Role", null);
-                emailParameters.Add("@Department", job?.Department);
+                emailParameters.Add("@Department", job.Department);
             }
 
             var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
@@ -137,28 +120,26 @@ namespace JobOnlineAPI.Repositories
             {
                 var hrEmail = staff.EMAIL;
                 if (!string.IsNullOrWhiteSpace(hrEmail))
+                {
+                    try
                     {
-                        try
-                        {
-                            await _emailService.SendEmailAsync(hrEmail, "New Job Application", hrBody, true);
-                            successCount++;
-                        }
-                        catch (Exception ex)
-                        {
-                            failCount++;
-                            Console.WriteLine($"❌ Failed to send email to {hrEmail}: {ex.Message}");
-                        }
+                        await _emailService.SendEmailAsync(hrEmail, "New Job Application", hrBody, true);
+                        successCount++;
                     }
+                    catch (Exception ex)
+                    {
+                        failCount++;
+                        Console.WriteLine($"❌ Failed to send email to {hrEmail}: {ex.Message}");
+                    }
+                }
             }
 
             return id;
-
         }
 
         public async Task<int> UpdateJobAsync(Job job)
         {
-            using IDbConnection db = new SqlConnection(_connectionString);
-
+            using var db = new SqlConnection(_connectionString);
             string sql = "sp_UpdateJob";
 
             var parameters = new
@@ -172,7 +153,7 @@ namespace JobOnlineAPI.Repositories
                 job.NumberOfPositions,
                 job.Department,
                 job.JobStatus,
-                job.PostedDate,
+                PostedDate = job.PostedDate.HasValue ? (object)job.PostedDate.Value : DBNull.Value,
                 ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
                 ModifiedBy = job.ModifiedBy.HasValue ? (object)job.ModifiedBy.Value : DBNull.Value,
                 ModifiedDate = job.ModifiedDate.HasValue ? (object)job.ModifiedDate.Value : DBNull.Value
@@ -181,11 +162,16 @@ namespace JobOnlineAPI.Repositories
             return await db.ExecuteAsync(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task<int> DeleteJobAsync(int id)
+        public async Task DeleteJobAsync(int id)
         {
-            using IDbConnection db = new SqlConnection(_connectionString);
+            using var db = new SqlConnection(_connectionString);
             string sql = "DELETE FROM Jobs WHERE JobID = @Id";
-            return await db.ExecuteAsync(sql, new { Id = id });
+            await db.ExecuteAsync(sql, new { Id = id });
+        }
+
+        Task<int> IJobRepository.DeleteJobAsync(int id)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace JobOnlineAPI.Models
 {
     public class Job
     {
-        public int JobID { get; set; }
+        public int? JobID { get; set; }
 
         [Required(ErrorMessage = "Job title is required.")]
         public string JobTitle { get; set; } = string.Empty;
@@ -18,26 +19,27 @@ namespace JobOnlineAPI.Models
         [Required(ErrorMessage = "Location is required.")]
         public string Location { get; set; } = string.Empty;
 
-        // [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50.")]
-        // public int ExperienceYears { get; set; }
         [Required(ErrorMessage = "ExperienceYears is required.")]
         public string ExperienceYears { get; set; } = string.Empty;
 
+        [JsonRequired]
         [Range(0, 100, ErrorMessage = "Number of positions must be between 0 and 100.")]
         public int NumberOfPositions { get; set; }
 
         [Required(ErrorMessage = "Department is required.")]
         public string Department { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Job status is required.")]
         public string JobStatus { get; set; } = "Open";
+
         public string ApprovalStatus { get; set; } = "Pending";
         public int? ApplicantCount { get; set; }
-        public DateTime PostedDate { get; set; } = DateTime.Now;
+        public DateTime? PostedDate { get; set; }
 
         [Required(ErrorMessage = "Closing date is required.")]
         public DateTime? ClosingDate { get; set; }
 
-        public int CreatedBy { get; set; }
+        public int? CreatedBy { get; set; }
         public string CreatedByRole { get; set; } = string.Empty;
         public int? ModifiedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
@@ -51,7 +53,7 @@ namespace JobOnlineAPI.Models
         public string? TELOFF { get; set; }
         public string? NAMETHAI { get; set; }
         public string? Role { get; set; }
-        public string? NAMECOSTCENT { get; set; }     
+        public string? NAMECOSTCENT { get; set; }
         public string? Remark { get; set; }
     }
 }
