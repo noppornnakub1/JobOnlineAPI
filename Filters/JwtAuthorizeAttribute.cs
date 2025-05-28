@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
-using JobOnlineAPI.Services;
 
 namespace JobOnlineAPI.Filters
 {
@@ -14,11 +12,9 @@ namespace JobOnlineAPI.Filters
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             var configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
-            // var spService = context.HttpContext.RequestServices.GetRequiredService<StoredProcedureService>();
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<JwtAuthorizeAttribute>>();
 
-            // string? authHeader = context.HttpContext.Request.Headers.Authorization;
-            string? authHeader = context.HttpContext.Request.Headers["Authorization"];
+            string? authHeader = context.HttpContext.Request.Headers.Authorization;
             if (string.IsNullOrEmpty(authHeader))
             {
                 logger.LogWarning("AccessToken cannot be empty");
@@ -26,8 +22,7 @@ namespace JobOnlineAPI.Filters
                 return;
             }
 
-            // string token = authHeader;
-            string token = authHeader.StartsWith("Bearer ") ? authHeader.Substring(7).Trim() : authHeader;
+            string token = authHeader.StartsWith("Bearer ") ? authHeader[7..].Trim() : authHeader;
             if (token.Count(c => c == '.') != 2)
             {
                 context.Result = new BadRequestObjectResult(new { message = "Invalid token format. Expected JWS format (header.payload.signature)" });
