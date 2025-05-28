@@ -19,12 +19,17 @@ namespace JobOnlineAPI.Controllers
 
                 if (adminUser != null)
                 {
+                    if (!adminUser.UserId.HasValue)
+                    {
+                        return BadRequest(new { message = "UserId is missing for the authenticated user." });
+                    }
+
                     var userModel = new UserModel
                     {
                         Username = adminUser.Username,
                         Role = adminUser.Role,
                         ConfirmConsent = adminUser.ConfirmConsent ?? string.Empty,
-                        UserId = adminUser.UserId
+                        UserId = adminUser.UserId.Value
                     };
 
                     var token = _jwtTokenService.GenerateJwtToken(userModel);
