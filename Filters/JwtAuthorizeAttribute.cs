@@ -35,7 +35,6 @@ namespace JobOnlineAPI.Filters
                 var jwtSecret = jwtSettings["AccessSecret"] ?? throw new InvalidOperationException("JwtSettings:AccessSecret is missing.");
                 var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JwtSettings:Issuer is missing.");
                 var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JwtSettings:Audience is missing.");
-                var sqlServerConnectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("DefaultConnection connection string is missing.");
 
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var key = Encoding.UTF8.GetBytes(jwtSecret);
@@ -72,7 +71,6 @@ namespace JobOnlineAPI.Filters
 
                 string cn = parts[0];
                 string samAccountName = parts[1];
-
             }
             catch (SecurityTokenMalformedException ex)
             {
