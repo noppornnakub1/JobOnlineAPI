@@ -5,13 +5,12 @@ namespace JobOnlineAPI.DAL
 {
     public class DapperContext
     {
-        private readonly IConfiguration _configuration;
         private readonly string _connectionString;
 
         public DapperContext(IConfiguration configuration)
         {
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _connectionString = _configuration.GetConnectionString("DefaultConnection")
+            ArgumentNullException.ThrowIfNull(configuration);
+            _connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is missing in configuration.");
         }
 
@@ -20,13 +19,12 @@ namespace JobOnlineAPI.DAL
 
     public class DapperContextHRMS
     {
-        private readonly IConfiguration _configuration;
         private readonly string _connectionString;
 
         public DapperContextHRMS(IConfiguration configuration)
         {
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _connectionString = _configuration.GetConnectionString("DefaultConnectionHRMS")
+            ArgumentNullException.ThrowIfNull(configuration);
+            _connectionString = configuration.GetConnectionString("DefaultConnectionHRMS")
                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnectionHRMS' is missing in configuration.");
         }
 
