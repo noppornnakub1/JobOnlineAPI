@@ -8,7 +8,7 @@ namespace JobOnlineAPI.Services
 {
     public class JwtTokenService(IConfiguration configuration) : IJwtTokenService
     {
-        private readonly IConfiguration _configuration = configuration;
+        private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         public string GenerateJwtToken(UserAdminModel user)
         {
@@ -23,16 +23,10 @@ namespace JobOnlineAPI.Services
         private string GenerateToken(string username, string role)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
-            var jwtSecret = jwtSettings["AccessSecret"] ?? throw new InvalidOperationException("JwtSettings:AccessSecret is not configured.");
             var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JwtSettings:Issuer is not configured.");
             var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JwtSettings:Audience is not configured.");
 
-            var keyBytes = Encoding.UTF8.GetBytes(jwtSecret);
-            if (keyBytes.Length < 32)
-            {
-                throw new InvalidOperationException("JWT secret key must be at least 32 bytes long for HMAC-SHA256.");
-            }
-
+            var keyBytes = Encoding.UTF8.GetBytes(GetJwtSecret());
             var key = new SymmetricSecurityKey(keyBytes);
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -57,19 +51,18 @@ namespace JobOnlineAPI.Services
         public async Task<JwtSecurityToken> ValidateTokenAsync(string token)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
-            var jwtSecret = jwtSettings["AccessSecret"] ?? throw new InvalidOperationException("JwtSettings:AccessSecret is not configured.");
             var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JwtSettings:Issuer is not configured.");
             var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JwtSettings:Audience is not configured.");
 
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(jwtSecret);
+            var keyBytes = Encoding.UTF8.GetBytes(GetJwtSecret());
 
             var validatedToken = await Task.Run(() =>
             {
                 tokenHandler.ValidateToken(token, new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
                     ValidateIssuer = true,
                     ValidIssuer = issuer,
                     ValidateAudience = true,
@@ -82,6 +75,19 @@ namespace JobOnlineAPI.Services
             });
 
             return (JwtSecurityToken)validatedToken;
+        }
+
+        private string GetJwtSecret()
+        {
+            var jwtSecret = _configuration["JwtSettings:AccessSecret"]
+                ?? throw new InvalidOperationException("JwtSettings:AccessSecret is not configured.");
+
+            if (Encoding.UTF8.GetBytes(jwtSecret).Length < 32)
+            {
+                throw new InvalidOperationException("JWT secret key must be at least 32 bytes long for HMAC-SHA256.");
+            }
+
+            return jwtSecret;
         }
     }
 }
