@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using Dapper;
 using JobOnlineAPI.Models;
 using Microsoft.Data.SqlClient;
@@ -13,11 +12,11 @@ namespace JobOnlineAPI.Repositories
                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
         private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
 
-        public async Task<IEnumerable<dynamic>> GetAllJobsAsync()
+        public async Task<IEnumerable<Job>> GetAllJobsAsync()
         {
             using var db = new SqlConnection(_connectionString);
             string sql = "sp_GetAllJobs";
-            return await db.QueryAsync(sql, commandType: CommandType.StoredProcedure);
+            return await db.QueryAsync<Job>(sql, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<Job> GetJobByIdAsync(int id)
@@ -31,8 +30,6 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> AddJobAsync(Job job)
         {
             using var db = new SqlConnection(_connectionString);
-            using var connection = new SqlConnection(_connectionString);
-
             string sql = "sp_AddJob";
 
             var parameters = new
@@ -59,17 +56,17 @@ namespace JobOnlineAPI.Repositories
                 throw new InvalidOperationException("Failed to retrieve JobID after inserting the job.");
             }
 
-            var email = job.Email;
-            string requesterInfo = string.Empty;
-            var roleSendMail = job.Role == "1" ? "<Admin>" : job.Role == "2" ? "<HR>" : "";
-            if (job.Role == "1" || job.Role == "2")
-            {
-                requesterInfo = $"<li style='color: #333;'><strong>ผู้ขอ:</strong> {job.NAMETHAI} {roleSendMail}</li>";
-            }
-            else
-            {
-                requesterInfo = $"<li style='color: #333;'><strong>ผู้ขอ:</strong> {job.NAMETHAI} Requester: {job.NAMECOSTCENT}</li>";
-            }
+            await SendJobNotificationEmailsAsync(job, db);
+
+            return id;
+        }
+
+        private async Task SendJobNotificationEmailsAsync(Job job, SqlConnection db)
+        {
+            var roleSendMail = GetRoleSendMail(job.Role);
+            var requesterInfo = job.Role == "1" || job.Role == "2"
+                ? $"<li style='color: #333;'><strong>ผู้ขอ:</strong> {job.NAMETHAI} {roleSendMail}</li>"
+                : $"<li style='color: #333;'><strong>ผู้ขอ:</strong> {job.NAMETHAI} Requester: {job.NAMECOSTCENT}</li>";
 
             string hrBody = $@"
                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
@@ -86,7 +83,7 @@ namespace JobOnlineAPI.Repositories
                                     {requesterInfo}
                                     <li><strong>หน่วยงาน:</strong> {job.NAMECOSTCENT}</li>
                                     <li><strong>เบอร์โทร:</strong> {job.TELOFF}</li>
-                                    <li><strong>Email:</strong> {email}</li>
+                                    <li><strong>Email:</strong> {job.Email}</li>
                                     <li><strong>อัตรา:</strong> {job.NumberOfPositions}</li>
                                 </ul>
                             </td>
@@ -101,41 +98,39 @@ namespace JobOnlineAPI.Repositories
                 </div>";
 
             var emailParameters = new DynamicParameters();
-            if (job.Role != "2")
-            {
-                emailParameters.Add("@Role", 2);
-                emailParameters.Add("@Department", null);
-            }
-            else
-            {
-                emailParameters.Add("@Role", null);
-                emailParameters.Add("@Department", job.Department);
-            }
+            emailParameters.Add("@Role", job.Role != "2" ? 2 : (object)DBNull.Value);
+            emailParameters.Add("@Department", job.Role == "2" ? job.Department ?? (object)DBNull.Value : DBNull.Value);
 
             var queryStaff = "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department";
-            var staffList = await connection.QueryAsync<dynamic>(queryStaff, emailParameters);
+            var staffList = await db.QueryAsync<StaffEmail>(queryStaff, emailParameters);
+
             int successCount = 0;
             int failCount = 0;
             foreach (var staff in staffList)
             {
-                var hrEmail = staff.EMAIL;
-                if (!string.IsNullOrWhiteSpace(hrEmail))
+                if (!string.IsNullOrWhiteSpace(staff.Email))
                 {
                     try
                     {
-                        await _emailService.SendEmailAsync(hrEmail, "New Job Application", hrBody, true);
+                        await _emailService.SendEmailAsync(staff.Email, "New Job Application", hrBody, true);
                         successCount++;
                     }
                     catch (Exception ex)
                     {
                         failCount++;
-                        Console.WriteLine($"❌ Failed to send email to {hrEmail}: {ex.Message}");
+                        Console.WriteLine($"❌ Failed to send email to {staff.Email}: {ex.Message}");
                     }
                 }
             }
-
-            return id;
         }
+
+        private static string GetRoleSendMail(string? role) =>
+            role switch
+            {
+                "1" => "<Admin>",
+                "2" => "<HR>",
+                _ => ""
+            };
 
         public async Task<int> UpdateJobAsync(Job job)
         {
@@ -162,16 +157,13 @@ namespace JobOnlineAPI.Repositories
             return await db.ExecuteAsync(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task DeleteJobAsync(int id)
+        public async Task<int> DeleteJobAsync(int id)
         {
             using var db = new SqlConnection(_connectionString);
             string sql = "DELETE FROM Jobs WHERE JobID = @Id";
-            await db.ExecuteAsync(sql, new { Id = id });
-        }
-
-        Task<int> IJobRepository.DeleteJobAsync(int id)
-        {
-            throw new NotImplementedException();
+            return await db.ExecuteAsync(sql, new { Id = id });
         }
     }
+
+    internal record StaffEmail(string? Email);
 }

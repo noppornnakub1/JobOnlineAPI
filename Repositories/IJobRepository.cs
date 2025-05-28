@@ -4,7 +4,7 @@ namespace JobOnlineAPI.Repositories
 {
     public interface IJobRepository
     {
-        Task<IEnumerable<dynamic>> GetAllJobsAsync();
+        Task<IEnumerable<Job>> GetAllJobsAsync();
         Task<Job> GetJobByIdAsync(int id);
         Task<int> AddJobAsync(Job job);
         Task<int> UpdateJobAsync(Job job);
