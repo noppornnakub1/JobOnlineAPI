@@ -22,28 +22,15 @@ namespace JobOnlineAPI.Services
 
         private string GenerateToken(string username, string role)
         {
-            var jwtKey = _configuration["Jwt:Key"];
-            if (string.IsNullOrEmpty(jwtKey))
-            {
-                throw new InvalidOperationException("JWT Key is not configured.");
-            }
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var jwtSecret = jwtSettings["AccessSecret"] ?? throw new InvalidOperationException("JwtSettings:AccessSecret is not configured.");
+            var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JwtSettings:Issuer is not configured.");
+            var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JwtSettings:Audience is not configured.");
 
-            var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
+            var keyBytes = Encoding.UTF8.GetBytes(jwtSecret);
             if (keyBytes.Length < 32)
             {
-                throw new InvalidOperationException("JWT Key must be at least 32 bytes long for HMAC-SHA256.");
-            }
-
-            var issuer = _configuration["Jwt:Issuer"];
-            if (string.IsNullOrEmpty(issuer))
-            {
-                throw new InvalidOperationException("JWT Issuer is not configured.");
-            }
-
-            var audience = _configuration["Jwt:Audience"];
-            if (string.IsNullOrEmpty(audience))
-            {
-                throw new InvalidOperationException("JWT Audience is not configured.");
+                throw new InvalidOperationException("JWT secret key must be at least 32 bytes long for HMAC-SHA256.");
             }
 
             var key = new SymmetricSecurityKey(keyBytes);
@@ -65,6 +52,36 @@ namespace JobOnlineAPI.Services
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public async Task<JwtSecurityToken> ValidateTokenAsync(string token)
+        {
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var jwtSecret = jwtSettings["AccessSecret"] ?? throw new InvalidOperationException("JwtSettings:AccessSecret is not configured.");
+            var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JwtSettings:Issuer is not configured.");
+            var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JwtSettings:Audience is not configured.");
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+            var validatedToken = await Task.Run(() =>
+            {
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = true,
+                    ValidIssuer = issuer,
+                    ValidateAudience = true,
+                    ValidAudience = audience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                }, out SecurityToken securityToken);
+
+                return securityToken;
+            });
+
+            return (JwtSecurityToken)validatedToken;
         }
     }
 }

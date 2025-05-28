@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.Text;
+using JobOnlineAPI.Services;
+using Microsoft.IdentityModel.Tokens;
 
 namespace JobOnlineAPI.Filters
 {
@@ -11,7 +11,7 @@ namespace JobOnlineAPI.Filters
     {
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            var configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+            var jwtTokenService = context.HttpContext.RequestServices.GetRequiredService<IJwtTokenService>();
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<JwtAuthorizeAttribute>>();
 
             string? authHeader = context.HttpContext.Request.Headers.Authorization;
@@ -31,27 +31,7 @@ namespace JobOnlineAPI.Filters
 
             try
             {
-                var jwtSettings = configuration.GetSection("JwtSettings");
-                var jwtSecret = jwtSettings["AccessSecret"] ?? throw new InvalidOperationException("JwtSettings:AccessSecret is missing.");
-                var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JwtSettings:Issuer is missing.");
-                var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JwtSettings:Audience is missing.");
-
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(jwtSecret);
-
-                tokenHandler.ValidateToken(token, new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = true,
-                    ValidIssuer = issuer,
-                    ValidateAudience = true,
-                    ValidAudience = audience,
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
-                }, out SecurityToken validatedToken);
-
-                var jwtToken = (JwtSecurityToken)validatedToken;
+                var jwtToken = await jwtTokenService.ValidateTokenAsync(token);
                 var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value;
 
                 if (string.IsNullOrEmpty(subClaim))

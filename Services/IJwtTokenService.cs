@@ -1,4 +1,5 @@
-﻿using JobOnlineAPI.Controllers;
+﻿using System.IdentityModel.Tokens.Jwt;
+using JobOnlineAPI.Controllers;
 
 namespace JobOnlineAPI.Services
 {
@@ -6,5 +7,6 @@ namespace JobOnlineAPI.Services
     {
         string GenerateJwtToken(UserAdminModel user);
         string GenerateJwtToken(UserModel user);
+        Task<JwtSecurityToken> ValidateTokenAsync(string token);
     }
 }
