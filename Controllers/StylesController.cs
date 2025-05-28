@@ -5,16 +5,13 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class StylesController : Controller
+    public class StylesController(IUserService userService) : ControllerBase
     {
-        private readonly IUserService _userService;
-
-        public StylesController(IUserService userService)
-        {
-            _userService = userService;
-        }
+        private readonly IUserService _userService = userService;
 
         [HttpGet("{key}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetStyleValue(string key)
         {
             var styleValue = await _userService.GetStyleValueAsync(key);
