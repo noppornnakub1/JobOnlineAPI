@@ -51,13 +51,13 @@ namespace JobOnlineAPI.Filters
             }
             catch (SecurityTokenMalformedException ex)
             {
-                logger.LogWarning("Invalid token format: {Message}", ex.Message);
+                logger.LogWarning(ex, "Invalid token format: {Message}", ex.Message);
                 context.Result = new BadRequestObjectResult(new { message = "Invalid token format: Token must be a valid JWT with correct segments" });
                 return;
             }
             catch (SecurityTokenException ex)
             {
-                logger.LogWarning("Token validation failed: {Message}", ex.Message);
+                logger.LogWarning(ex, "Token validation failed: {Message}", ex.Message);
                 context.Result = new UnauthorizedObjectResult(new { message = "Invalid or expired token", error = ex.Message });
                 return;
             }
