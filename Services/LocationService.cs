@@ -4,15 +4,10 @@ using System.Data.SqlClient;
 
 namespace JobOnlineAPI.Services
 {
-    public class LocationService : ILocationService
+    public class LocationService(IConfiguration configuration) : ILocationService
     {
-        private readonly string _connectionString;
-
-        public LocationService(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
+        private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
                                ?? throw new InvalidOperationException("DefaultConnection is not configured in appsettings.json.");
-        }
 
         public async Task<IEnumerable<dynamic>> GetProvincesAsync()
         {
@@ -55,12 +50,12 @@ namespace JobOnlineAPI.Services
             );
         }
 
-        public Task<IEnumerable<dynamic>> GetDistrictsAsync()
+        public static Task<IEnumerable<dynamic>> GetDistrictsAsync()
         {
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<dynamic>> GetSubDistrictsAsync()
+        public static Task<IEnumerable<dynamic>> GetSubDistrictsAsync()
         {
             throw new NotImplementedException();
         }
