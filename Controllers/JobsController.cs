@@ -1,28 +1,17 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Mvc;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
-using Microsoft.AspNetCore.Mvc;
-using Dapper;
-using System.Data;
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Filters;
+
 namespace JobOnlineAPI.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
-    public class JobsController : ControllerBase
+    [Route("api/[controller]")]
+    public class JobsController(IJobRepository jobRepository, DapperContext context) : ControllerBase
     {
-        private readonly IJobRepository _jobRepository;
-        private readonly DapperContext _context;
-        private readonly DapperContextHRMS _contextHRMS;
-
-        public JobsController(IJobRepository jobRepository, DapperContext context, DapperContextHRMS contextHRMS)
-        {
-            _jobRepository = jobRepository;
-            _context = context;
-            _contextHRMS = contextHRMS;
-        }
+        private readonly IJobRepository _jobRepository = jobRepository;
+        private readonly DapperContext _context = context;
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Job>>> GetAllJobs()
@@ -49,10 +38,9 @@ namespace JobOnlineAPI.Controllers
             {
                 return BadRequest();
             }
-            
+
             int newId = await _jobRepository.AddJobAsync(job);
             job.JobID = newId;
-
             return CreatedAtAction(nameof(GetJobById), new { id = newId }, job);
         }
 
@@ -72,7 +60,6 @@ namespace JobOnlineAPI.Controllers
             }
 
             int rowsAffected = await _jobRepository.UpdateJobAsync(job);
-
             if (rowsAffected <= 0)
             {
                 return StatusCode(500, "Update failed.");
@@ -94,81 +81,5 @@ namespace JobOnlineAPI.Controllers
             await _jobRepository.DeleteJobAsync(id);
             return NoContent();
         }
-
-
-        [HttpDelete("deleteJob/{id}")]
-        [TypeFilter(typeof(JwtAuthorizeAttribute))]
-        public async Task<IActionResult> DeleteJobByJobID(int id)
-        {
-            try
-            {
-                using var connection = _context.CreateConnection();
-                var parameters = new DynamicParameters();
-                parameters.Add("@JobID", id);
-
-                var remainingJobs = await connection.QueryAsync<Job>(
-                    "sp_DeleteJobByJobID",
-                    parameters,
-                    commandType: CommandType.StoredProcedure
-                );
-
-                return Ok(new
-                {
-                    Message = "Job deleted successfully.",
-                    RemainingJobs = remainingJobs
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Error = "Failed to delete job", ex.Message });
-            }
-        }
-
-        [HttpGet("GetDepartment")]
-        public async Task<IActionResult> GetDepartmentFromHRMS([FromQuery] string? comCode)
-        {
-            try
-            {
-                using var connection = _contextHRMS.CreateConnection();
-
-                var parameters = new DynamicParameters();
-                parameters.Add("@COMPANY_CODE", comCode);
-
-                var result = await connection.QueryAsync(
-                    "sp_GetDepartmentBycomCodeV2",
-                    parameters,
-                    commandType: CommandType.StoredProcedure
-                );
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Error = ex.Message });
-            }
-        }
-          
-        [HttpGet("GetJobsDepartment")]
-        public async Task<IActionResult> GetJobsDepartment()
-        {
-            try
-            {
-                using var connection = _context.CreateConnection();
-
-                var result = await connection.QueryAsync(
-                    "sp_GetJobsDepartment",
-                    commandType: CommandType.StoredProcedure
-                );
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Error = ex.Message });
-            }
-        }
-
-          
-
     }
 }
