@@ -17,11 +17,11 @@ namespace JobOnlineAPI.DAL
         public IDbConnection CreateConnection() => new SqlConnection(_connectionString);
     }
 
-    public class DapperContextHRMS
+    public class DapperContextHrms
     {
         private readonly string _connectionString;
 
-        public DapperContextHRMS(IConfiguration configuration)
+        public DapperContextHrms(IConfiguration configuration)
         {
             ArgumentNullException.ThrowIfNull(configuration);
             _connectionString = configuration.GetConnectionString("DefaultConnectionHRMS")

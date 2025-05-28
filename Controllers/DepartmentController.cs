@@ -7,9 +7,9 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class DepartmentController(DapperContextHRMS contextHRMS) : ControllerBase
+    public class DepartmentController(DapperContextHrms contextHRMS) : ControllerBase
     {
-        private readonly DapperContextHRMS _contextHRMS = contextHRMS;
+        private readonly DapperContextHrms _contextHRMS = contextHRMS;
 
         [HttpGet("GetDepartment")]
         public async Task<IActionResult> GetDepartmentFromHRMS([FromQuery] string? comCode)

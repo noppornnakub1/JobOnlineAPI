@@ -34,7 +34,7 @@ builder.Services.AddLogging(logging =>
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddSingleton<DapperContextHRMS>();
+builder.Services.AddSingleton<DapperContextHrms>();
 builder.Services.AddSingleton<DapperContext>();
 
 AppContext.SetSwitch("Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows", true);
