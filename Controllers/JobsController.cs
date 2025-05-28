@@ -1,17 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
-using JobOnlineAPI.DAL;
 using JobOnlineAPI.Filters;
 
 namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class JobsController(IJobRepository jobRepository, DapperContext context) : ControllerBase
+    public class JobsController(IJobRepository jobRepository) : ControllerBase
     {
         private readonly IJobRepository _jobRepository = jobRepository;
-        private readonly DapperContext _context = context;
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Job>>> GetAllJobs()
