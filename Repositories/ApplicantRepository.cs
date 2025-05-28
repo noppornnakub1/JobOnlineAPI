@@ -85,7 +85,7 @@ namespace JobOnlineAPI.Repositories
                     INSERT INTO Jobs (JobTitle, JobDescription, Requirements, Location, NumberOfPositions, Department, JobStatus, ApprovalStatus, PostedDate, ClosingDate)
                     VALUES (@JobTitle, @JobDescription, @Requirements, @Location, @NumberOfPositions, @Department, @JobStatus, @ApprovalStatus, @PostedDate, @ClosingDate);
                     SELECT CAST(SCOPE_IDENTITY() AS int)";
-                var jobId = await db.QuerySingleAsync<int>(jobSql, job, transaction);
+                await db.ExecuteAsync(jobSql, job, transaction);
 
                 await transaction.CommitAsync();
                 return applicantId;
