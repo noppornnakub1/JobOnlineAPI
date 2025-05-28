@@ -7,22 +7,18 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class DepartmentController(DapperContextHRMS contextHRMS) : ControllerBase
+    public class JobDepartmentController(DapperContext context) : ControllerBase
     {
-        private readonly DapperContextHRMS _contextHRMS = contextHRMS;
+        private readonly DapperContext _context = context;
 
-        [HttpGet("GetDepartment")]
-        public async Task<IActionResult> GetDepartmentFromHRMS([FromQuery] string? comCode)
+        [HttpGet("GetJobsDepartment")]
+        public async Task<IActionResult> GetJobsDepartment()
         {
             try
             {
-                using var connection = _contextHRMS.CreateConnection();
-                var parameters = new DynamicParameters();
-                parameters.Add("@COMPANY_CODE", comCode);
-
+                using var connection = _context.CreateConnection();
                 var result = await connection.QueryAsync(
-                    "sp_GetDepartmentBycomCodeV2",
-                    parameters,
+                    "sp_GetJobsDepartment",
                     commandType: CommandType.StoredProcedure
                 );
 
