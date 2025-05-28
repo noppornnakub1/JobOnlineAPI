@@ -1,10 +1,6 @@
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using JobOnlineAPI.DAL;
-using System.Text;
-using System.Text.Json;
-using JobOnlineAPI.Models;
-using System.Data;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -39,11 +35,11 @@ namespace JobOnlineAPI.Controllers
                 result.Password = "";
                 
                 return Ok(new {
-                    AdminID = result.AdminID,
-                    Username = result.Username,
-                    Email = result.EMAIL,
-                    Role = result.Role,
-                    Department = result.Department
+                    result.AdminID,
+                    result.Username,
+                    result.EMAIL,
+                    result.Role,
+                    result.Department
                 });
             }
             catch (Exception ex)
@@ -72,17 +68,17 @@ namespace JobOnlineAPI.Controllers
                 if (result == null) return Unauthorized("User or password is Invalid.");
                 return Ok(new {
                     Empno = result.CODEMPID,
-                    AdminID = result.AdminID,
-                    Username = result.Username,
-                    NAMETHAI = result.NAMETHAI,
-                    Email = result.EMAIL,
-                    Role = result.Role,
-                    Mobile = result.MOBILE,
-                    POST = result.POST,
-                    ComName = result.COMPANY_NAME,
-                    TELOFF = result.TELOFF,
-                    Department = result.Department,
-                    deptName = result.NAMECOSTCENT
+                    result.AdminID,
+                    result.Username,
+                    result.NAMETHAI,
+                    result.EMAIL,
+                    result.Role,
+                    result.MOBILE,
+                    result.POST,
+                    result.COMPANY_NAME,
+                    result.TELOFF,
+                    result.Department,
+                    result.NAMECOSTCENT
                 });
 
             }
@@ -91,12 +87,10 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
-    }  
-}
-
-public class LoginRequest
-{
-    public string Username { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
+        public class LoginRequest
+        {
+            public string Username { get; set; } = string.Empty;
+            public string Password { get; set; } = string.Empty;
+        }
+    }
 }
