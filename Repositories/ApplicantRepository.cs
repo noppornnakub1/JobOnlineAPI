@@ -1,22 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
+﻿using System.Data;
 using Dapper;
 using JobOnlineAPI.Models;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 
 namespace JobOnlineAPI.Repositories
 {
-    public class ApplicantRepository : IApplicantRepository
+    public class ApplicantRepository(IConfiguration configuration) : IApplicantRepository
     {
-        private readonly string _connectionString;
-
-        public ApplicantRepository(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
+        private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
                                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
-        }
+
         public IDbConnection GetConnection()
         {
             return new SqlConnection(_connectionString);
@@ -32,13 +25,8 @@ namespace JobOnlineAPI.Repositories
                 storedProcedure,
                 (applicant, job, status) =>
                 {
-                    //applicant.JobTitle = job.JobTitle;
-                    //applicant.JobLocation = job.Location;
-                    //applicant.JobDepartment = job.Department;
-                    //applicant.Status = status;
                     return applicant;
                 },
-                //splitOn: "JobTitle,Status",
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -54,30 +42,17 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> AddApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            //    string sql = @"
-            //INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
-            //VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, GETDATE());
-            //SELECT CAST(SCOPE_IDENTITY() as int)";
 
             string sql = @"
-        INSERT INTO Applicants (FirstNameThai, LastNameThai, Email, MobilePhone)
-        VALUES (@FirstNameThai, @LastNameThai, @Email, @MobilePhone);
-        SELECT CAST(SCOPE_IDENTITY() as int)";
+            INSERT INTO Applicants (FirstNameThai, LastNameThai, Email, MobilePhone)
+            VALUES (@FirstNameThai, @LastNameThai, @Email, @MobilePhone);
+            SELECT CAST(SCOPE_IDENTITY() as int)";
             return await db.QuerySingleAsync<int>(sql, applicant);
         }
 
         public async Task<int> UpdateApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            //string sql = @"
-            //    UPDATE Applicants
-            //    SET FirstName = @FirstName,
-            //        LastName = @LastName,
-            //        Email = @Email,
-            //        Phone = @Phone,
-            //        Resume = @Resume,
-            //        AppliedDate = @AppliedDate
-            //    WHERE ApplicantID = @ApplicantID";
 
             string sql = @"
                 UPDATE Applicants
