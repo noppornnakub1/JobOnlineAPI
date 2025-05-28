@@ -1,28 +1,20 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Mvc;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
-using Microsoft.AspNetCore.Mvc;
-using Dapper;
-using System.Data;
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Filters;
+using Dapper;
+using System.Data;
+
 namespace JobOnlineAPI.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
-    public class JobsController : ControllerBase
+    [Route("api/[controller]")]
+    public class JobsController(IJobRepository jobRepository, DapperContext context, DapperContextHRMS contextHRMS) : ControllerBase
     {
-        private readonly IJobRepository _jobRepository;
-        private readonly DapperContext _context;
-        private readonly DapperContextHRMS _contextHRMS;
-
-        public JobsController(IJobRepository jobRepository, DapperContext context, DapperContextHRMS contextHRMS)
-        {
-            _jobRepository = jobRepository;
-            _context = context;
-            _contextHRMS = contextHRMS;
-        }
+        private readonly IJobRepository _jobRepository = jobRepository;
+        private readonly DapperContext _context = context;
+        private readonly DapperContextHRMS _contextHRMS = contextHRMS;
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Job>>> GetAllJobs()
@@ -52,7 +44,6 @@ namespace JobOnlineAPI.Controllers
 
             int newId = await _jobRepository.AddJobAsync(job);
             job.JobID = newId;
-
             return CreatedAtAction(nameof(GetJobById), new { id = newId }, job);
         }
 
@@ -72,7 +63,6 @@ namespace JobOnlineAPI.Controllers
             }
 
             int rowsAffected = await _jobRepository.UpdateJobAsync(job);
-
             if (rowsAffected <= 0)
             {
                 return StatusCode(500, "Update failed.");
@@ -94,7 +84,6 @@ namespace JobOnlineAPI.Controllers
             await _jobRepository.DeleteJobAsync(id);
             return NoContent();
         }
-
 
         [HttpDelete("deleteJob/{id}")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
@@ -130,7 +119,6 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 using var connection = _contextHRMS.CreateConnection();
-
                 var parameters = new DynamicParameters();
                 parameters.Add("@COMPANY_CODE", comCode);
 
@@ -154,7 +142,6 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 using var connection = _context.CreateConnection();
-
                 var result = await connection.QueryAsync(
                     "sp_GetJobsDepartment",
                     commandType: CommandType.StoredProcedure
@@ -167,7 +154,6 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
-        
 
         [HttpGet("GetCompanyInfo")]
         public async Task<IActionResult> GetCompanyInfo()
@@ -175,7 +161,6 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 using var connection = _context.CreateConnection();
-
                 var result = await connection.QueryAsync(
                     "sp_GetCompanyInfo",
                     commandType: CommandType.StoredProcedure
@@ -188,9 +173,5 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
-
-
-          
-
     }
 }
