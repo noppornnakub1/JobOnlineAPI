@@ -65,7 +65,6 @@ namespace JobOnlineAPI.Services
                 catch (LdapException ex)
                 {
                     Console.WriteLine($"LDAP Error for server {server.Url}: {ex.Message}");
-                    continue;
                 }
             }
 
@@ -109,7 +108,6 @@ namespace JobOnlineAPI.Services
                     catch (LdapException ex)
                     {
                         Console.WriteLine($"LDAP Error for server {server.Url}: {ex.Message}");
-                        continue;
                     }
                 }
             }
