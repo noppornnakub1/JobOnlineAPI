@@ -49,7 +49,7 @@ namespace JobOnlineAPI.Controllers
             {
                 return BadRequest();
             }
-            
+
             int newId = await _jobRepository.AddJobAsync(job);
             job.JobID = newId;
 
@@ -147,7 +147,7 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
-          
+
         [HttpGet("GetJobsDepartment")]
         public async Task<IActionResult> GetJobsDepartment()
         {
@@ -167,6 +167,28 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
+        
+
+        [HttpGet("GetCompanyInfo")]
+        public async Task<IActionResult> GetCompanyInfo()
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+
+                var result = await connection.QueryAsync(
+                    "sp_GetCompanyInfo",
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+
 
           
 
