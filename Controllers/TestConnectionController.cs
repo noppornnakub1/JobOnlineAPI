@@ -5,14 +5,9 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class TestConnectionController : ControllerBase
+    public class TestConnectionController(IConfiguration configuration) : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-
-        public TestConnectionController(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+        private readonly IConfiguration _configuration = configuration;
 
         [HttpGet("test-connection")]
         public async Task<IActionResult> TestConnection()
