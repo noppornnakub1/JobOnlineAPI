@@ -1039,9 +1039,14 @@ namespace JobOnlineAPI.Controllers
 
             if (data["UserId"] is JsonElement userIdElement)
             {
-                userId = userIdElement.ValueKind == JsonValueKind.Number
-                    ? userIdElement.GetInt32()
-                    : int.TryParse(userIdElement.GetString(), out var id) ? id : 0;
+                if (userIdElement.ValueKind == JsonValueKind.Number)
+                {
+                    userId = userIdElement.GetInt32();
+                }
+                else if (int.TryParse(userIdElement.GetString(), out var id))
+                {
+                    userId = id;
+                }
             }
 
             return (userId, confirmConsent);
