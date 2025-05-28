@@ -94,7 +94,7 @@ namespace JobOnlineAPI.Repositories
                             </td>
                         </tr>
                     </table>
-                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs.oneeclick.co</a> เข้าระบบเพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
+                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                 </div>";
 
             var emailParameters = new DynamicParameters();
@@ -106,19 +106,23 @@ namespace JobOnlineAPI.Repositories
 
             int successCount = 0;
             int failCount = 0;
-            foreach (var staff in staffList.Where(s => !string.IsNullOrWhiteSpace(s.Email)))
-            {
-                try
+            var emailTasks = staffList
+                .Where(s => !string.IsNullOrWhiteSpace(s.Email))
+                .Select(async s =>
                 {
-                    await _emailService.SendEmailAsync(staff.Email!, "New Job Application", hrBody, true);
-                    successCount++;
-                }
-                catch (Exception ex)
-                {
-                    failCount++;
-                    Console.WriteLine($"❌ Failed to send email to {staff.Email}: {ex.Message}");
-                }
-            }
+                    try
+                    {
+                        await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true);
+                        Interlocked.Increment(ref successCount);
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref failCount);
+                        Console.WriteLine($"❌ Failed to send email to {s.Email}: {ex.Message}");
+                    }
+                });
+
+            await Task.WhenAll(emailTasks);
         }
 
         private static string GetRoleSendMail(string? role) =>
