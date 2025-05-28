@@ -7,8 +7,8 @@ namespace JobOnlineAPI.Repositories
 {
     public class ApplicantRepository(IConfiguration configuration) : IApplicantRepository
     {
-        private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
-                                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
+        private readonly string _connectionString = configuration?.GetConnectionString("DefaultConnection")
+                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
 
         public IDbConnection GetConnection()
         {
@@ -18,7 +18,6 @@ namespace JobOnlineAPI.Repositories
         public async Task<IEnumerable<Applicant>> GetAllApplicantsAsync()
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-
             string storedProcedure = "spGetAllApplicantsWithJobDetails";
 
             return await db.QueryAsync<Applicant, Job, string, Applicant>(
@@ -42,24 +41,22 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> AddApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-
             string sql = @"
-            INSERT INTO Applicants (FirstNameThai, LastNameThai, Email, MobilePhone)
-            VALUES (@FirstNameThai, @LastNameThai, @Email, @MobilePhone);
-            SELECT CAST(SCOPE_IDENTITY() as int)";
+                INSERT INTO Applicants (FirstName, LastName, Email, Phone)
+                VALUES (@FirstName, @LastName, @Email, @Phone);
+                SELECT CAST(SCOPE_IDENTITY() AS int)";
             return await db.QuerySingleAsync<int>(sql, applicant);
         }
 
         public async Task<int> UpdateApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-
             string sql = @"
                 UPDATE Applicants
-                SET FirstNameThai = @FirstNameThai,
-                    LastNameThai = @LastNameThai,
+                SET FirstName = @FirstName,
+                    LastName = @LastName,
                     Email = @Email,
-                    MobilePhone = @MobilePhone
+                    Phone = @Phone
                 WHERE ApplicantID = @ApplicantID";
             return await db.ExecuteAsync(sql, applicant);
         }
@@ -75,27 +72,27 @@ namespace JobOnlineAPI.Repositories
         {
             using SqlConnection db = new(_connectionString);
             await db.OpenAsync();
-            using var transaction = db.BeginTransaction();
+            using var transaction = await db.BeginTransactionAsync();
             try
             {
                 string applicantSql = @"
                     INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
                     VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, @AppliedDate);
-                    SELECT CAST(SCOPE_IDENTITY() as int)";
+                    SELECT CAST(SCOPE_IDENTITY() AS int)";
                 var applicantId = await db.QuerySingleAsync<int>(applicantSql, applicant, transaction);
 
                 string jobSql = @"
-                    INSERT INTO Jobs (JobTitle, JobDescription, Requirements, Location, Salary, PostedDate, ClosingDate)
-                    VALUES (@JobTitle, @JobDescription, @Requirements, @Location, @Salary, @PostedDate, @ClosingDate);
-                    SELECT CAST(SCOPE_IDENTITY() as int)";
+                    INSERT INTO Jobs (JobTitle, JobDescription, Requirements, Location, NumberOfPositions, Department, JobStatus, ApprovalStatus, PostedDate, ClosingDate)
+                    VALUES (@JobTitle, @JobDescription, @Requirements, @Location, @NumberOfPositions, @Department, @JobStatus, @ApprovalStatus, @PostedDate, @ClosingDate);
+                    SELECT CAST(SCOPE_IDENTITY() AS int)";
                 var jobId = await db.QuerySingleAsync<int>(jobSql, job, transaction);
 
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return applicantId;
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }
