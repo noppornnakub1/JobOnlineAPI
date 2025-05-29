@@ -22,6 +22,7 @@ namespace JobOnlineAPI.Controllers
         private readonly string? _password;
         private readonly bool _useNetworkShare;
         private readonly string _applicationFormUri;
+        private readonly FileStorageConfig _fileStorageConfig;
 
         private const string JobTitleKey = "JobTitle";
         private const string JobIdKey = "JobID";
@@ -66,16 +67,6 @@ namespace JobOnlineAPI.Controllers
             [MarshalAs(UnmanagedType.LPWStr)]
             public string? lpProvider;
         }
-
-        public class FileStorageConfig
-        {
-            public string EnvironmentName { get; set; } = "Development";
-            public string BasePath { get; set; } = string.Empty;
-            public string? NetworkUsername { get; set; }
-            public string? NetworkPassword { get; set; }
-            public string ApplicationFormUri { get; set; } = string.Empty;
-        }
-
         public ApplicantNewController(
             DapperContext context,
             IEmailService emailService,
@@ -777,7 +768,7 @@ namespace JobOnlineAPI.Controllers
             parameters.Add("@Status", status);
 
             await connection.ExecuteAsync(
-                "EXEC sp_UpdateApplicantStatus @ApplicantID, @Status",
+                "sp_UpdateApplicantStatus",
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
@@ -1052,4 +1043,13 @@ namespace JobOnlineAPI.Controllers
             return (userId, confirmConsent);
         }
     }
+}
+
+public class FileStorageConfig
+{
+    public string EnvironmentName { get; set; } = "Development";
+    public string BasePath { get; set; } = string.Empty;
+    public string? NetworkUsername { get; set; }
+    public string? NetworkPassword { get; set; }
+    public string ApplicationFormUri { get; set; } = string.Empty;
 }

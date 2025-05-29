@@ -8,6 +8,7 @@ using JobOnlineAPI.Repositories;
 using JobOnlineAPI.Services;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.DAL;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +61,12 @@ builder.Services.AddScoped<ILdapService, LdapService>();
 builder.Services.AddScoped<IConsentService, ConsentService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.Configure<FileStorageConfig>(
+builder.Configuration.GetSection("FileStorage"));
+
+builder.Services.AddSingleton(resolver =>
+    resolver.GetRequiredService<IOptions<FileStorageConfig>>().Value);
+
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
