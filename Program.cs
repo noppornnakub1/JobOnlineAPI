@@ -19,11 +19,24 @@ using var loggerFactory = LoggerFactory.Create(logging =>
 });
 var logger = loggerFactory.CreateLogger<Program>();
 
+// Log configuration sources
+logger.LogInformation("Configuration sources:");
+foreach (var source in builder.Configuration.Sources)
+{
+    logger.LogInformation(" - {Source}", source.GetType().Name);
+}
+
+// Clear default sources and add in specific order
+builder.Configuration.Sources.Clear();
 builder.Configuration
-    .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddEnvironmentVariables()
-    .AddUserSecrets<Program>(optional: true);
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddUserSecrets<Program>(optional: false)
+    .AddEnvironmentVariables();
+
+// Log connection string
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+logger.LogInformation("DefaultConnection: {ConnectionString}", connectionString ?? "null");
 
 builder.Services.AddLogging(logging =>
 {
