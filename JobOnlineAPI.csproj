@@ -5,11 +5,18 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<EnableDefaultStaticWebAssets>true</EnableDefaultStaticWebAssets>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<NoWarn>$(NoWarn);SYSLIB1054</NoWarn>
+		<NoWarn>$(NoWarn);SYSLIB1054;CS7022</NoWarn>
 		<UserSecretsId>7f8a3b2c-4c5d-6e7f-8a9b-0c1d2e3f4g5h</UserSecretsId>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
 		<IsTestProject>false</IsTestProject>
+		<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+		<GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+		<GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+		<GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+		<GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+		<GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+		<GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -55,4 +62,5 @@
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
 	</ItemGroup>
+
 </Project>
