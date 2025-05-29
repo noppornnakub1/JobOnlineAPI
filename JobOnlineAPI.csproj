@@ -7,6 +7,9 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NoWarn>$(NoWarn);SYSLIB1054</NoWarn>
 		<UserSecretsId>7f8a3b2c-4c5d-6e7f-8a9b-0c1d2e3f4g5h</UserSecretsId>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+		<IsTestProject>false</IsTestProject>
 	</PropertyGroup>
 
 	<ItemGroup>
