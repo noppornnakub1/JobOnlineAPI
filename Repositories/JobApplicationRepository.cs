@@ -5,15 +5,10 @@ using Microsoft.Data.SqlClient;
 
 namespace JobOnlineAPI.Repositories
 {
-    public class JobApplicationRepository : IJobApplicationRepository
+    public class JobApplicationRepository(IConfiguration configuration) : IJobApplicationRepository
     {
-        private readonly string _connectionString;
-
-        public JobApplicationRepository(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
-        }
+        private readonly string _connectionString = configuration?.GetConnectionString("DefaultConnection")
+                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
 
         public IDbConnection GetConnection()
         {
@@ -37,11 +32,30 @@ namespace JobOnlineAPI.Repositories
 
         public async Task<int> AddJobApplicationAsync(JobApplication jobApplication)
         {
+            ArgumentNullException.ThrowIfNull(jobApplication);
+            if (jobApplication.ApplicantID <= 0 || jobApplication.JobID <= 0)
+            {
+                throw new ArgumentException("ApplicantID and JobID must be positive integers.");
+            }
+            if (string.IsNullOrEmpty(jobApplication.Status))
+            {
+                jobApplication.Status = "Pending";
+            }
+            if (jobApplication.SubmissionDate == default)
+            {
+                jobApplication.SubmissionDate = DateTime.UtcNow;
+            }
+
+            return await ExecuteInsertJobApplicationAsync(jobApplication);
+        }
+
+        private async Task<int> ExecuteInsertJobApplicationAsync(JobApplication jobApplication)
+        {
             using IDbConnection db = new SqlConnection(_connectionString);
             string sql = @"
                 INSERT INTO JobApplications (ApplicantID, JobID, Status, SubmissionDate)
                 VALUES (@ApplicantID, @JobID, @Status, @SubmissionDate);
-                SELECT CAST(SCOPE_IDENTITY() as int)";
+                SELECT CAST(SCOPE_IDENTITY() AS int)";
             return await db.QuerySingleAsync<int>(sql, jobApplication);
         }
 

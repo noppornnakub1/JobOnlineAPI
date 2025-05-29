@@ -1,22 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
+﻿using System.Data;
 using Dapper;
 using JobOnlineAPI.Models;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 
 namespace JobOnlineAPI.Repositories
 {
-    public class ApplicantRepository : IApplicantRepository
+    public class ApplicantRepository(IConfiguration configuration) : IApplicantRepository
     {
-        private readonly string _connectionString;
+        private readonly string _connectionString = configuration?.GetConnectionString("DefaultConnection")
+                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
 
-        public ApplicantRepository(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                                ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
-        }
         public IDbConnection GetConnection()
         {
             return new SqlConnection(_connectionString);
@@ -25,20 +18,14 @@ namespace JobOnlineAPI.Repositories
         public async Task<IEnumerable<Applicant>> GetAllApplicantsAsync()
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-
             string storedProcedure = "spGetAllApplicantsWithJobDetails";
 
             return await db.QueryAsync<Applicant, Job, string, Applicant>(
                 storedProcedure,
                 (applicant, job, status) =>
                 {
-                    //applicant.JobTitle = job.JobTitle;
-                    //applicant.JobLocation = job.Location;
-                    //applicant.JobDepartment = job.Department;
-                    //applicant.Status = status;
                     return applicant;
                 },
-                //splitOn: "JobTitle,Status",
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -54,37 +41,22 @@ namespace JobOnlineAPI.Repositories
         public async Task<int> AddApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            //    string sql = @"
-            //INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
-            //VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, GETDATE());
-            //SELECT CAST(SCOPE_IDENTITY() as int)";
-
             string sql = @"
-        INSERT INTO Applicants (FirstNameThai, LastNameThai, Email, MobilePhone)
-        VALUES (@FirstNameThai, @LastNameThai, @Email, @MobilePhone);
-        SELECT CAST(SCOPE_IDENTITY() as int)";
+                INSERT INTO Applicants (FirstName, LastName, Email, Phone)
+                VALUES (@FirstName, @LastName, @Email, @Phone);
+                SELECT CAST(SCOPE_IDENTITY() AS int)";
             return await db.QuerySingleAsync<int>(sql, applicant);
         }
 
         public async Task<int> UpdateApplicantAsync(Applicant applicant)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            //string sql = @"
-            //    UPDATE Applicants
-            //    SET FirstName = @FirstName,
-            //        LastName = @LastName,
-            //        Email = @Email,
-            //        Phone = @Phone,
-            //        Resume = @Resume,
-            //        AppliedDate = @AppliedDate
-            //    WHERE ApplicantID = @ApplicantID";
-
             string sql = @"
                 UPDATE Applicants
-                SET FirstNameThai = @FirstNameThai,
-                    LastNameThai = @LastNameThai,
+                SET FirstName = @FirstName,
+                    LastName = @LastName,
                     Email = @Email,
-                    MobilePhone = @MobilePhone
+                    Phone = @Phone
                 WHERE ApplicantID = @ApplicantID";
             return await db.ExecuteAsync(sql, applicant);
         }
@@ -100,27 +72,27 @@ namespace JobOnlineAPI.Repositories
         {
             using SqlConnection db = new(_connectionString);
             await db.OpenAsync();
-            using var transaction = db.BeginTransaction();
+            using var transaction = await db.BeginTransactionAsync();
             try
             {
                 string applicantSql = @"
                     INSERT INTO Applicants (FirstName, LastName, Email, Phone, Resume, AppliedDate)
                     VALUES (@FirstName, @LastName, @Email, @Phone, @Resume, @AppliedDate);
-                    SELECT CAST(SCOPE_IDENTITY() as int)";
+                    SELECT CAST(SCOPE_IDENTITY() AS int)";
                 var applicantId = await db.QuerySingleAsync<int>(applicantSql, applicant, transaction);
 
                 string jobSql = @"
-                    INSERT INTO Jobs (JobTitle, JobDescription, Requirements, Location, Salary, PostedDate, ClosingDate)
-                    VALUES (@JobTitle, @JobDescription, @Requirements, @Location, @Salary, @PostedDate, @ClosingDate);
-                    SELECT CAST(SCOPE_IDENTITY() as int)";
-                var jobId = await db.QuerySingleAsync<int>(jobSql, job, transaction);
+                    INSERT INTO Jobs (JobTitle, JobDescription, Requirements, Location, NumberOfPositions, Department, JobStatus, ApprovalStatus, PostedDate, ClosingDate)
+                    VALUES (@JobTitle, @JobDescription, @Requirements, @Location, @NumberOfPositions, @Department, @JobStatus, @ApprovalStatus, @PostedDate, @ClosingDate);
+                    SELECT CAST(SCOPE_IDENTITY() AS int)";
+                await db.ExecuteAsync(jobSql, job, transaction);
 
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return applicantId;
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }
