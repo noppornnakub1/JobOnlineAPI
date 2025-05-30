@@ -530,6 +530,26 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        [HttpGet("GetDataOpenFor")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
+        [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetDataOpenFor()
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                var query = "getDateOpenFor";
+                var response = await connection.QueryAsync(query);
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve applicants: {Message}", ex.Message);
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
         [HttpGet("applicantByID")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]

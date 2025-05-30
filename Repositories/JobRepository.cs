@@ -43,6 +43,7 @@ namespace JobOnlineAPI.Repositories
                 job.Department,
                 job.JobStatus,
                 job.ApprovalStatus,
+                job.OpenFor,
                 ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
                 PostedDate = job.PostedDate.HasValue ? (object)job.PostedDate.Value : DBNull.Value,
                 CreatedBy = job.CreatedBy.HasValue ? (object)job.CreatedBy.Value : DBNull.Value,
@@ -56,7 +57,7 @@ namespace JobOnlineAPI.Repositories
                 throw new InvalidOperationException("Failed to retrieve JobID after inserting the job.");
             }
 
-            await SendJobNotificationEmailsAsync(job, db);
+            // await SendJobNotificationEmailsAsync(job, db);
 
             return id;
         }

@@ -55,5 +55,6 @@ namespace JobOnlineAPI.Models
         public string? Role { get; set; }
         public string? NAMECOSTCENT { get; set; }
         public string? Remark { get; set; }
+        public string? OpenFor { get; set; }
     }
 }
