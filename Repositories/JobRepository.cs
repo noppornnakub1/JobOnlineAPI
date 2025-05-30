@@ -29,37 +29,44 @@ namespace JobOnlineAPI.Repositories
 
         public async Task<int> AddJobAsync(Job job)
         {
-            using var db = new SqlConnection(_connectionString);
-            string sql = "sp_AddJob";
-
-            var parameters = new
+            try
             {
-                job.JobTitle,
-                job.JobDescription,
-                job.Requirements,
-                job.Location,
-                job.ExperienceYears,
-                job.NumberOfPositions,
-                job.Department,
-                job.JobStatus,
-                job.ApprovalStatus,
-                job.OpenFor,
-                ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
-                PostedDate = job.PostedDate.HasValue ? (object)job.PostedDate.Value : DBNull.Value,
-                CreatedBy = job.CreatedBy.HasValue ? (object)job.CreatedBy.Value : DBNull.Value,
-                job.CreatedByRole
-            };
+                using var db = new SqlConnection(_connectionString);
+                await db.OpenAsync();
+                string sql = "sp_AddJob";
 
-            var id = await db.ExecuteScalarAsync<int>(sql, parameters, commandType: CommandType.StoredProcedure);
+                var parameters = new
+                {
+                    job.JobTitle,
+                    job.JobDescription,
+                    job.Requirements,
+                    job.Location,
+                    job.ExperienceYears,
+                    job.NumberOfPositions,
+                    job.Department,
+                    job.JobStatus,
+                    job.ApprovalStatus,
+                    job.OpenFor,
+                    ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
+                    CreatedBy = job.CreatedBy.HasValue ? (object)job.CreatedBy.Value : DBNull.Value,
+                    job.CreatedByRole
+                };
 
-            if (id == 0)
-            {
-                throw new InvalidOperationException("Failed to retrieve JobID after inserting the job.");
+                var result = await db.ExecuteScalarAsync(sql, parameters, commandType: CommandType.StoredProcedure);
+                if (result == null || !int.TryParse(result.ToString(), out int id) || id == 0)
+                {
+                    throw new InvalidOperationException("Failed to retrieve valid JobID after inserting the job.");
+                }
+
+                // await SendJobNotificationEmailsAsync(job, db);
+
+                return id;
             }
-
-            // await SendJobNotificationEmailsAsync(job, db);
-
-            return id;
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error adding job: {ex.Message}");
+                throw;
+            }
         }
 
         private async Task SendJobNotificationEmailsAsync(Job job, SqlConnection db)
