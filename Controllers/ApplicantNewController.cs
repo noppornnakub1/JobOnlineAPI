@@ -39,6 +39,7 @@ namespace JobOnlineAPI.Controllers
             string Department,
             string Tel,
             string TelOff,
+            string Remark,
             string JobTitle,
             string TypeMail,
             string NameCon);
@@ -698,7 +699,8 @@ namespace JobOnlineAPI.Controllers
                     int emailSuccessCount = await SendHrEmails(requestData);
                 }
 
-                await UpdateStatusInDatabase(requestData.ApplicantId, requestData.Status);
+                // await UpdateStatusInDatabase(requestData.ApplicantId, requestData.Status);
+                await UpdateStatusInDatabaseV2(requestData);
                 return Ok(new { message = "อัปเดตสถานะเรียบร้อย"});
 
             }
@@ -755,7 +757,14 @@ namespace JobOnlineAPI.Controllers
             string TypeMail = data.TryGetValue("TypeMail", out object? TypeMailObj) ? TypeMailObj?.ToString() ?? "-" : "-";
             string Department = data.TryGetValue("Department", out object? DepartmentObj) ? DepartmentObj?.ToString() ?? "-" : "-";
             string NameCon = data.TryGetValue("NameCon", out object? NameConObj) ? NameConObj?.ToString() ?? "-" : "-";
-            
+            // string InterviewDate = data.TryGetValue("InterviewDate", out object? InterviewDateObj) ? InterviewDateObj?.ToString() ?? "-" : "-";
+            string? Remark = data.TryGetValue("Remark", out object? remarkObj) &&
+                            remarkObj is JsonElement remarkElement &&
+                            remarkElement.ValueKind == JsonValueKind.String
+                ? remarkElement.GetString()
+                : null;
+
+
             string jobTitle = data.TryGetValue(JobTitleKey, out object? jobTitleObj) &&
                               jobTitleObj is JsonElement jobTitleElement &&
                               jobTitleElement.ValueKind == JsonValueKind.String
@@ -770,11 +779,12 @@ namespace JobOnlineAPI.Controllers
                 requesterMail,
                 requesterName,
                 requesterPost,
+                Department,
                 tel,
                 telOff,
+                Remark,
                 jobTitle,
                 TypeMail,
-                Department,
                 NameCon);
         }
 
@@ -810,6 +820,27 @@ namespace JobOnlineAPI.Controllers
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        private async Task UpdateStatusInDatabaseV2(ApplicantRequestData requestData)
+        {
+            using var connection = _context.CreateConnection();
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@ApplicantID", requestData.ApplicantId);
+            parameters.Add("@Status", requestData.Status ?? "");
+            if (!string.IsNullOrWhiteSpace(requestData.Remark))
+            {
+                parameters.Add("@Remark", requestData.Remark);
+            }
+
+            await connection.ExecuteAsync(
+                "sp_UpdateApplicantStatusV2",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+
+
         private async Task<int> SendHireToHrEmails(ApplicantRequestData requestData)
         {
             var candidateNames = requestData.Candidates?.Select(candidateObj =>
