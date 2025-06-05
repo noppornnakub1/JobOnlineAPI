@@ -27,6 +27,7 @@ namespace JobOnlineAPI.Controllers
         private const string JobTitleKey = "JobTitle";
         private const string JobIdKey = "JobID";
         private const string ApplicantIdKey = "ApplicantID";
+        private const string UserIdKey = "UserId";
         public string TypeMail { get; set; } = "-";
         private sealed record ApplicantRequestData(
             int ApplicantId,
@@ -640,9 +641,9 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpGet("GetCandidateData")]
-        [TypeFilter(typeof(JwtAuthorizeAttribute))]
+        //[TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetApplicantData([FromQuery] int? id)
+        public async Task<IActionResult> GetApplicantData([FromQuery] int? id, int? userId)
         {
             try
             {
@@ -650,7 +651,7 @@ namespace JobOnlineAPI.Controllers
 
                 var parameters = new DynamicParameters();
                 parameters.Add($"@{ApplicantIdKey}", id);
-
+                parameters.Add($"@{UserIdKey}", userId);
                 var result = await connection.QueryAsync(
                     "sp_GetApplicantDataV2",
                     parameters,
