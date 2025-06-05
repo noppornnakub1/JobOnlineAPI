@@ -22,8 +22,6 @@ namespace JobOnlineAPI.Controllers
         private readonly string? _password;
         private readonly bool _useNetworkShare;
         private readonly string _applicationFormUri;
-        private readonly FileStorageConfig _fileStorageConfig;
-
         private const string JobTitleKey = "JobTitle";
         private const string JobIdKey = "JobID";
         private const string ApplicantIdKey = "ApplicantID";
