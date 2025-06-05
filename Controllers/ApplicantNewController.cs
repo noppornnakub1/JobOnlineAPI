@@ -37,7 +37,7 @@ namespace JobOnlineAPI.Controllers
             string Department,
             string Tel,
             string TelOff,
-            string Remark,
+            string? Remark,
             string JobTitle,
             string TypeMail,
             string NameCon);
@@ -699,7 +699,7 @@ namespace JobOnlineAPI.Controllers
 
                 // await UpdateStatusInDatabase(requestData.ApplicantId, requestData.Status);
                 await UpdateStatusInDatabaseV2(requestData);
-                return Ok(new { message = "อัปเดตสถานะเรียบร้อย"});
+                return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
 
             }
             catch (Exception ex)
@@ -1173,13 +1173,12 @@ namespace JobOnlineAPI.Controllers
             return (userId, confirmConsent);
         }
     }
-}
-
-public class FileStorageConfig
-{
-    public string EnvironmentName { get; set; } = "Development";
-    public string BasePath { get; set; } = string.Empty;
-    public string? NetworkUsername { get; set; }
-    public string? NetworkPassword { get; set; }
-    public string ApplicationFormUri { get; set; } = string.Empty;
+    public class FileStorageConfig
+    {
+        public string EnvironmentName { get; set; } = "Development";
+        public string BasePath { get; set; } = string.Empty;
+        public string? NetworkUsername { get; set; }
+        public string? NetworkPassword { get; set; }
+        public string ApplicationFormUri { get; set; } = string.Empty;
+    }
 }
