@@ -8,6 +8,7 @@ using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
 using JobOnlineAPI.Models;
+using static System.Net.WebRequestMethods;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -702,9 +703,16 @@ namespace JobOnlineAPI.Controllers
                 {
                     int emailSuccessCount = await SendHrEmails(requestData);
                 }
+                else if (typeMail == "notiMail")
+                {
+                    int emailSuccessCount = await SendMailNoti(requestData);
+                }
 
-                await UpdateStatusInDatabaseV2(requestData);
+                if (typeMail != "notiMail") {
+                    await UpdateStatusInDatabaseV2(requestData);
+                }
                 return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
+
             }
             catch (Exception ex)
             {
@@ -970,6 +978,50 @@ namespace JobOnlineAPI.Controllers
             }
 
             return successCount;
+        }
+
+        private async Task<int> SendMailNoti(ApplicantRequestData requestData)
+        {
+            var candidateNames = requestData.Candidates?.Select(candidateObj =>
+            {
+                var candidateDict = candidateObj as IDictionary<string, object>;
+                string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
+                string firstNameThai = candidateDict.TryGetValue("firstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
+                string lastNameThai = candidateDict.TryGetValue("lastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
+                return $"{title} {firstNameThai} {lastNameThai}".Trim();
+            }).ToList() ?? [];
+
+            string fromRegis = "https://oneejobs.oneeclick.co:7191/login?jobId=51&com";
+
+            string reqBody = $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน {requestData.RequesterName}</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: ผลสัมภาษณ์ผู้สมัครตำแหน่ง {requestData.JobTitle}</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>
+                        ตามที่ท่านได้สมัครในตำแหน่ง {requestData.JobTitle} ทางบริษัทได้พิจณาให้คุณผ่านการคัดเลือก กรุณาเข้าไปกรอกรายละเอียดของท่าน ตามลิงก์ด้านล่าง
+                    </p>
+                    <p style='margin: 0 0 10px 0;'>
+                        Clik : {fromRegis}
+                    </p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
+
+            using var connection = _context.CreateConnection();
+            int successCount = 0;
+            try
+            {
+                await _emailService.SendEmailAsync(requestData.RequesterMail, "ONEE Jobs - List of selected candidates", reqBody, true);
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send email to {RequesterMail} for applicant status update: {Message}", requestData.RequesterMail, ex.Message);
+            }
+
+            return successCount;
+
         }
 
         [HttpPut("updateJobApprovalStatus")]
