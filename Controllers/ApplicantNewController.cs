@@ -843,16 +843,17 @@ namespace JobOnlineAPI.Controllers
 
         private async Task<int> SendHireToHrEmails(ApplicantRequestData requestData)
         {
-            var candidateNames = requestData.Candidates?.Select(candidateObj =>
-            {
-                var candidateDict = candidateObj as IDictionary<string, object>;
-                string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
-                string firstNameThai = candidateDict.TryGetValue("firstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
-                string lastNameThai = candidateDict.TryGetValue("lastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
-                return $"{title} {firstNameThai} {lastNameThai}".Trim();
-            }).ToList() ?? [];
+            var candidateNames = requestData.Candidates?
+                .Select((candidateObj, index) =>
+                {
+                    var candidateDict = candidateObj as IDictionary<string, object>;
+                    string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
+                    string firstNameThai = candidateDict.TryGetValue("FirstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
+                    string lastNameThai = candidateDict.TryGetValue("LastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
+                    return $"ลำดับที่ {index + 1}: {title} {firstNameThai} {lastNameThai}".Trim();
+                }).ToList() ?? [];
 
-            string candidateNamesString = string.Join(" ", candidateNames);
+            string candidateNamesString = string.Join("<br>", candidateNames);
 
             string Tel = requestData.Tel ?? "-";
 
@@ -870,7 +871,7 @@ namespace JobOnlineAPI.Controllers
                     </p>
                     <br>
                     
-                    <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> โดยให้ทำการติดต่อ ผู้มัครลำดับที่ 1 ก่อน หากไม่เจรจสสำเร็จ ให้ทำการติดต่อกับผู้มัครลำดับต่อไป <span style='color: red; font-weight: bold;'>*</span></p>
+                    <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> โดยให้ทำการติดต่อ ผู้มัครลำดับที่ 1 ก่อน หากเจรจาไม่สสำเร็จ ให้ทำการติดต่อกับผู้มัครลำดับต่อไป <span style='color: red; font-weight: bold;'>*</span></p>
                     <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> กรุณา Login เข้าสู่ระบบ https://oneejobs.oneeclick.co:7191/LoginAdmin และไปที่ Menu การว่าจ้าง เพื่อตอบกลับคำขอนี้ <span style='color: red; font-weight: bold;'>*</span></p>
                     <br>
                     <p style='color: red; font-weight: bold;'>**Email อัตโนมัติ โปรดอย่าตอบกลับ**</p>
