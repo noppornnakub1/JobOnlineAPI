@@ -32,7 +32,7 @@ builder.Configuration.Sources.Clear();
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-    .AddUserSecrets<Program>(optional: false)
+    // .AddUserSecrets<Program>(optional: false)
     .AddEnvironmentVariables();
 
 // Log connection string

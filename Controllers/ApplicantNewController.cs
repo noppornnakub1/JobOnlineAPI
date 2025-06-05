@@ -29,6 +29,7 @@ namespace JobOnlineAPI.Controllers
         private const string ApplicantIdKey = "ApplicantID";
         private const string UserIdKey = "UserId";
         public string TypeMail { get; set; } = "-";
+
         private sealed record ApplicantRequestData(
             int ApplicantId,
             string Status,
@@ -72,6 +73,7 @@ namespace JobOnlineAPI.Controllers
             [MarshalAs(UnmanagedType.LPWStr)]
             public string? lpProvider;
         }
+
         public ApplicantNewController(
             DapperContext context,
             IEmailService emailService,
@@ -81,33 +83,34 @@ namespace JobOnlineAPI.Controllers
             _context = context;
             _emailService = emailService;
             _logger = logger;
+            _fileStorageConfig = config ?? throw new ArgumentNullException(nameof(config));
 
-            config.EnvironmentName ??= "Development";
+            _fileStorageConfig.EnvironmentName ??= "Development";
             string hostname = System.Net.Dns.GetHostName();
-            _logger.LogInformation("Detected environment: {Environment}, Hostname: {Hostname}", config.EnvironmentName, hostname);
+            _logger.LogInformation("Detected environment: {Environment}, Hostname: {Hostname}", _fileStorageConfig.EnvironmentName, hostname);
 
-            bool isProduction = config.EnvironmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
+            bool isProduction = _fileStorageConfig.EnvironmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
 
             if (isProduction)
             {
-                if (string.IsNullOrEmpty(config.BasePath))
+                if (string.IsNullOrEmpty(_fileStorageConfig.BasePath))
                     throw new InvalidOperationException("Production file storage path is not configured.");
-                _basePath = config.BasePath;
+                _basePath = _fileStorageConfig.BasePath;
                 _username = null;
                 _password = null;
                 _useNetworkShare = false;
             }
             else
             {
-                if (string.IsNullOrEmpty(config.BasePath))
+                if (string.IsNullOrEmpty(_fileStorageConfig.BasePath))
                     throw new InvalidOperationException("File storage path is not configured.");
-                _basePath = config.BasePath;
-                _username = config.NetworkUsername;
-                _password = config.NetworkPassword;
+                _basePath = _fileStorageConfig.BasePath;
+                _username = _fileStorageConfig.NetworkUsername;
+                _password = _fileStorageConfig.NetworkPassword;
                 _useNetworkShare = !string.IsNullOrEmpty(_basePath) && _username != null && _password != null;
             }
 
-            _applicationFormUri = config.ApplicationFormUri
+            _applicationFormUri = _fileStorageConfig.ApplicationFormUri
                 ?? throw new InvalidOperationException("Application form URI is not configured.");
 
             if (!_useNetworkShare && !Directory.Exists(_basePath))
@@ -700,10 +703,8 @@ namespace JobOnlineAPI.Controllers
                     int emailSuccessCount = await SendHrEmails(requestData);
                 }
 
-                // await UpdateStatusInDatabase(requestData.ApplicantId, requestData.Status);
                 await UpdateStatusInDatabaseV2(requestData);
                 return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
-
             }
             catch (Exception ex)
             {
@@ -758,13 +759,11 @@ namespace JobOnlineAPI.Controllers
             string TypeMail = data.TryGetValue("TypeMail", out object? TypeMailObj) ? TypeMailObj?.ToString() ?? "-" : "-";
             string Department = data.TryGetValue("Department", out object? DepartmentObj) ? DepartmentObj?.ToString() ?? "-" : "-";
             string NameCon = data.TryGetValue("NameCon", out object? NameConObj) ? NameConObj?.ToString() ?? "-" : "-";
-            // string InterviewDate = data.TryGetValue("InterviewDate", out object? InterviewDateObj) ? InterviewDateObj?.ToString() ?? "-" : "-";
             string? Remark = data.TryGetValue("Remark", out object? remarkObj) &&
                             remarkObj is JsonElement remarkElement &&
                             remarkElement.ValueKind == JsonValueKind.String
                 ? remarkElement.GetString()
                 : null;
-
 
             string jobTitle = data.TryGetValue(JobTitleKey, out object? jobTitleObj) &&
                               jobTitleObj is JsonElement jobTitleElement &&
@@ -840,20 +839,19 @@ namespace JobOnlineAPI.Controllers
                 commandType: CommandType.StoredProcedure);
         }
 
-
-
         private async Task<int> SendHireToHrEmails(ApplicantRequestData requestData)
         {
-            var candidateNames = requestData.Candidates?.Select(candidateObj =>
-            {
-                var candidateDict = candidateObj as IDictionary<string, object>;
-                string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
-                string firstNameThai = candidateDict.TryGetValue("firstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
-                string lastNameThai = candidateDict.TryGetValue("lastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
-                return $"{title} {firstNameThai} {lastNameThai}".Trim();
-            }).ToList() ?? [];
+            var candidateNames = requestData.Candidates?
+                .Select((candidateObj, index) =>
+                {
+                    var candidateDict = candidateObj as IDictionary<string, object>;
+                    string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
+                    string firstNameThai = candidateDict.TryGetValue("FirstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
+                    string lastNameThai = candidateDict.TryGetValue("LastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
+                    return $"ลำดับที่ {index + 1}: {title} {firstNameThai} {lastNameThai}".Trim();
+                }).ToList() ?? [];
 
-            string candidateNamesString = string.Join(" ", candidateNames);
+            string candidateNamesString = string.Join("<br>", candidateNames);
 
             string Tel = requestData.Tel ?? "-";
 
@@ -871,7 +869,7 @@ namespace JobOnlineAPI.Controllers
                     </p>
                     <br>
                     
-                    <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> โดยให้ทำการติดต่อ ผู้มัครลำดับที่ 1 ก่อน หากไม่เจรจสสำเร็จ ให้ทำการติดต่อกับผู้มัครลำดับต่อไป <span style='color: red; font-weight: bold;'>*</span></p>
+                    <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> โดยให้ทำการติดต่อ ผู้มัครลำดับที่ 1 ก่อน หากเจรจาไม่สสำเร็จ ให้ทำการติดต่อกับผู้มัครลำดับต่อไป <span style='color: red; font-weight: bold;'>*</span></p>
                     <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> กรุณา Login เข้าสู่ระบบ https://oneejobs.oneeclick.co:7191/LoginAdmin และไปที่ Menu การว่าจ้าง เพื่อตอบกลับคำขอนี้ <span style='color: red; font-weight: bold;'>*</span></p>
                     <br>
                     <p style='color: red; font-weight: bold;'>**Email อัตโนมัติ โปรดอย่าตอบกลับ**</p>
