@@ -1,28 +1,26 @@
-name: SonarCloud Scan for JobOnlineAPI
+name: CI/CD Pipeline for JobOnlineAPI
 
 on:
   push:
     branches:
-      - master
+      - master    # Production
+      - release   # Test Site
 
 jobs:
   build-and-analyze:
     name: Build and Analyze with SonarCloud
     runs-on: windows-latest
     steps:
-      # Checkout โค้ดจาก branch feature/Copter
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # ปิด shallow clone เพื่อให้ SonarCloud วิเคราะห์ได้ดีขึ้น
+          fetch-depth: 0
 
-      # ตั้งค่า .NET SDK
       - name: Set up .NET 8.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      # แคช SonarCloud packages
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
@@ -30,7 +28,6 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      # แคช SonarScanner
       - name: Cache SonarScanner
         id: cache-sonar-scanner
         uses: actions/cache@v4
@@ -39,7 +36,6 @@ jobs:
           key: ${{ runner.os }}-sonar-scanner
           restore-keys: ${{ runner.os }}-sonar-scanner
 
-      # ติดตั้ง SonarScanner ถ้าไม่พบในแคช
       - name: Install SonarScanner
         if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
         shell: powershell
@@ -48,14 +44,12 @@ jobs:
           dotnet tool update dotnet-sonarscanner --tool-path ./.sonar/scanner
           if ($LASTEXITCODE -ne 0) { throw "SonarScanner installation failed" }
 
-      # ติดตั้ง Coverlet สำหรับ coverage (ถ้ามี test projects)
       - name: Install Coverlet
         shell: powershell
         run: |
           dotnet tool install --global coverlet.console
           if ($LASTEXITCODE -ne 0) { throw "Coverlet installation failed" }
 
-      # เริ่มการสแกน SonarCloud
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -87,3 +81,59 @@ jobs:
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
           if ($LASTEXITCODE -ne 0) { throw "SonarCloud scan completion failed" }
         continue-on-error: false
+
+  deploy-production:
+    name: Deploy to Production
+    if: github.ref == 'refs/heads/master'
+    runs-on: self-hosted
+    needs: build-and-analyze
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Stop IIS (Production)
+        run: |
+          iisreset /stop
+        shell: cmd
+
+      - name: Restore dependencies
+        run: dotnet restore JobOnlineAPI.sln
+
+      - name: Build
+        run: dotnet build JobOnlineAPI.sln --configuration Release --no-restore
+
+      - name: Publish to Production
+        run: dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend --no-build
+
+      - name: Restart IIS (Production)
+        run: |
+          iisreset /restart
+        shell: cmd
+
+  deploy-test:
+    name: Deploy to Test Site
+    if: github.ref == 'refs/heads/release'
+    runs-on: self-hosted
+    needs: build-and-analyze
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Stop IIS (Test Site)
+        run: |
+          iisreset /stop
+        shell: cmd
+
+      - name: Restore dependencies
+        run: dotnet restore JobOnlineAPI.sln
+
+      - name: Build
+        run: dotnet build JobOnlineAPI.sln --configuration Release --no-restore
+
+      - name: Publish to Test Site
+        run: dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend-Test --no-build
+
+      - name: Restart IIS (Test Site)
+        run: |
+          iisreset /restart
+        shell: cmd
