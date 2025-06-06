@@ -7,6 +7,26 @@ on:
       - release   # Test Site
 
 jobs:
+  test-runner:
+    name: Test Runner
+    runs-on: self-hosted
+    steps:
+      - name: Debug Environment Variables
+        shell: cmd
+        run: |
+          echo Listing all environment variables:
+          set
+          echo Checking SONAR_TOKEN...
+          if defined SONAR_TOKEN (echo SONAR_TOKEN is defined) else (echo SONAR_TOKEN is not defined)
+        continue-on-error: true
+
+      - name: Simple Echo
+        shell: cmd
+        run: |
+          echo Hello, World!
+          dir
+        continue-on-error: true
+
   build-and-analyze:
     name: Build and Analyze with SonarCloud
     runs-on: windows-latest
@@ -50,6 +70,14 @@ jobs:
           dotnet tool install --global coverlet.console
           if ($LASTEXITCODE -ne 0) { throw "Coverlet installation failed" }
 
+      - name: Validate SONAR_TOKEN
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: powershell
+        run: |
+          if (-not $env:SONAR_TOKEN) { throw "SONAR_TOKEN is not set or empty" }
+          echo "SONAR_TOKEN is set"
+
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -57,7 +85,6 @@ jobs:
         run: |
           echo "Project Key: noppornnakub1_JobOnlineAPI"
           echo "Organization: noppornnakub1"
-          echo "SONAR_TOKEN: $env:SONAR_TOKEN"
           ./.sonar/scanner/dotnet-sonarscanner begin `
             /k:"noppornnakub1_JobOnlineAPI" `
             /o:"noppornnakub1" `
@@ -87,53 +114,113 @@ jobs:
     if: github.ref == 'refs/heads/master'
     runs-on: self-hosted
     needs: build-and-analyze
+    env:
+      ACTIONS_RUNNER_NO_SECRET_MASKING: true
     steps:
       - name: Debug Environment Variables
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Output "Listing all environment variables:"
-          Get-ChildItem Env: | ForEach-Object {
-            $name = $_.Name
-            $value = $_.Value
-            if ($value -eq $null -or $value -eq "") {
-              Write-Output "WARNING: $name is null or empty"
-            } else {
-              Write-Output "$name has value (length: $($value.Length))"
-            }
-          }
-          Write-Output "Checking secrets..."
-          if ($env:SONAR_TOKEN) {
-            Write-Output "SONAR_TOKEN is defined (length: $($env:SONAR_TOKEN.Length))"
-          } else {
-            Write-Output "SONAR_TOKEN is not defined"
-          }
+          echo Listing all environment variables:
+          set
+          echo Checking SONAR_TOKEN...
+          if defined SONAR_TOKEN (echo SONAR_TOKEN is defined) else (echo SONAR_TOKEN is not defined)
         continue-on-error: true
 
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check .NET SDK
+        run: dotnet --list-sdks
+        shell: cmd
+
+      - name: Check IIS Status
+        run: |
+          net start w3svc
+          iisreset /status
+        shell: cmd
+        continue-on-error: true
+
+      - name: Stop IIS (Production)
+        run: |
+          iisreset /stop
+        shell: cmd
+        continue-on-error: true
+
+      - name: Restore dependencies
+        run: |
+          dir
+          dotnet restore JobOnlineAPI.sln
+        shell: cmd
+
+      - name: Build
+        run: dotnet build JobOnlineAPI.sln --configuration Release --no-restore
+        shell: cmd
+
+      - name: Publish to Production
+        run: |
+          echo Publishing to C:\ONEE-JOBS\OneeJob-Backend
+          dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend --no-build
+          dir C:\ONEE-JOBS\OneeJob-Backend
+        shell: cmd
+
+      - name: Restart IIS (Production)
+        run: |
+          iisreset /restart
+        shell: cmd
 
   deploy-test:
     name: Deploy to Test Site
     if: github.ref == 'refs/heads/release'
     runs-on: self-hosted
     needs: build-and-analyze
+    env:
+      ACTIONS_RUNNER_NO_SECRET_MASKING: true
     steps:
+      - name: Debug Environment Variables
+        shell: cmd
+        run: |
+          echo Listing all environment variables:
+          set
+          echo Checking SONAR_TOKEN...
+          if defined SONAR_TOKEN (echo SONAR_TOKEN is defined) else (echo SONAR_TOKEN is not defined)
+        continue-on-error: true
+
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check .NET SDK
+        run: dotnet --list-sdks
+        shell: cmd
+
+      - name: Check IIS Status
+        run: |
+          net start w3svc
+          iisreset /status
+        shell: cmd
+        continue-on-error: true
 
       - name: Stop IIS (Test Site)
         run: |
           iisreset /stop
         shell: cmd
+        continue-on-error: true
 
       - name: Restore dependencies
-        run: dotnet restore JobOnlineAPI.sln
+        run: |
+          dir
+          dotnet restore JobOnlineAPI.sln
+        shell: cmd
 
       - name: Build
         run: dotnet build JobOnlineAPI.sln --configuration Release --no-restore
+        shell: cmd
 
       - name: Publish to Test Site
-        run: dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend-Test --no-build
+        run: |
+          echo Publishing to C:\ONEE-JOBS\OneeJob-Backend-Test
+          dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend-Test --no-build
+          dir C:\ONEE-JOBS\OneeJob-Backend-Test
+        shell: cmd
 
       - name: Restart IIS (Test Site)
         run: |
