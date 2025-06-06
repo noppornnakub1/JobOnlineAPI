@@ -19,10 +19,9 @@ jobs:
           echo Checking SONAR_TOKEN...
           if defined SONAR_TOKEN (echo SONAR_TOKEN is defined) else (echo SONAR_TOKEN is not defined)
         continue-on-error: true
-
       - name: Simple Echo
         shell: cmd
         run: |
-          echo Hello, World!X
+          echo Hello, World!
           dir
         continue-on-error: true
