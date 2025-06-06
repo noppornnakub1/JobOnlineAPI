@@ -986,34 +986,58 @@ namespace JobOnlineAPI.Controllers
             {
                 var candidateDict = candidateObj as IDictionary<string, object>;
                 string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
-                string firstNameThai = candidateDict.TryGetValue("firstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
-                string lastNameThai = candidateDict.TryGetValue("lastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
+                string firstNameThai = candidateDict.TryGetValue("FirstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
+                string lastNameThai = candidateDict.TryGetValue("LastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
                 return $"{title} {firstNameThai} {lastNameThai}".Trim();
             }).ToList() ?? [];
+            string candidateName = candidateNames.FirstOrDefault() ?? "ผู้สมัคร";
+            var candidateEmails = requestData.Candidates?.Select(candidateObj =>
+            {
+                var candidateDict = candidateObj as IDictionary<string, object>;
+                return candidateDict.TryGetValue("Email", out var emailObj) ? emailObj?.ToString() ?? "" : "";
+            }).ToList() ?? [];
 
-            string fromRegis = "https://oneejobs.oneeclick.co:7191/login?jobId=51&com";
+            var candidateApplicantIDs = requestData.Candidates?.Select(candidateObj =>
+            {
+                var candidateDict = candidateObj as IDictionary<string, object>;
+                return candidateDict.TryGetValue("ApplicantID", out var applicantIdObj) ? applicantIdObj?.ToString() ?? "" : "";
+            }).ToList() ?? [];
+            string candidateApplicantID = candidateApplicantIDs.FirstOrDefault() ?? "0";
+            using var connection = _context.CreateConnection();
+            var url = new DynamicParameters();
+            url.Add("@ApplicantID", candidateApplicantID);
+
+            var urllist = await connection.QueryAsync<dynamic>(
+                "EXEC GetDataForEmailNotiSelectCandidate @ApplicantID = @ApplicantID",
+                url);
+
+            var urlResult = urllist.FirstOrDefault();
+            string fromRegis = urlResult != null ? urlResult.LoginUrl?.ToString() ?? "ลิงก์ไม่พร้อมใช้งาน" : "ลิงก์ไม่พร้อมใช้งาน";
 
             string reqBody = $@"
                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน {requestData.RequesterName}</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ{candidateName}</p>
                     <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: ผลสัมภาษณ์ผู้สมัครตำแหน่ง {requestData.JobTitle}</p>
                     <br>
                     <p style='margin: 0 0 10px 0;'>
-                        ตามที่ท่านได้สมัครในตำแหน่ง {requestData.JobTitle} ทางบริษัทได้พิจณาให้คุณผ่านการคัดเลือก กรุณาเข้าไปกรอกรายละเอียดของท่าน ตามลิงก์ด้านล่าง
+                        ตามที่ท่านได้สมัครในตำแหน่ง {requestData.JobTitle} ทางบริษัทได้พิจารณาให้คุณผ่านการคัดเลือก กรุณาเข้าไปกรอกรายละเอียดของท่าน ตามลิงก์ด้านล่าง
                     </p>
                     <p style='margin: 0 0 10px 0;'>
-                        Clik : {fromRegis}
+                        Click : <a href='{fromRegis}'>{fromRegis}</a>
                     </p>
                     <br>
                     <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                 </div>";
 
-            using var connection = _context.CreateConnection();
+            
             int successCount = 0;
             try
             {
-                await _emailService.SendEmailAsync(requestData.RequesterMail, "ONEE Jobs - List of selected candidates", reqBody, true);
-                successCount++;
+                foreach (var email in candidateEmails)
+                {
+                    await _emailService.SendEmailAsync(email, "ONEE Jobs - List of selected candidates", reqBody, true);
+                    successCount++;
+                }
             }
             catch (Exception ex)
             {
