@@ -88,6 +88,13 @@ jobs:
     runs-on: self-hosted
     needs: build-and-analyze
     steps:
+      - name: Debug Environment Variables
+        shell: cmd
+        run: |
+          set
+          echo Checking secrets...
+          if defined SONAR_TOKEN (echo SONAR_TOKEN is defined) else (echo SONAR_TOKEN is not defined)
+
       - name: Checkout code
         uses: actions/checkout@v4
 
