@@ -22,6 +22,6 @@ jobs:
       - name: Simple Echo
         shell: cmd
         run: |
-          echo Hello, World!
+          echo Hello, WorldXX!
           dir
         continue-on-error: true
