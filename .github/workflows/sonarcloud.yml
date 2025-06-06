@@ -89,53 +89,28 @@ jobs:
     needs: build-and-analyze
     steps:
       - name: Debug Environment Variables
-        shell: cmd
+        shell: powershell
         run: |
-          set
-          echo Checking secrets...
-          if defined SONAR_TOKEN (echo SONAR_TOKEN is defined) else (echo SONAR_TOKEN is not defined)
+          Write-Output "Listing all environment variables:"
+          Get-ChildItem Env: | ForEach-Object {
+            $name = $_.Name
+            $value = $_.Value
+            if ($value -eq $null -or $value -eq "") {
+              Write-Output "WARNING: $name is null or empty"
+            } else {
+              Write-Output "$name has value (length: $($value.Length))"
+            }
+          }
+          Write-Output "Checking secrets..."
+          if ($env:SONAR_TOKEN) {
+            Write-Output "SONAR_TOKEN is defined (length: $($env:SONAR_TOKEN.Length))"
+          } else {
+            Write-Output "SONAR_TOKEN is not defined"
+          }
+        continue-on-error: true
 
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Check .NET SDK
-        run: dotnet --list-sdks
-        shell: cmd
-
-      - name: Check IIS Status
-        run: |
-          net start w3svc
-          iisreset /status
-        shell: cmd
-        continue-on-error: true
-
-      - name: Stop IIS (Production)
-        run: |
-          iisreset /stop
-        shell: cmd
-        continue-on-error: true
-
-      - name: Restore dependencies
-        run: |
-          dir
-          dotnet restore JobOnlineAPI.sln
-        shell: cmd
-
-      - name: Build
-        run: dotnet build JobOnlineAPI.sln --configuration Release --no-restore
-        shell: cmd
-
-      - name: Publish to Production
-        run: |
-          echo Publishing to C:\ONEE-JOBS\OneeJob-Backend
-          dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend --no-build
-          dir C:\ONEE-JOBS\OneeJob-Backend
-        shell: cmd
-
-      - name: Restart IIS (Production)
-        run: |
-          iisreset /restart
-        shell: cmd
 
   deploy-test:
     name: Deploy to Test Site
