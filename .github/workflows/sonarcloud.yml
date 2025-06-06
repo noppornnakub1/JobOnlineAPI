@@ -91,19 +91,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check .NET SDK
+        run: dotnet --list-sdks
+        shell: cmd
+
+      - name: Check IIS Status
+        run: |
+          net start w3svc
+          iisreset /status
+        shell: cmd
+        continue-on-error: true
+
       - name: Stop IIS (Production)
         run: |
           iisreset /stop
         shell: cmd
+        continue-on-error: true
 
       - name: Restore dependencies
-        run: dotnet restore JobOnlineAPI.sln
+        run: |
+          dir
+          dotnet restore JobOnlineAPI.sln
+        shell: cmd
 
       - name: Build
         run: dotnet build JobOnlineAPI.sln --configuration Release --no-restore
+        shell: cmd
 
       - name: Publish to Production
-        run: dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend --no-build
+        run: |
+          echo Publishing to C:\ONEE-JOBS\OneeJob-Backend
+          dotnet publish JobOnlineAPI.csproj --configuration Release --output C:\ONEE-JOBS\OneeJob-Backend --no-build
+          dir C:\ONEE-JOBS\OneeJob-Backend
+        shell: cmd
 
       - name: Restart IIS (Production)
         run: |
