@@ -58,7 +58,7 @@ namespace JobOnlineAPI.Repositories
                     throw new InvalidOperationException("Failed to retrieve valid JobID after inserting the job.");
                 }
 
-                // await SendJobNotificationEmailsAsync(job, db);
+                await SendJobNotificationEmailsAsync(job, db);
 
                 return id;
             }
