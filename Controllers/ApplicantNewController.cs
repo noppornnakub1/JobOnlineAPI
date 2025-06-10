@@ -1133,7 +1133,7 @@ namespace JobOnlineAPI.Controllers
             var parameters = new DynamicParameters();
             parameters.Add("@JobID", approvalData.JobId);
             parameters.Add("@ApprovalStatus", approvalData.ApprovalStatus);
-            parameters.Add("@Remark", approvalData.Remark);
+            parameters.Add("@Remark", approvalData.Remark ?? (object)DBNull.Value);
 
             await connection.ExecuteAsync(
                 "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus, @Remark",
