@@ -36,7 +36,10 @@ namespace JobOnlineAPI.Controllers
                         Username = adminUser.Username,
                         Role = adminUser.Role,
                         ConfirmConsent = adminUser.ConfirmConsent ?? string.Empty,
-                        UserId = adminUser.UserId.Value
+                        UserId = adminUser.UserId.Value,
+                        ApplicantID = adminUser.ApplicantID,
+                        JobID = adminUser.JobID,
+                        Status = adminUser.Status
                     };
 
                     var token = _jwtTokenService.GenerateJwtToken(userModel);
@@ -122,5 +125,8 @@ namespace JobOnlineAPI.Controllers
         public string Role { get; set; } = string.Empty;
         public int UserId { get; set; }
         public string ConfirmConsent { get; set; } = string.Empty;
+        public int? ApplicantID { get; set; }
+        public int? JobID { get; set; }
+        public string? Status { get; set; } = string.Empty;
     }
 }

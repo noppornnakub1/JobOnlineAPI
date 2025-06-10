@@ -8,5 +8,8 @@
         public required string Role { get; set; }
         public int? UserId { get; set; }
         public string? ConfirmConsent { get; set; }
+        public int? ApplicantID { get; set; }
+        public int? JobID { get; set; }
+        public string? Status { get; set; }
     }
 }

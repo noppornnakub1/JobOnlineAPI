@@ -32,7 +32,10 @@ namespace JobOnlineAPI.Services
                         Password = user.PasswordHash,
                         Role = "User",
                         UserId = user.UserId,
-                        ConfirmConsent = user.ConfirmConsent
+                        ConfirmConsent = user.ConfirmConsent,
+                        ApplicantID = user.ApplicantID,
+                        JobID = user.JobID,
+                        Status = user.Status
                     };
                 }
             }
