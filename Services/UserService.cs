@@ -8,9 +8,9 @@ namespace JobOnlineAPI.Services
         private readonly IAdminRepository _adminRepository = adminRepository;
         private readonly ILdapService _ldapService = ldapService;
 
-        public async Task<AdminUser?> AuthenticateAsync(string username, string password)
+        public async Task<AdminUser?> AuthenticateAsync(string username, string password, int JobID)
         {
-            var user = await _adminRepository.GetUserByEmailAsync(username);
+            var user = await _adminRepository.GetUserByEmailAsync(username,JobID);
 
             if (user != null)
             {

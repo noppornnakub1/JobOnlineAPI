@@ -17,7 +17,7 @@ namespace JobOnlineAPI.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = await userService.AuthenticateAsync(model.Username, model.Password);
+                var user = await userService.AuthenticateAsync(model.Username, model.Password, model.JobID);
 
                 if (user != null)
                 {
