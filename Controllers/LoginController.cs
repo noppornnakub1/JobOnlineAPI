@@ -37,7 +37,7 @@ namespace JobOnlineAPI.Controllers
 
                     var token = _jwtTokenService.GenerateJwtToken(userModel);
 
-                    return Ok(new { Token = token, userModel.Username, userModel.Role, userModel.ConfirmConsent, userModel.UserId });
+                    return Ok(new { Token = token, userModel.Username, userModel.Role, userModel.ConfirmConsent, userModel.UserId, userModel.ApplicantID, userModel.JobID, userModel.Status });
                 }
 
                 return Unauthorized("Invalid username or password.");
