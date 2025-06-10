@@ -1,23 +1,15 @@
 ﻿using System.Data;
-using System.Threading.Tasks;
 using Dapper;
-using BCrypt.Net;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using JobOnlineAPI.Models;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace JobOnlineAPI.Repositories
 {
-    public class AdminRepository : IAdminRepository
+    public class AdminRepository(IConfiguration configuration) : IAdminRepository
     {
-        private readonly string? _connectionString;
-
-        public AdminRepository(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
-        }
+        private readonly string? _connectionString = configuration.GetConnectionString("DefaultConnection");
 
         public async Task<int> AddAdminUserAsync(AdminUser admin)
         {
