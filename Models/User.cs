@@ -6,6 +6,9 @@
         public string? ConfirmConsent { get; set; }
         public required string Email { get; set; }
         public required string PasswordHash { get; set; }
+        public  int ApplicantID { get; set; }
+        public  int JobID { get; set; }
+        public  string? Status { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

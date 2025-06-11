@@ -382,7 +382,8 @@ namespace JobOnlineAPI.Controllers
             param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
 
-            await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
+            // await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
+            await conn.ExecuteAsync("InsertOrUpdateApplicantDataV7", param, commandType: CommandType.StoredProcedure);
 
             return (
                 param.Get<int>("ApplicantID"),
@@ -1133,7 +1134,7 @@ namespace JobOnlineAPI.Controllers
             var parameters = new DynamicParameters();
             parameters.Add("@JobID", approvalData.JobId);
             parameters.Add("@ApprovalStatus", approvalData.ApprovalStatus);
-            parameters.Add("@Remark", approvalData.Remark);
+            parameters.Add("@Remark", approvalData.Remark ?? (object)DBNull.Value);
 
             await connection.ExecuteAsync(
                 "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus, @Remark",

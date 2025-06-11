@@ -1,23 +1,15 @@
 ﻿using System.Data;
-using System.Threading.Tasks;
 using Dapper;
-using BCrypt.Net;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using JobOnlineAPI.Models;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace JobOnlineAPI.Repositories
 {
-    public class AdminRepository : IAdminRepository
+    public class AdminRepository(IConfiguration configuration) : IAdminRepository
     {
-        private readonly string? _connectionString;
-
-        public AdminRepository(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
-        }
+        private readonly string? _connectionString = configuration.GetConnectionString("DefaultConnection");
 
         public async Task<int> AddAdminUserAsync(AdminUser admin)
         {
@@ -61,14 +53,14 @@ namespace JobOnlineAPI.Repositories
             }
         }
 
-        public async Task<User?> GetUserByEmailAsync(string email)
+        public async Task<User?> GetUserByEmailAsync(string email, int JobID)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            var query = "SELECT * FROM Users WHERE Email = @Email";
-
+            var query = "sp_Userlogin";
+            
             try
             {
-                return await db.QuerySingleOrDefaultAsync<User>(query, new { Email = email });
+                return await db.QuerySingleOrDefaultAsync<User>(query, new { Email = email, JobID });
             }
             catch (Exception ex)
             {
