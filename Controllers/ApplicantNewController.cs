@@ -1134,12 +1134,20 @@ namespace JobOnlineAPI.Controllers
             var parameters = new DynamicParameters();
             parameters.Add("@JobID", approvalData.JobId);
             parameters.Add("@ApprovalStatus", approvalData.ApprovalStatus);
-            parameters.Add("@Remark", approvalData.Remark ?? (object)DBNull.Value);
+            parameters.Add("@Remark", approvalData.Remark != "" ? approvalData.Remark : "");
 
-            await connection.ExecuteAsync(
-                "EXEC sp_UpdateJobApprovalStatus @JobID, @ApprovalStatus, @Remark",
-                parameters,
-                commandType: CommandType.StoredProcedure);
+            try
+            {
+                await connection.ExecuteAsync(
+                    "sp_UpdateJobApprovalStatus",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                throw;
+            }
         }
 
         [HttpGet("GetPDPAContent")]
