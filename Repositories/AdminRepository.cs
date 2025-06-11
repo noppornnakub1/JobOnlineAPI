@@ -53,15 +53,14 @@ namespace JobOnlineAPI.Repositories
             }
         }
 
-        public async Task<User?> GetUserByEmailAsync(string email)
+        public async Task<User?> GetUserByEmailAsync(string email, int JobID)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            // var query = "SELECT * FROM Users WHERE Email = @Email";
             var query = "sp_Userlogin";
             
             try
             {
-                return await db.QuerySingleOrDefaultAsync<User>(query, new { Email = email });
+                return await db.QuerySingleOrDefaultAsync<User>(query, new { Email = email, JobID });
             }
             catch (Exception ex)
             {

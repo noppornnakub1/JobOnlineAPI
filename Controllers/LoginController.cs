@@ -22,7 +22,7 @@ namespace JobOnlineAPI.Controllers
         {
             try
             {
-                var adminUser = await _userService.AuthenticateAsync(loginRequest.Username, loginRequest.Password);
+                var adminUser = await _userService.AuthenticateAsync(loginRequest.Username, loginRequest.Password, loginRequest.JobID);
 
                 if (adminUser != null)
                 {
@@ -44,7 +44,7 @@ namespace JobOnlineAPI.Controllers
 
                     var token = _jwtTokenService.GenerateJwtToken(userModel);
 
-                    return Ok(new { Token = token, userModel.Username, userModel.Role, userModel.ConfirmConsent, userModel.UserId });
+                    return Ok(new { Token = token, userModel.Username, userModel.Role, userModel.ConfirmConsent, userModel.UserId, userModel.ApplicantID, userModel.JobID, userModel.Status });
                 }
 
                 return Unauthorized("Invalid username or password.");
@@ -106,6 +106,8 @@ namespace JobOnlineAPI.Controllers
     {
         public required string Username { get; set; }
         public required string Password { get; set; }
+        public required int JobID { get; set; }
+        
     }
 
     public class ChangePasswordRequest

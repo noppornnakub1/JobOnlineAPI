@@ -10,5 +10,8 @@ namespace JobOnlineAPI.Models
         [Required]
         [DataType(DataType.Password)]
         public required string Password { get; set; }
+
+        public int JobID { get; set; }
+        
     }
 }

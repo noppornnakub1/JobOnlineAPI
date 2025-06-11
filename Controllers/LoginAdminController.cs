@@ -15,7 +15,7 @@ namespace JobOnlineAPI.Controllers
         {
             try
             {
-                var adminUser = await _userService.AuthenticateAsync(loginAdminRequest.Username, loginAdminRequest.Password);
+                var adminUser = await _userService.AuthenticateAsync(loginAdminRequest.Username, loginAdminRequest.Password, loginAdminRequest.JobID);
 
                 if (adminUser != null)
                 {
@@ -43,6 +43,8 @@ namespace JobOnlineAPI.Controllers
     {
         public required string Username { get; set; }
         public required string Password { get; set; }
+        public required int JobID { get; set; }
+        
     }
 
     public class UserAdminModel
