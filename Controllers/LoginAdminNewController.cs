@@ -92,10 +92,18 @@ namespace JobOnlineAPI.Controllers
             }
         }
     }
+<<<<<<< HEAD
+=======
+    
+>>>>>>> origin/feature/Copter
     public class LoginRequestAdmin
     {
         public required string Username { get; set; }
         public required string Password { get; set; }
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> origin/feature/Copter
     }
 }
