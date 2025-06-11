@@ -326,7 +326,7 @@ namespace JobOnlineAPI.Controllers
                         <p style='font-size: 22px'>**Do not reply**</p>
                         <p style='font-size: 20px'>Hi All,</p>
                         <p style='font-size: 20px'>We’ve received a new job application from <strong style='font-weight: bold'>{result.FullNameEng}</strong> for the <strong style='font-weight: bold'>{result.JobTitle}</strong> position.</p>
-                        <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={result.ApplicantId}'>https://oneejobs.oneeclick.co</a></p>
+                        <p style='font-size: 20px'>For more details, please click <a target='_blank' href='https://oneejobs27.oneeclick.co:7191/ApplicationForm/ApplicationFormView?id={result.ApplicantId}'>https://oneejobs27.oneeclick.co</a></p>
                     </div>
                     """;
                 await _emailService.SendEmailAsync(email, "New Job Application Received", managerBody, true);
