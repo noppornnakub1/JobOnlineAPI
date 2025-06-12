@@ -73,10 +73,8 @@ namespace JobOnlineAPI.Repositories
         {
             var roleSendMail = GetRoleSendMail(job.Role);
             var emailParameters = new DynamicParameters();
-            emailParameters.Add("@CreatorRole", job.Role != "2" ? 2 : (object)DBNull.Value, DbType.Int32);
-            emailParameters.Add("@CreatorDepartment", job.Role == "2" && !string.IsNullOrEmpty(job.Department) 
-                ? job.Department 
-                : (object)DBNull.Value, DbType.String);
+            emailParameters.Add("@CreatorRole", job.Role );
+            emailParameters.Add("@CreatorDepartment", job.Department);
             emailParameters.Add("@OpenForEmpID", 
                 string.IsNullOrWhiteSpace(job.OpenFor) 
                     ? (object)DBNull.Value 
