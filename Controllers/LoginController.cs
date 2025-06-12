@@ -3,7 +3,6 @@ using JobOnlineAPI.Services;
 using System.ComponentModel.DataAnnotations;
 using Dapper;
 using System.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using System.Data;
 
 namespace JobOnlineAPI.Controllers
