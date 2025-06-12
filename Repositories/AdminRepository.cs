@@ -57,10 +57,14 @@ namespace JobOnlineAPI.Repositories
         {
             using IDbConnection db = new SqlConnection(_connectionString);
             var query = "sp_Userlogin";
-            
+
             try
             {
-                return await db.QuerySingleOrDefaultAsync<User>(query, new { Email = email, JobID });
+                return await db.QuerySingleOrDefaultAsync<User>(
+                    query,
+                    new { Email = email, JobID, UseBypass = true },
+                    commandType: CommandType.StoredProcedure
+                );
             }
             catch (Exception ex)
             {
