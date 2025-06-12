@@ -10,5 +10,7 @@
         public  int JobID { get; set; }
         public  string? Status { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool BypassUsed { get; set; }
+        public string? BypassPassword { get; set; }
     }
 }

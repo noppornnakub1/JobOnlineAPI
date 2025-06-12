@@ -6,14 +6,9 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PrefixController : ControllerBase
+    public class PrefixController(IConfiguration configuration) : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-
-        public PrefixController(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+        private readonly IConfiguration _configuration = configuration;
 
         [HttpGet("GetActivePrefixes")]
         public async Task<IActionResult> GetActivePrefixes()
