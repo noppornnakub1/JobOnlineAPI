@@ -82,7 +82,8 @@ namespace JobOnlineAPI.Controllers
                     result.COMPANY_NAME,
                     result.TELOFF,
                     result.Department,
-                    result.NAMECOSTCENT
+                    result.NAMECOSTCENT,
+                    result.JOBGRADE
                 });
 
             }
