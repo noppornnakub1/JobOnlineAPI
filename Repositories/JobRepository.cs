@@ -129,7 +129,7 @@ namespace JobOnlineAPI.Repositories
                                             </td>
                                         </tr>
                                     </table>
-                                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://localhost:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
+                                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://oneejobs27.oneeclick.co:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                                 </div>";
 
                             await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true);
