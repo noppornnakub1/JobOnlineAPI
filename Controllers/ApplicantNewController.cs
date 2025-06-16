@@ -382,7 +382,6 @@ namespace JobOnlineAPI.Controllers
             param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
 
-            // await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
             await conn.ExecuteAsync("InsertOrUpdateApplicantDataV8", param, commandType: CommandType.StoredProcedure);
 
             return (
