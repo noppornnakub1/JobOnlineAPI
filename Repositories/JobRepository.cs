@@ -94,7 +94,6 @@ namespace JobOnlineAPI.Repositories
                     : $"<li style='color: #333;'><strong>ผู้ขอ:</strong> {job.NAMETHAI} Requester: {job.NAMECOSTCENT}</li>";
 
                 int successCount = 0;
-                int failCount = 0;
                 var emailTasks = staffList
                     .Where(s => !string.IsNullOrWhiteSpace(s.Email))
                     .Select(async s =>
