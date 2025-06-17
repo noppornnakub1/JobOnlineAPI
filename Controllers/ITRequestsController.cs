@@ -99,7 +99,7 @@ namespace JobOnlineAPI.Controllers
                     return StatusCode(500, new { Error = $"Failed to {(isUpdate ? "update" : "create")} IT request." });
 
                 // Send email notification
-                await SendITRequestEmail(requestData, newId.Value, createdBy, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
+                await SendITRequestEmail(requestData, newId.Value, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
 
                 return Ok(new
                 {
@@ -115,7 +115,7 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        private async Task SendITRequestEmail(Dictionary<string, object> requestData, int id, string createdBy, bool isUpdate, string? reqNo, string? approver1, string? approver2, string? approver3, string? approver4, string? approver5)
+        private async Task SendITRequestEmail(Dictionary<string, object> requestData, int id, bool isUpdate, string? reqNo, string? approver1, string? approver2, string? approver3, string? approver4, string? approver5)
         {
             try
             {
