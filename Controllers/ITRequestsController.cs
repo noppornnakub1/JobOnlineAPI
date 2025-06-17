@@ -20,7 +20,7 @@ namespace JobOnlineAPI.Controllers
         {
             try
             {
-                // รองรับทั้ง JSON object และ JSON array
+                // Validate JSON format
                 if (request.ValueKind != JsonValueKind.Object && request.ValueKind != JsonValueKind.Array)
                     return BadRequest(new { Error = "Invalid JSON format. Expected a JSON object or array." });
 
@@ -28,7 +28,7 @@ namespace JobOnlineAPI.Controllers
                 string? createdBy = null;
                 bool isArray = request.ValueKind == JsonValueKind.Array;
 
-                // กรณี JSON object เดียว
+                // Handle single JSON object
                 if (!isArray)
                 {
                     if (!request.TryGetProperty("CreatedBy", out var createdByElement) || createdByElement.ValueKind == JsonValueKind.Null || string.IsNullOrWhiteSpace(createdByElement.GetString()))
@@ -38,9 +38,6 @@ namespace JobOnlineAPI.Controllers
                     var requestData = new Dictionary<string, object>();
                     foreach (var property in request.EnumerateObject())
                     {
-                        if (property.Name.Equals("REQ_NO", StringComparison.OrdinalIgnoreCase))
-                            continue;
-
                         requestData[property.Name] = property.Value.ValueKind switch
                         {
                             JsonValueKind.String => property.Value.GetString() ?? string.Empty,
@@ -56,9 +53,10 @@ namespace JobOnlineAPI.Controllers
                     }
                     requestDataList.Add(requestData);
                 }
-                // กรณี JSON array
+                // Handle JSON array
                 else
                 {
+                    string? jsonReqNo = null;
                     foreach (var item in request.EnumerateArray())
                     {
                         if (item.ValueKind != JsonValueKind.Object)
@@ -76,7 +74,16 @@ namespace JobOnlineAPI.Controllers
                         foreach (var property in item.EnumerateObject())
                         {
                             if (property.Name.Equals("REQ_NO", StringComparison.OrdinalIgnoreCase))
-                                continue;
+                            {
+                                string? currentReqNo = property.Value.GetString();
+                                if (currentReqNo != null)
+                                {
+                                    if (jsonReqNo == null)
+                                        jsonReqNo = currentReqNo;
+                                    else if (jsonReqNo != currentReqNo)
+                                        return BadRequest(new { Error = "All items in the array must have the same REQ_NO value." });
+                                }
+                            }
 
                             requestData[property.Name] = property.Value.ValueKind switch
                             {
@@ -95,23 +102,10 @@ namespace JobOnlineAPI.Controllers
                     }
                 }
 
-                int id = 0;
-                bool isUpdate = !isArray && request.TryGetProperty("ID", out var idElement) && idElement.ValueKind != JsonValueKind.Null && idElement.TryGetInt32(out id);
-                string operation = isUpdate ? "UPDATE" : "INSERT";
-
-                // ตรวจสอบ REQ_STATUS สำหรับ INSERT
-                foreach (var requestData in requestDataList)
-                {
-                    if (requestData.TryGetValue("REQ_STATUS", out var statusObj) && statusObj is string reqStatus && !isUpdate && reqStatus is "Acknowledge" or "Completed")
-                        return BadRequest(new { Error = "INSERT operation requires REQ_STATUS to be 'New'." });
-                }
-
                 try
                 {
                     using var connection = new SqlConnection(_dbConnection.ConnectionString);
                     var parameters = new DynamicParameters();
-                    parameters.Add("Operation", operation);
-                    parameters.Add("ID", isUpdate ? id : (object?)null, DbType.Int32);
                     string jsonData = isArray ? JsonSerializer.Serialize<List<Dictionary<string, object>>>(requestDataList) : JsonSerializer.Serialize<Dictionary<string, object>>(requestDataList[0]);
                     parameters.Add("JsonData", jsonData);
                     parameters.Add("CreatedBy", createdBy);
@@ -131,44 +125,40 @@ namespace JobOnlineAPI.Controllers
                         return BadRequest(new { Error = errorMessage });
 
                     if (newId == null)
-                        return StatusCode(500, new { Error = $"Failed to {(isUpdate ? "update" : "create")} IT request." });
+                        return StatusCode(500, new { Error = "Failed to process IT request." });
 
-                    // สร้าง response จาก result set
+                    // Create response from result set
                     int index = 0;
                     var responseItems = result.Select(r =>
                     {
-                        // ใช้ requestData ตาม index สำหรับ array
                         var requestData = isArray && index < requestDataList.Count ? requestDataList[index++] : requestDataList.FirstOrDefault();
                         return new
                         {
                             ITRequestId = r.NewID,
                             r.ReqNo,
-                            Message = $"IT request {(isUpdate ? "updated" : "created")} successfully.",
+                            Message = requestData != null && requestData.ContainsKey("ID") ? "IT request updated successfully." : "IT request created successfully.",
                             FilePath = requestData != null && requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? filePath.ToString() : null
                         };
                     }).ToList();
 
-                    // ส่งอีเมลแจ้งเตือนสำหรับแต่ละ result
-                    index = 0;
-                    foreach (var r in result)
+                    // Send a single email for the entire request
+                    var firstResult = result.FirstOrDefault();
+                    if (firstResult != null)
                     {
-                        string? reqNo = r.ReqNo;
-                        string? approver1 = r.APPROVER1;
-                        string? approver2 = r.APPROVER2;
-                        string? approver3 = r.APPROVER3;
-                        string? approver4 = r.APPROVER4;
-                        string? approver5 = r.APPROVER5;
-
-                        // ใช้ requestData ตาม index สำหรับ array
-                        var requestData = isArray && index < requestDataList.Count ? requestDataList[index] : requestDataList.FirstOrDefault() ?? [];
-                        await SendITRequestEmail(requestData, (int)r.NewID, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
-                        index++;
+                        string? reqNo = firstResult.ReqNo;
+                        string? approver1 = firstResult.APPROVER1;
+                        string? approver2 = firstResult.APPROVER2;
+                        string? approver3 = firstResult.APPROVER3;
+                        string? approver4 = firstResult.APPROVER4;
+                        string? approver5 = firstResult.APPROVER5;
+                        bool isUpdate = requestDataList.Any(data => data.ContainsKey("ID"));
+                        await SendITRequestEmail(requestDataList, newId.Value, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
                     }
 
                     return Ok(new
                     {
                         ITRequests = responseItems,
-                        Message = isUpdate ? "IT request updated successfully." : "Multiple IT requests created successfully."
+                        Message = requestDataList.Any(data => data.ContainsKey("ID")) ? "IT requests updated successfully." : "Multiple IT requests created successfully."
                     });
                 }
                 catch (Exception ex)
@@ -182,22 +172,33 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        private async Task SendITRequestEmail(Dictionary<string, object> requestData, int id, bool isUpdate, string? reqNo, string? approver1, string? approver2, string? approver3, string? approver4, string? approver5)
+        private async Task SendITRequestEmail(List<Dictionary<string, object>> requestDataList, int id, bool isUpdate, string? reqNo, string? approver1, string? approver2, string? approver3, string? approver4, string? approver5)
         {
             try
             {
                 string requesterEmail = _defaultEmail;
-                if (requestData.TryGetValue("RequesterEmail", out var emailObj) && emailObj is string email && IsValidEmail(email))
+                if (requestDataList.Any(data => data.TryGetValue("RequesterEmail", out var emailObj) && emailObj is string email && IsValidEmail(email)))
                 {
-                    requesterEmail = email;
+                    requesterEmail = requestDataList.First(data => data.TryGetValue("RequesterEmail", out var emailObj) && emailObj is string email && IsValidEmail(email))["RequesterEmail"].ToString()!;
                 }
 
                 string action = isUpdate ? "updated" : "created";
-                reqNo ??= requestData.TryGetValue("REQ_NO", out var reqNoObj) && reqNoObj != null ? reqNoObj.ToString()! : "N/A";
-                string reqStatus = requestData.TryGetValue("REQ_STATUS", out var statusObj) && statusObj != null ? statusObj.ToString()! : "N/A";
+                reqNo ??= requestDataList.FirstOrDefault()?.TryGetValue("REQ_NO", out var reqNoObj) == true && reqNoObj != null ? reqNoObj.ToString()! : "N/A";
                 string subject = $"IT Request #{reqNo} has been {action}";
 
-                // อีเมลสำหรับ Approvers
+                // Build email body with all services
+                var servicesList = new System.Text.StringBuilder();
+                foreach (var requestData in requestDataList)
+                {
+                    servicesList.AppendLine("<div style='margin-bottom: 15px;'>");
+                    servicesList.AppendLine($"<p><strong>Service:</strong> {(requestData.TryGetValue("SERVICE_ID", out var serviceId) && serviceId != null ? serviceId.ToString() : "N/A")}</p>");
+                    servicesList.AppendLine($"<p><strong>Details:</strong> {(requestData.TryGetValue("REQ_DETAIL", out var detail) && detail != null ? detail.ToString() : "N/A")}</p>");
+                    servicesList.AppendLine($"<p><strong>Status:</strong> {(requestData.TryGetValue("REQ_STATUS", out var statusObj) && statusObj != null ? statusObj.ToString() : "N/A")}</p>");
+                    servicesList.AppendLine($"<p><strong>File:</strong> {(requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? $"<a href='{System.Web.HttpUtility.HtmlEncode(filePath)}'>View File</a>" : "N/A")}</p>");
+                    servicesList.AppendLine("</div>");
+                }
+
+                // Email for Approvers
                 var approvers = new[] { approver1, approver2, approver3, approver4, approver5 }
                     .Where(a => !string.IsNullOrWhiteSpace(a) && IsValidEmail(a))
                     .ToList();
@@ -207,10 +208,8 @@ namespace JobOnlineAPI.Controllers
                     string approverBody = $"""
                 <div style='font-family: Arial, sans-serif; padding: 20px;'>
                     <p>An IT request #{reqNo} requires your approval.</p>
-                    <p><strong>Service:</strong> {(requestData.TryGetValue("SERVICE_ID", out var serviceId) && serviceId != null ? serviceId.ToString() : "N/A")}</p>
-                    <p><strong>Details:</strong> {(requestData.TryGetValue("REQ_DETAIL", out var detail) && detail != null ? detail.ToString() : "N/A")}</p>
-                    <p><strong>Status:</strong> {reqStatus}</p>
-                    <p><strong>File:</strong> {(requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? $"<a href='{System.Web.HttpUtility.HtmlEncode(filePath)}'>View File</a>" : "N/A")}</p>
+                    <h3>Services Requested:</h3>
+                    {servicesList}
                     <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
                 </div>
                 """;
@@ -219,7 +218,7 @@ namespace JobOnlineAPI.Controllers
                     {
                         if (approver != null)
                         {
-                            await _emailService.SendEmailAsync(approver, $"Approval Required: IT Request #{reqNo}", approverBody, true);
+                            await _emailService.SendEmailAsync(approver, subject, approverBody, true);
                         }
                     }
                 }
