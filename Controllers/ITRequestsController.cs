@@ -208,6 +208,50 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        [HttpGet("generate-form/{reqNo}")]
+        public async Task<IActionResult> GenerateForm(string reqNo)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_dbConnection.ConnectionString);
+                var parameters = new DynamicParameters();
+                parameters.Add("REQ_NO", reqNo);
+                parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+
+                var results = await connection.QueryAsync<dynamic>(
+                    "usp_GetT_EMP_IT_REQ_ByReqNo",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                var errorMessage = parameters.Get<string>("ErrorMessage");
+
+                if (!string.IsNullOrEmpty(errorMessage))
+                    return BadRequest(new { Error = errorMessage });
+
+                if (results == null || !results.Any())
+                    return NotFound(new { Message = $"No IT requests found for REQ_NO: {reqNo}" });
+
+                var dataDict = new Dictionary<string, object>
+                {
+                    ["Requests"] = results,
+                    ["ReqNo"] = reqNo
+                };
+
+                var viewAsPdf = new Rotativa.AspNetCore.ViewAsPdf("ITRequestForm", dataDict)
+                {
+                    FileName = $"ITRequest_{reqNo}.pdf",
+                    PageSize = Rotativa.AspNetCore.Options.Size.A4,
+                    PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 20, 10)
+                };
+                return viewAsPdf;
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = $"Error generating PDF: {ex.Message}" });
+            }
+        }
+
         private async Task SendITRequestEmail(List<Dictionary<string, object>> requestDataList, int id, bool isUpdate, string? reqNo, string? approver1, string? approver2, string? approver3, string? approver4, string? approver5)
         {
             try

@@ -7,14 +7,9 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class EducationLevelsController : ControllerBase
+    public class EducationLevelsController(IConfiguration configuration) : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-
-        public EducationLevelsController(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+        private readonly IConfiguration _configuration = configuration;
 
         [HttpGet("GetAll")]
         public async Task<IActionResult> GetAllEducationLevels()

@@ -9,6 +9,7 @@ using JobOnlineAPI.Services;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.DAL;
 using Microsoft.Extensions.Options;
+using Rotativa.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -174,6 +175,8 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
+
+RotativaConfiguration.Setup(app.Environment.ContentRootPath, "Rotativa");
 
 if (app.Environment.IsDevelopment())
 {

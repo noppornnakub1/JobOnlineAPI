@@ -1,0 +1,29 @@
+﻿@model Dictionary<string, object>
+<h1>IT Request Report: @Model["ReqNo"]</h1>
+<table border="1" style="width:100%; border-collapse:collapse; font-size:12px;">
+    <thead>
+        <tr>
+            @{
+                var firstRow = ((IEnumerable<dynamic>)Model["Requests"]).Cast<IDictionary<string, object>>().FirstOrDefault();
+                if (firstRow != null)
+                {
+                    foreach (var key in firstRow.Keys)
+                    {
+                        <th>@key.Replace("_", " ")</th>
+                    }
+                }
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in ((IEnumerable<dynamic>)Model["Requests"]).Cast<IDictionary<string, object>>())
+        {
+            <tr>
+                @foreach (var key in row.Keys)
+                {
+                    <td>@(row[key]?.ToString() ?? "")</td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
