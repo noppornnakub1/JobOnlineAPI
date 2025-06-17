@@ -6,14 +6,9 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AdminController : ControllerBase
+    public class AdminController(IAdminRepository adminRepository) : ControllerBase
     {
-        private readonly IAdminRepository _adminRepository;
-
-        public AdminController(IAdminRepository adminRepository)
-        {
-            _adminRepository = adminRepository;
-        }
+        private readonly IAdminRepository _adminRepository = adminRepository;
 
         [HttpPost("add-admin")]
         public async Task<IActionResult> AddAdminUser(AdminUser admin)
