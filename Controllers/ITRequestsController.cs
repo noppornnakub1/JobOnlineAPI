@@ -3,14 +3,18 @@ using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using JobOnlineAPI.Services;
 
 namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ITRequestsController(IConfiguration configuration) : ControllerBase
+    public class ITRequestsController(IConfiguration configuration, IEmailService emailService) : ControllerBase
     {
         private readonly IDbConnection _dbConnection = new SqlConnection(configuration.GetConnectionString("DefaultConnection"));
+        private readonly IEmailService _emailService = emailService;
+        private readonly string _defaultEmail = "default@company.com";
+        private readonly string _itTeamEmail = "it-team@company.com";
 
         [HttpPost]
         public async Task<IActionResult> SubmitITRequest([FromBody] JsonElement request)
@@ -63,6 +67,7 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
+                using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
                 parameters.Add("Operation", operation);
                 parameters.Add("ID", isUpdate ? id : (object?)null, DbType.Int32);
@@ -71,21 +76,30 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
-                var result = await _dbConnection.QueryFirstOrDefaultAsync<dynamic>(
+                var result = await connection.QueryAsync(
                     "usp_DynamicInsertUpdateT_EMP_IT_REQ",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
 
+                var resultData = result.FirstOrDefault();
                 var newId = parameters.Get<int?>("NewID");
                 var errorMessage = parameters.Get<string>("ErrorMessage");
-                string? reqNo = result?.ReqNo;
+                string? reqNo = resultData?.ReqNo;
+                string? approver1 = resultData?.APPROVER1;
+                string? approver2 = resultData?.APPROVER2;
+                string? approver3 = resultData?.APPROVER3;
+                string? approver4 = resultData?.APPROVER4;
+                string? approver5 = resultData?.APPROVER5;
 
                 if (!string.IsNullOrEmpty(errorMessage))
                     return BadRequest(new { Error = errorMessage });
 
                 if (newId == null)
                     return StatusCode(500, new { Error = $"Failed to {(isUpdate ? "update" : "create")} IT request." });
+
+                // Send email notification
+                await SendITRequestEmail(requestData, newId.Value, createdBy, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
 
                 return Ok(new
                 {
@@ -101,50 +115,103 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        /*
-        private async Task SendITRequestEmail(Dictionary<string, object> requestData, int id, string createdBy, bool isUpdate)
+        private async Task SendITRequestEmail(Dictionary<string, object> requestData, int id, string createdBy, bool isUpdate, string? reqNo, string? approver1, string? approver2, string? approver3, string? approver4, string? approver5)
         {
-            // แก้ไขการกำหนด requesterEmail
-            string requesterEmail = "default@company.com";
-            if (requestData.TryGetValue("RequesterEmail", out var emailObj) && emailObj is string email)
+            try
             {
-                requesterEmail = email;
-            }
+                string requesterEmail = _defaultEmail;
+                if (requestData.TryGetValue("RequesterEmail", out var emailObj) && emailObj is string email && IsValidEmail(email))
+                {
+                    requesterEmail = email;
+                }
 
-            string itTeamEmail = "it-team@company.com";
-            string action = isUpdate ? "updated" : "created";
-            string reqNo = requestData.TryGetValue("REQ_NO", out var reqNoObj) && reqNoObj != null ? reqNoObj.ToString()! : "N/A";
-            string reqStatus = requestData.TryGetValue("REQ_STATUS", out var statusObj) && statusObj != null ? statusObj.ToString()! : "N/A";
-            string subject = $"IT Request #{reqNo} has been {action}";
+                string action = isUpdate ? "updated" : "created";
+                reqNo ??= requestData.TryGetValue("REQ_NO", out var reqNoObj) && reqNoObj != null ? reqNoObj.ToString()! : "N/A";
+                string reqStatus = requestData.TryGetValue("REQ_STATUS", out var statusObj) && statusObj != null ? statusObj.ToString()! : "N/A";
+                string subject = $"IT Request #{reqNo} has been {action}";
 
-            // อีเมลสำหรับ requester
-            string requesterBody = $"""
+                //// อีเมลสำหรับ Requester
+                //string requesterBody = BuildEmailBody(requestData, id, reqNo, createdBy, reqStatus, isUpdate, false);
+                //await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true);
+
+                //// อีเมลสำหรับ IT Team
+                //string itTeamBody = BuildEmailBody(requestData, id, reqNo, createdBy, reqStatus, isUpdate, true);
+                //await _emailService.SendEmailAsync(_itTeamEmail, subject, itTeamBody, true);
+
+                // อีเมลสำหรับ Approvers
+                var approvers = new[] { approver1, approver2, approver3, approver4, approver5 }
+                    .Where(a => !string.IsNullOrWhiteSpace(a) && IsValidEmail(a))
+                    .ToList();
+
+                if (approvers.Count != 0)
+                {
+                    string approverBody = $"""
                 <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                    <p>Your IT request #{reqNo} has been {action}.</p>
+                    <p>An IT request #{reqNo} requires your approval.</p>
                     <p><strong>Service:</strong> {(requestData.TryGetValue("SERVICE_ID", out var serviceId) && serviceId != null ? serviceId.ToString() : "N/A")}</p>
                     <p><strong>Details:</strong> {(requestData.TryGetValue("REQ_DETAIL", out var detail) && detail != null ? detail.ToString() : "N/A")}</p>
                     <p><strong>Status:</strong> {reqStatus}</p>
-                    <p><strong>File:</strong> {(requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? $"<a href='{filePath}'>View File</a>" : "N/A")}</p>
-                    <p>For more details, contact IT team at <a href='mailto:{itTeamEmail}'>{itTeamEmail}</a>.</p>
-                </div>
-                """;
-
-            await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true);
-
-            // อีเมลสำหรับ IT team
-            string itTeamBody = $"""
-                <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                    <p>An IT request #{reqNo} has been {action} by {createdBy}.</p>
-                    <p><strong>Service:</strong> {(requestData.TryGetValue("SERVICE_ID", out serviceId) && serviceId != null ? serviceId.ToString() : "N/A")}</p>
-                    <p><strong>Details:</strong> {(requestData.TryGetValue("REQ_DETAIL", out detail) && detail != null ? detail.ToString() : "N/A")}</p>
-                    <p><strong>Status:</strong> {reqStatus}</p>
-                    <p><strong>File:</strong> {(requestData.TryGetValue("FilePath", out filePath) && filePath != null ? $"<a href='{filePath}'>View File</a>" : "N/A")}</p>
+                    <p><strong>File:</strong> {(requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? $"<a href='{System.Web.HttpUtility.HtmlEncode(filePath)}'>View File</a>" : "N/A")}</p>
                     <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
                 </div>
                 """;
 
-            await _emailService.SendEmailAsync(itTeamEmail, subject, itTeamBody, true);
+                    foreach (var approver in approvers)
+                    {
+                        if (approver != null)
+                        {
+                            await _emailService.SendEmailAsync(approver, $"Approval Required: IT Request #{reqNo}", approverBody, true);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send email for IT request #{id}: {ex.Message}");
+            }
         }
-        */
+
+        private string BuildEmailBody(Dictionary<string, object> requestData, int id, string reqNo, string createdBy, string reqStatus, bool isUpdate, bool isForITTeam)
+        {
+            string action = isUpdate ? "updated" : "created";
+            string? service = requestData.TryGetValue("SERVICE_ID", out var serviceId) && serviceId != null ? serviceId.ToString() : "N/A";
+            string? details = requestData.TryGetValue("REQ_DETAIL", out var detail) && detail != null ? detail.ToString() : "N/A";
+            string fileLink = requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? $"<a href='{System.Web.HttpUtility.HtmlEncode(filePath)}'>View File</a>" : "N/A";
+
+            return isForITTeam
+                ? $"""
+                   <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                       <p>An IT request #{reqNo} has been {action} by {createdBy}.</p>
+                       <p><strong>Service:</strong> {service}</p>
+                       <p><strong>Details:</strong> {details}</p>
+                       <p><strong>Status:</strong> {reqStatus}</p>
+                       <p><strong>File:</strong> {fileLink}</p>
+                       <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
+                   </div>
+                   """
+                : $"""
+                   <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                       <p>Your IT request #{reqNo} has been {action}.</p>
+                       <p><strong>Service:</strong> {service}</p>
+                       <p><strong>Details:</strong> {details}</p>
+                       <p><strong>Status:</strong> {reqStatus}</p>
+                       <p><strong>File:</strong> {fileLink}</p>
+                       <p>For more details, contact IT team at <a href='mailto:{_itTeamEmail}'>{_itTeamEmail}</a>.</p>
+                   </div>
+                   """;
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }
