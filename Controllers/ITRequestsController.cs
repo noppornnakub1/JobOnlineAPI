@@ -14,7 +14,6 @@ namespace JobOnlineAPI.Controllers
         private readonly IDbConnection _dbConnection = new SqlConnection(configuration.GetConnectionString("DefaultConnection"));
         private readonly IEmailService _emailService = emailService;
         private readonly string _defaultEmail = "default@company.com";
-        private readonly string _itTeamEmail = "it-team@company.com";
 
         [HttpPost]
         public async Task<IActionResult> SubmitITRequest([FromBody] JsonElement request)
