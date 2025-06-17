@@ -172,6 +172,42 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        [HttpGet("{reqNo}")]
+        public async Task<IActionResult> GetITRequestByReqNo(string reqNo)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_dbConnection.ConnectionString);
+                var parameters = new DynamicParameters();
+                parameters.Add("REQ_NO", reqNo);
+                parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+
+                var results = await connection.QueryAsync(
+                    "usp_GetT_EMP_IT_REQ_ByReqNo",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                var errorMessage = parameters.Get<string>("ErrorMessage");
+
+                if (!string.IsNullOrEmpty(errorMessage))
+                    return BadRequest(new { Error = errorMessage });
+
+                if (results == null || !results.Any())
+                    return Ok(new { ITRequests = new List<object>(), Message = "No IT requests found." });
+
+                return Ok(new
+                {
+                    ITRequests = results,
+                    Message = "IT requests retrieved successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = "Internal Server Error", Details = ex.Message });
+            }
+        }
+
         private async Task SendITRequestEmail(List<Dictionary<string, object>> requestDataList, int id, bool isUpdate, string? reqNo, string? approver1, string? approver2, string? approver3, string? approver4, string? approver5)
         {
             try
