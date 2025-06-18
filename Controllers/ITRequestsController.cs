@@ -173,17 +173,23 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        [HttpGet("{reqNo}")]
-        public async Task<IActionResult> GetITRequestByReqNo(string reqNo)
+        [HttpGet]
+        public async Task<IActionResult> GetITRequestByReqNo(string? reqNo = null, int? applicantId = null)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(reqNo) && !applicantId.HasValue)
+                {
+                    return BadRequest(new { Error = "At least one of reqNo or applicantId is required." });
+                }
+
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
-                parameters.Add("REQ_NO", reqNo);
+                parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
+                parameters.Add("ApplicantID", applicantId);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
-                var results = await connection.QueryAsync(
+                var results = await connection.QueryAsync<dynamic>(
                     "usp_GetT_EMP_IT_REQ_ByReqNo",
                     parameters,
                     commandType: CommandType.StoredProcedure
@@ -192,10 +198,14 @@ namespace JobOnlineAPI.Controllers
                 var errorMessage = parameters.Get<string>("ErrorMessage");
 
                 if (!string.IsNullOrEmpty(errorMessage))
+                {
                     return BadRequest(new { Error = errorMessage });
+                }
 
                 if (results == null || !results.Any())
+                {
                     return Ok(new { ITRequests = new List<object>(), Message = "No IT requests found." });
+                }
 
                 return Ok(new
                 {
@@ -209,14 +219,20 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        [HttpGet("generate-form/{reqNo}")]
-        public async Task<IActionResult> GenerateForm(string reqNo)
+        [HttpGet("generate-form")]
+        public async Task<IActionResult> GenerateForm(string? reqNo = null, int? applicantId = null)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(reqNo) && !applicantId.HasValue)
+                {
+                    return BadRequest(new { Error = "At least one of reqNo or applicantId is required." });
+                }
+
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
-                parameters.Add("REQ_NO", reqNo);
+                parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
+                parameters.Add("ApplicantID", applicantId);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
                 var results = await connection.QueryAsync<dynamic>(
@@ -235,7 +251,7 @@ namespace JobOnlineAPI.Controllers
                 var firstResult = results.FirstOrDefault();
                 if (firstResult == null)
                 {
-                    return NotFound(new { Message = $"No IT requests found for REQ_NO: {reqNo}" });
+                    return NotFound(new { Message = $"No IT requests found for REQ_NO: {reqNo}, ApplicantID: {applicantId}" });
                 }
 
                 var servicesList = new List<Dictionary<string, object>>
@@ -258,7 +274,7 @@ namespace JobOnlineAPI.Controllers
 
                 var dataDict = new Dictionary<string, object>
                 {
-                    ["FormNumber"] = firstResult.REQ_NO ?? reqNo,
+                    ["FormNumber"] = firstResult.REQ_NO ?? reqNo ?? "N/A",
                     ["RequestDate"] = firstResult.REQ_DATE is DateTime date ? date : DateTime.Now,
                     ["Company"] = firstResult.Company ?? "Example Company Ltd.",
                     ["CostCenter"] = firstResult.CostCenter ?? "CC001",
@@ -295,7 +311,7 @@ namespace JobOnlineAPI.Controllers
 
                 var viewAsPdf = new ViewAsPdf("ITRequestForm", dataDict)
                 {
-                    FileName = $"ITRequest_{reqNo}.pdf",
+                    FileName = $"ITRequest_{(reqNo ?? "Applicant_" + applicantId)}.pdf",
                     PageSize = Rotativa.AspNetCore.Options.Size.A4,
                     PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 20, 10),
                     CustomSwitches = "--encoding UTF-8 --disable-smart-shrinking --dpi 300"
