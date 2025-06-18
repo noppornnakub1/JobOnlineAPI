@@ -128,6 +128,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddControllersWithViews();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "JobOnlineAPI", Version = "v1" });
