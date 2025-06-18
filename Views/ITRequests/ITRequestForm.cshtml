@@ -27,11 +27,15 @@
                     <td>@(model.TryGetValue("CostCenter", out var costCenter) && costCenter != null ? costCenter.ToString() : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Requester Name</th>
+                    <th>Requester Full Name</th>
                     <td>@(model.TryGetValue("RequesterName", out var requesterName) ? requesterName?.ToString() : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Employee ID</th>
+                    <th>Nickname</th>
+                    <td>@(model.TryGetValue("Nickname", out var nickname) ? nickname?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Employee No.</th>
                     <td>@(model.TryGetValue("EmployeeId", out var employeeId) ? employeeId?.ToString() : "N/A")</td>
                 </tr>
                 <tr>
@@ -116,11 +120,11 @@
                     </td>
                 </tr>
             </table>
-            <div>
+            <div style="page-break-inside: avoid;">
                 <label class="form-label fw-semibold">New User Request</label>
                 <textarea class="form-control" rows="3" readonly>@(model.TryGetValue("NewUserDetails", out var newUserDetails) ? newUserDetails?.ToString() : "N/A")</textarea>
             </div>
-            <div>
+            <div style="page-break-inside: avoid;">
                 <label class="form-label fw-semibold">Service Details</label>
                 <textarea class="form-control" rows="5" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? serviceDetails?.ToString() : "N/A")</textarea>
             </div>
