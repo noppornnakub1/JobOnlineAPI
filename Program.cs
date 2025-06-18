@@ -128,7 +128,11 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "JobOnlineAPI", Version = "v1" });
@@ -176,6 +180,8 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
+
+app.UseStaticFiles();
 
 RotativaConfiguration.Setup(app.Environment.ContentRootPath, "Rotativa");
 

@@ -1,29 +1,222 @@
-﻿@model Dictionary<string, object>
-<h1>IT Request Report: @Model["ReqNo"]</h1>
-<table border="1" style="width:100%; border-collapse:collapse; font-size:12px;">
-    <thead>
-        <tr>
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>IT Request Form</title>
+    <link href="/css/ITRequestForm.css" rel="stylesheet" />
+</head>
+<body>
+    @{
+        var model = Model as Dictionary<string, object> ?? new Dictionary<string, object>();
+    }
+    <div class="page">
+        <div class="header">
+            <h1>IT Request Form</h1>
+            <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? formNumber?.ToString() : "N/A")</p>
+            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd/MM/yyyy") : "N/A")</p>
+        </div>
+        <div class="container">
+            <h2>Section 1: For Requester</h2>
+            <table>
+                <tr>
+                    <th style="width: 50%;">Company</th>
+                    <td>@(model.TryGetValue("Company", out var company) && company != null ? company.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Cost Center</th>
+                    <td>@(model.TryGetValue("CostCenter", out var costCenter) && costCenter != null ? costCenter.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Requester Name</th>
+                    <td>@(model.TryGetValue("RequesterName", out var requesterName) ? requesterName?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Employee ID</th>
+                    <td>@(model.TryGetValue("EmployeeId", out var employeeId) ? employeeId?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Job Title</th>
+                    <td>@(model.TryGetValue("JobTitle", out var jobTitle) && jobTitle != null ? jobTitle.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Contact Number</th>
+                    <td>@(model.TryGetValue("RequesterPhone", out var requesterPhone) ? requesterPhone?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Name - Surname (Eng)</th>
+                    <td>@(model.TryGetValue("RequesterNameEng", out var requesterNameEng) ? requesterNameEng?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Coordinator Name</th>
+                    <td>@(model.TryGetValue("CoordinatorName", out var coordinatorName) ? coordinatorName?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Coordinator Contact</th>
+                    <td>@(model.TryGetValue("CoordinatorPhone", out var coordinatorPhone) ? coordinatorPhone?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Applicant ID</th>
+                    <td>@(model.TryGetValue("ApplicantID", out var applicantId) ? applicantId?.ToString() : "N/A")</td>
+                </tr>
+            </table>
+            <h6><strong>Service Types</strong></h6>
             @{
-                var firstRow = ((IEnumerable<dynamic>)Model["Requests"]).Cast<IDictionary<string, object>>().FirstOrDefault();
-                if (firstRow != null)
-                {
-                    foreach (var key in firstRow.Keys)
-                    {
-                        <th>@key.Replace("_", " ")</th>
-                    }
-                }
+                var serviceList = model.TryGetValue("ServicesList", out var servicesObj) && servicesObj is IEnumerable<object> services ? services.Cast<Dictionary<string, object>>().ToList() : new List<Dictionary<string, object>>();
+                var serviceIds = model.TryGetValue("ServiceTypes", out var serviceTypesObj) && serviceTypesObj is IEnumerable<string> st ? st.ToList() : new List<string>();
             }
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var row in ((IEnumerable<dynamic>)Model["Requests"]).Cast<IDictionary<string, object>>())
-        {
-            <tr>
-                @foreach (var key in row.Keys)
-                {
-                    <td>@(row[key]?.ToString() ?? "")</td>
-                }
-            </tr>
-        }
-    </tbody>
-</table>
+            <table>
+                <tr>
+                    <td style="width: 25%;">
+                        @foreach (var service in serviceList.Take(5))
+                        {
+                            var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "";
+                            var serviceId = service.TryGetValue("ID", out var id) ? id?.ToString() : null;
+                            var isDisabled = new[] { "Internet", "Messaging", "Upload file on Online Storage" }.Contains(serviceDesc);
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @(serviceId != null && serviceIds.Contains(serviceId) ? "checked" : "") disabled />
+                                <label class="form-check-label @(isDisabled ? "text-danger" : "")">
+                                    @serviceDesc @(isDisabled ? "(N/A)" : "")
+                                </label>
+                            </div>
+                        }
+                    </td>
+                    <td style="width: 25%;">
+                        @foreach (var service in serviceList.Skip(5).Take(5))
+                        {
+                            var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "";
+                            var serviceId = service.TryGetValue("ID", out var id) ? id?.ToString() : null;
+                            var isDisabled = new[] { "FTP Upload & Download", "Teamviewer", "Remote Desktop" }.Contains(serviceDesc);
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @(serviceId != null && serviceIds.Contains(serviceId) ? "checked" : "") disabled />
+                                <label class="form-check-label @(isDisabled ? "text-danger" : "")">
+                                    @serviceDesc @(isDisabled ? "(N/A)" : "")
+                                </label>
+                            </div>
+                        }
+                    </td>
+                    <td style="width: 25%;">
+                        @foreach (var service in serviceList.Skip(10).Take(5))
+                        {
+                            var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "";
+                            var serviceId = service.TryGetValue("ID", out var id) ? id?.ToString() : null;
+                            var isDisabled = new[] { "Request New System or Report", "Domain Service" }.Contains(serviceDesc);
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @(serviceId != null && serviceIds.Contains(serviceId) ? "checked" : "") disabled />
+                                <label class="form-check-label @(isDisabled ? "text-danger" : "")">
+                                    @serviceDesc @(isDisabled ? "(N/A)" : "")
+                                </label>
+                            </div>
+                        }
+                    </td>
+                    <td style="width: 25%;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @(serviceIds.Contains("0") ? "checked" : "") disabled />
+                            <label class="form-check-label">Others</label>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div>
+                <label class="form-label fw-semibold">New User Request</label>
+                <textarea class="form-control" rows="3" readonly>@(model.TryGetValue("NewUserDetails", out var newUserDetails) ? newUserDetails?.ToString() : "N/A")</textarea>
+            </div>
+            <div>
+                <label class="form-label fw-semibold">Service Details</label>
+                <textarea class="form-control" rows="5" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? serviceDetails?.ToString() : "N/A")</textarea>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Page 1/2 - Generated by IT Request System</p>
+        </div>
+    </div>
+    <div class="page">
+        <div class="header">
+            <h1>IT Request Form</h1>
+            <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber2) ? formNumber2?.ToString() : "N/A")</p>
+            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate2) && requestDate2 is DateTime requestDateValue2 ? requestDateValue2.ToString("dd/MM/yyyy") : "N/A")</p>
+        </div>
+        <div class="container">
+            <h2>Section 2: For IT</h2>
+            <table>
+                <tr>
+                    <th style="width: 50%;">Received Date</th>
+                    <td>@(model.TryGetValue("ReceivedDate", out var receivedDate) && receivedDate is DateTime receivedDateValue ? receivedDateValue.ToString("dd/MM/yyyy") : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Assigned To</th>
+                    <td>@(model.TryGetValue("AssignedTo", out var assignedTo) ? assignedTo?.ToString() : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>IT Details</th>
+                    <td>@(model.TryGetValue("ITDetails", out var itDetails) ? itDetails?.ToString() : "N/A")</td>
+                </tr>
+            </table>
+            <div>
+                <label class="form-label fw-semibold">Priority</label>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" @(model.TryGetValue("Priority", out var priority) && priority?.ToString() == "High" ? "checked" : "") disabled />
+                    <label class="form-check-label">High</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" @(priority?.ToString() == "Medium" ? "checked" : "") disabled />
+                    <label class="form-check-label">Medium</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" @(priority?.ToString() == "Low" ? "checked" : "") disabled />
+                    <label class="form-check-label">Low</label>
+                </div>
+            </div>
+            <h6><strong>Approval and Acceptance</strong></h6>
+            <table>
+                <tr>
+                    <th style="width: 33.33%;">Requester</th>
+                    <th style="width: 33.33%;">Approver</th>
+                    <th style="width: 33.33%;">User (UAT/Acceptance)</th>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="text" class="form-control my-2" value="@(model.TryGetValue("RequesterName", out var reqName) ? reqName?.ToString() : "N/A")" readonly />
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" value="@(model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime requesterDateValue ? requesterDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                    </td>
+                    <td>
+                        <textarea class="form-control my-2" rows="2" readonly>@(model.TryGetValue("ApproverText", out var approverText) ? approverText?.ToString() : "N/A")</textarea>
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" value="@(model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime approverDateValue ? approverDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                    </td>
+                    <td>
+                        <input type="text" class="form-control my-2" value="@(model.TryGetValue("UatUser", out var uatUser) ? uatUser?.ToString() : "N/A")" readonly />
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate", out var uatDate) && uatDate is DateTime uatDateValue ? uatDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                    </td>
+                </tr>
+                <tr>
+                    <th>IT Officer</th>
+                    <th>Approver (Other Systems)</th>
+                    <th>User (UAT/Acceptance)</th>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="text" class="form-control my-2" value="@(model.TryGetValue("ITOfficer", out var itOfficer) ? itOfficer?.ToString() : "N/A")" readonly />
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" value="@(model.TryGetValue("ITDate", out var itDate) && itDate is DateTime itDateValue ? itDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                    </td>
+                    <td>
+                        <textarea class="form-control my-2" rows="2" readonly>@(model.TryGetValue("OtherApproverText", out var otherApprover) ? otherApprover?.ToString() : "N/A")</textarea>
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" value="@(model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherApproverDateValue ? otherApproverDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                    </td>
+                    <td>
+                        <input type="text" class="form-control my-2" value="@(model.TryGetValue("UatUser2", out var uatUser2) ? uatUser2?.ToString() : "N/A")" readonly />
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate2", out var uatDate2) && uatDate2 is DateTime uatDate2Value ? uatDate2Value.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="footer">
+            <p>Page 2/2 - Generated by IT Request System</p>
+        </div>
+    </div>
+</body>
+</html>

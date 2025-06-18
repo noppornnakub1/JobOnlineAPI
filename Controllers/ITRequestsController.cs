@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using JobOnlineAPI.Services;
+using Rotativa.AspNetCore;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -227,23 +228,77 @@ namespace JobOnlineAPI.Controllers
                 var errorMessage = parameters.Get<string>("ErrorMessage");
 
                 if (!string.IsNullOrEmpty(errorMessage))
+                {
                     return BadRequest(new { Error = errorMessage });
+                }
 
-                if (results == null || !results.Any())
+                var firstResult = results.FirstOrDefault();
+                if (firstResult == null)
+                {
                     return NotFound(new { Message = $"No IT requests found for REQ_NO: {reqNo}" });
+                }
+
+                var servicesList = new List<Dictionary<string, object>>
+                {
+                    new() { ["ID"] = "1", ["SERVICE_DESCRIPTION"] = "Email" },
+                    new() { ["ID"] = "2", ["SERVICE_DESCRIPTION"] = "VPN" },
+                    new() { ["ID"] = "3", ["SERVICE_DESCRIPTION"] = "File Sharing" },
+                    new() { ["ID"] = "4", ["SERVICE_DESCRIPTION"] = "Reset Password" },
+                    new() { ["ID"] = "5", ["SERVICE_DESCRIPTION"] = "Unlock User" },
+                    new() { ["ID"] = "6", ["SERVICE_DESCRIPTION"] = "New User" },
+                    new() { ["ID"] = "7", ["SERVICE_DESCRIPTION"] = "Install Software" },
+                    new() { ["ID"] = "8", ["SERVICE_DESCRIPTION"] = "Internet" },
+                    new() { ["ID"] = "9", ["SERVICE_DESCRIPTION"] = "Messaging" },
+                    new() { ["ID"] = "10", ["SERVICE_DESCRIPTION"] = "FTP Upload & Download" },
+                    new() { ["ID"] = "11", ["SERVICE_DESCRIPTION"] = "Teamviewer" },
+                    new() { ["ID"] = "12", ["SERVICE_DESCRIPTION"] = "Remote Desktop" },
+                    new() { ["ID"] = "13", ["SERVICE_DESCRIPTION"] = "Request New System or Report" },
+                    new() { ["ID"] = "14", ["SERVICE_DESCRIPTION"] = "Domain Service" }
+                };
 
                 var dataDict = new Dictionary<string, object>
                 {
-                    ["Requests"] = results,
-                    ["ReqNo"] = reqNo
+                    ["FormNumber"] = firstResult.REQ_NO ?? reqNo,
+                    ["RequestDate"] = firstResult.REQ_DATE ?? DateTime.Now,
+                    ["Company"] = firstResult.Company ?? "Example Company Ltd.",
+                    ["CostCenter"] = firstResult.CostCenter ?? "CC001",
+                    ["JobTitle"] = firstResult.JobTitle ?? "Manager",
+                    ["RequesterName"] = firstResult.REQ_BY ?? "Test User",
+                    ["EmployeeId"] = firstResult.EMP_NO ?? "EMP001",
+                    ["RequesterPhone"] = firstResult.REQUESTER_PHONE ?? "081-234-5678",
+                    ["RequesterNameEng"] = firstResult.REQUESTER_NAME_ENG ?? "Mr. Test User",
+                    ["CoordinatorName"] = firstResult.COORDINATOR_NAME ?? "Coordinator Name",
+                    ["CoordinatorPhone"] = firstResult.COORDINATOR_PHONE ?? "082-345-6789",
+                    ["ApplicantID"] = firstResult.ApplicantID ?? 0,
+                    ["ServiceTypes"] = new List<string> { firstResult.SERVICE_ID?.ToString() ?? "1" },
+                    ["ServicesList"] = servicesList,
+                    ["NewUserDetails"] = firstResult.REQ_DETAIL ?? "Request user for new employee: New User",
+                    ["ServiceDetails"] = firstResult.REQ_DETAIL ?? "Require software installation and VPN setup",
+                    ["ReceivedDate"] = firstResult.IT_ACK_DATE ?? DateTime.Now,
+                    ["AssignedTo"] = firstResult.IT_PIC ?? "IT Support",
+                    ["ITDetails"] = firstResult.IT_COMMENT ?? "Installation completed",
+                    ["Priority"] = firstResult.REQ_LEVEL ?? "Medium",
+                    ["RequesterDate"] = firstResult.REQ_DATE ?? DateTime.Now,
+                    ["ApproverText"] = firstResult.APPROVE_BY ?? "Approver Manager",
+                    ["ApproverDate"] = firstResult.REQ_DATE ?? DateTime.Now,
+                    ["UatUser"] = firstResult.ACK_BY ?? "Test User",
+                    ["UatDate"] = firstResult.REQ_DATE ?? DateTime.Now,
+                    ["ITOfficer"] = firstResult.CLOSE_BY ?? "IT Officer",
+                    ["ITDate"] = firstResult.REQ_DATE ?? DateTime.Now,
+                    ["OtherApproverText"] = "N/A",
+                    ["OtherApproverDate"] = DateTime.Now,
+                    ["UatUser2"] = "N/A",
+                    ["UatDate2"] = DateTime.Now
                 };
 
-                var viewAsPdf = new Rotativa.AspNetCore.ViewAsPdf("ITRequestForm", dataDict)
+                var viewAsPdf = new ViewAsPdf("ITRequestForm", dataDict)
                 {
                     FileName = $"ITRequest_{reqNo}.pdf",
                     PageSize = Rotativa.AspNetCore.Options.Size.A4,
-                    PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 20, 10)
+                    PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 20, 10),
+                    CustomSwitches = "--encoding UTF-8 --disable-smart-shrinking"
                 };
+
                 return viewAsPdf;
             }
             catch (Exception ex)
