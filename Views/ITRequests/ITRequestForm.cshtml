@@ -13,7 +13,7 @@
         <div class="header">
             <h1>IT Request Form</h1>
             <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? formNumber?.ToString() : "N/A")</p>
-            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd/MM/yyyy") : "N/A")</p>
+            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</p>
         </div>
         <div class="container">
             <h2>Section 1: For Requester</h2>
@@ -43,19 +43,23 @@
                     <td>@(model.TryGetValue("JobTitle", out var jobTitle) && jobTitle != null ? jobTitle.ToString() : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Contact Number</th>
-                    <td>@(model.TryGetValue("RequesterPhone", out var requesterPhone) ? requesterPhone?.ToString() : "N/A")</td>
+                    <th>Start Date</th>
+                    <td>@(model.TryGetValue("StartDate", out var startDate) && startDate is DateTime startDateValue ? startDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>Mobile Phone</th>
+                    <td>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? mobilePhone?.ToString() : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Name - Surname (Eng)</th>
-                    <td>@(model.TryGetValue("RequesterNameEng", out var requesterNameEng) ? requesterNameEng?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("NameSurname", out var nameSurname) ? nameSurname?.ToString() : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Coordinator Name</th>
                     <td>@(model.TryGetValue("CoordinatorName", out var coordinatorName) ? coordinatorName?.ToString() : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Coordinator Contact</th>
+                    <th>Coordinator Phone</th>
                     <td>@(model.TryGetValue("CoordinatorPhone", out var coordinatorPhone) ? coordinatorPhone?.ToString() : "N/A")</td>
                 </tr>
                 <tr>
@@ -137,14 +141,14 @@
         <div class="header">
             <h1>IT Request Form</h1>
             <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber2) ? formNumber2?.ToString() : "N/A")</p>
-            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate2) && requestDate2 is DateTime requestDateValue2 ? requestDateValue2.ToString("dd/MM/yyyy") : "N/A")</p>
+            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate2) && requestDate2 is DateTime requestDateValue2 ? requestDateValue2.ToString("dd-MM-yyyy") : "N/A")</p>
         </div>
         <div class="container">
             <h2>Section 2: For IT</h2>
             <table>
                 <tr>
                     <th style="width: 50%;">Received Date</th>
-                    <td>@(model.TryGetValue("ReceivedDate", out var receivedDate) && receivedDate is DateTime receivedDateValue ? receivedDateValue.ToString("dd/MM/yyyy") : "N/A")</td>
+                    <td>@(model.TryGetValue("ReceivedDate", out var receivedDate) && receivedDate is DateTime receivedDateValue ? receivedDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Assigned To</th>
@@ -181,17 +185,17 @@
                     <td>
                         <input type="text" class="form-control my-2" value="@(model.TryGetValue("RequesterName", out var reqName) ? reqName?.ToString() : "N/A")" readonly />
                         <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime requesterDateValue ? requesterDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                        <input type="text" class="form-control" value="@(model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime requesterDateValue ? requesterDateValue.ToString("dd-MM-yyyy") : "N/A")" readonly />
                     </td>
                     <td>
                         <textarea class="form-control my-2" rows="2" readonly>@(model.TryGetValue("ApproverText", out var approverText) ? approverText?.ToString() : "N/A")</textarea>
                         <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime approverDateValue ? approverDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                        <input type="text" class="form-control" value="@(model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime approverDateValue ? approverDateValue.ToString("dd-MM-yyyy") : "N/A")" readonly />
                     </td>
                     <td>
                         <input type="text" class="form-control my-2" value="@(model.TryGetValue("UatUser", out var uatUser) ? uatUser?.ToString() : "N/A")" readonly />
                         <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate", out var uatDate) && uatDate is DateTime uatDateValue ? uatDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate", out var uatDate) && uatDate is DateTime uatDateValue ? uatDateValue.ToString("dd-MM-yyyy") : "N/A")" readonly />
                     </td>
                 </tr>
                 <tr>
@@ -203,17 +207,17 @@
                     <td>
                         <input type="text" class="form-control my-2" value="@(model.TryGetValue("ITOfficer", out var itOfficer) ? itOfficer?.ToString() : "N/A")" readonly />
                         <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("ITDate", out var itDate) && itDate is DateTime itDateValue ? itDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                        <input type="text" class="form-control" value="@(model.TryGetValue("ITDate", out var itDate) && itDate is DateTime itOfficerDate ? itOfficerDate.ToString("dd-MM-yyyy") : "N/A")" readonly />
                     </td>
                     <td>
                         <textarea class="form-control my-2" rows="2" readonly>@(model.TryGetValue("OtherApproverText", out var otherApprover) ? otherApprover?.ToString() : "N/A")</textarea>
                         <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherApproverDateValue ? otherApproverDateValue.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                        <input type="text" class="form-control" value="@(model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherApproverDate ? otherApproverDate.ToString("dd-MM-yyyy") : "N/A")" readonly />
                     </td>
                     <td>
                         <input type="text" class="form-control my-2" value="@(model.TryGetValue("UatUser2", out var uatUser2) ? uatUser2?.ToString() : "N/A")" readonly />
                         <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate2", out var uatDate2) && uatDate2 is DateTime uatDate2Value ? uatDate2Value.ToString("dd/MM/yyyy") : "N/A")" readonly />
+                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate2", out var uatDate2) && uatDate2 is DateTime uatDate2Value ? uatDate2Value.ToString("dd-MM-yyyy") : "N/A")" readonly />
                     </td>
                 </tr>
             </table>
