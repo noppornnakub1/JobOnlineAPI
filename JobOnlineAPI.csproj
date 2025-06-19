@@ -26,6 +26,47 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Content Include="public\css\ITRequestForm.css" />
+	  <Content Include="public\fonts\NotoSansThai-Black.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-Bold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-ExtraBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-ExtraLight.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-Light.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-Medium.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-Regular.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-SemiBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai-Thin.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-Black.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-Bold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-ExtraBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-ExtraLight.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-Light.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-Medium.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-Regular.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-SemiBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_Condensed-Thin.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-Black.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-Bold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-ExtraBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-ExtraLight.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-Light.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-Medium.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-Regular.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-SemiBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_ExtraCondensed-Thin.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-Black.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-Bold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-ExtraBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-ExtraLight.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-Light.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-Medium.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-Regular.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-SemiBold.ttf" />
+	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-Thin.ttf" />
+	  <Content Include="public\images\logo.png" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 		<PackageReference Include="Dapper" Version="2.1.35" />
 		<PackageReference Include="MailKit" Version="4.11.0" />
@@ -62,7 +103,6 @@
 
 	<ItemGroup>
 		<Folder Include="Rotativa\" />
-		<Folder Include="wwwroot\fonts\" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -10,8 +10,14 @@ using JobOnlineAPI.Models;
 using JobOnlineAPI.DAL;
 using Microsoft.Extensions.Options;
 using Rotativa.AspNetCore;
+using Microsoft.Extensions.FileProviders;
 
-var builder = WebApplication.CreateBuilder(args);
+var options = new WebApplicationOptions
+{
+    WebRootPath = "public", // ตั้งค่า WebRootPath เป็น 'public'
+    ContentRootPath = Directory.GetCurrentDirectory()
+};
+var builder = WebApplication.CreateBuilder(options);
 
 using var loggerFactory = LoggerFactory.Create(logging =>
 {
@@ -36,9 +42,22 @@ builder.Configuration
     // .AddUserSecrets<Program>(optional: false)
     .AddEnvironmentVariables();
 
-// Log connection string
+// Log connection string and FileStorage path
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 logger.LogInformation("DefaultConnection: {ConnectionString}", connectionString ?? "null");
+logger.LogInformation("WebRootPath: {WebRootPath}", builder.Environment.WebRootPath);
+var fileStorageConfig = builder.Configuration.GetSection("FileStorage").Get<FileStorageConfig>();
+logger.LogInformation("FileStorage BasePath: {BasePath}", fileStorageConfig?.BasePath ?? "null");
+if (fileStorageConfig?.BasePath != null)
+{
+    var fullPath = Path.Combine(builder.Environment.ContentRootPath, fileStorageConfig.BasePath);
+    logger.LogInformation("Resolved FileStorage FullPath: {FullPath}", fullPath);
+    if (!Directory.Exists(fullPath))
+    {
+        Directory.CreateDirectory(fullPath);
+        logger.LogInformation("Created FileStorage directory: {Path}", fullPath);
+    }
+}
 
 builder.Services.AddLogging(logging =>
 {
@@ -76,11 +95,10 @@ builder.Services.AddScoped<IConsentService, ConsentService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.Configure<FileStorageConfig>(
-builder.Configuration.GetSection("FileStorage"));
+    builder.Configuration.GetSection("FileStorage"));
 
 builder.Services.AddSingleton(resolver =>
     resolver.GetRequiredService<IOptions<FileStorageConfig>>().Value);
-
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
@@ -181,9 +199,23 @@ builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "public")),
+    RequestPath = ""
+});
 
-RotativaConfiguration.Setup(app.Environment.ContentRootPath, "Rotativa");
+try
+{
+    RotativaConfiguration.Setup(app.Environment.ContentRootPath, "Rotativa");
+    logger.LogInformation("Rotativa configured successfully.");
+}
+catch (Exception ex)
+{
+    logger.LogError("Rotativa configuration failed: {Message}", ex.Message);
+    throw;
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -200,7 +232,9 @@ else
             var error = new { Error = "An unexpected error occurred. Please try again later." };
             await context.Response.WriteAsJsonAsync(error);
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError("An error occurred: {Error}", context.Response.StatusCode);
+            var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+            logger.LogError(exception, "An error occurred: {Error}, Path: {Path}, StackTrace: {StackTrace}",
+                exception?.Message, exception?.TargetSite, exception?.StackTrace);
         });
     });
 }

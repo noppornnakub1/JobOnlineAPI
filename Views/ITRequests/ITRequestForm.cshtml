@@ -14,9 +14,12 @@
     }
     <div class="page">
         <div class="header">
-            <h1>IT Request Form</h1>
-            <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? formNumber?.ToString() : "N/A")</p>
-            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</p>
+            <img src="/images/logo.png" alt="Company Logo" style="height: 50px; display: inline-block; vertical-align: middle; margin-right: 10px;" />
+            <div style="display: inline-block; vertical-align: middle;">
+                <h1 style="margin: 0;">IT Request Form</h1>
+                <p style="margin: 2px 0;">Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? formNumber?.ToString() : "N/A")</p>
+                <p style="margin: 2px 0;">Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</p>
+            </div>
         </div>
         <div class="container">
             <h2>Section 1: For Requester</h2>
@@ -135,9 +138,12 @@
     </div>
     <div class="page">
         <div class="header">
-            <h1>IT Request Form</h1>
-            <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber2) ? formNumber2?.ToString() : "N/A")</p>
-            <p>Date: @(model.TryGetValue("RequestDate", out var requestDate2) && requestDate2 is DateTime requestDateValue2 ? requestDateValue2.ToString("dd-MM-yyyy") : "N/A")</p>
+            <img src="/images/logo.png" alt="Company Logo" style="height: 50px; display: inline-block; vertical-align: middle; margin-right: 10px;" />
+            <div style="display: inline-block; vertical-align: middle;">
+                <h1 style="margin: 0;">IT Request Form</h1>
+                <p style="margin: 2px 0;">Form No.: @(model.TryGetValue("FormNumber", out var formNumber2) ? formNumber2?.ToString() : "N/A")</p>
+                <p style="margin: 2px 0;">Date: @(model.TryGetValue("RequestDate", out var requestDate2) && requestDate2 is DateTime requestDateValue2 ? requestDateValue2.ToString("dd-MM-yyyy") : "N/A")</p>
+            </div>
         </div>
         <div class="container">
             <h2>Section 2: For IT</h2>

@@ -16,7 +16,7 @@ namespace JobOnlineAPI.Controllers
         private readonly IApplicantRepository _applicantRepository;
         private readonly IJobApplicationRepository _jobApplicationRepository;
         private readonly IEmailService _emailService;
-        private readonly string _resumeBasePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "resumes");
+        private readonly string _resumeBasePath = Path.Combine(Directory.GetCurrentDirectory(), "public", "resumes");
         private readonly string[] _allowedExtensions = [".pdf", ".doc", ".docx"];
 
         public ApplicantsController(IApplicantRepository applicantRepository, IJobApplicationRepository jobApplicationRepository, IEmailService emailService)

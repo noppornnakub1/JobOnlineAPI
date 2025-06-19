@@ -21,7 +21,7 @@
 
 body {
     font-family: 'Noto Sans Thai', Arial, sans-serif;
-    font-size: 12pt;
+    font-size: 10pt;
     color: #333;
     margin: 0;
     padding: 0;
@@ -29,60 +29,71 @@ body {
 
 .page {
     width: 190mm;
-    min-height: 297mm;
+    min-height: 277mm;
     box-sizing: border-box;
-    page-break-after: always;
+    padding: 10mm;
     position: relative;
 }
 
 .container {
     border: 1px solid #ccc;
-    padding: 15px;
-    margin-bottom: 15px;
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
 .header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     border-bottom: 2px solid #333;
-    padding-bottom: 10px;
+    padding-bottom: 8px;
 }
 
-    .header h1 {
-        font-size: 18pt;
-        margin: 0;
-    }
+.header h1 {
+    font-size: 16pt;
+    margin: 0;
+}
 
-    .header p {
-        font-size: 10pt;
-        margin: 5px 0;
-    }
+.header p {
+    font-size: 8pt;
+    margin: 3px 0;
+}
 
 h2 {
-    font-size: 14pt;
-    margin: 15px 0 10px;
+    font-size: 12pt;
+    margin: 10px 0 8px;
     color: #333;
 }
 
 h6 {
-    font-size: 12pt;
+    font-size: 10pt;
     font-weight: 600;
-    margin: 10px 0;
+    margin: 8px 0;
     color: #005b96;
     border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 4px;
+    padding-bottom: 3px;
 }
 
-table {
+.sections {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.section {
+    width: 48%;
+    page-break-inside: avoid;
+}
+
+.section-requester table, .section-it table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 th, td {
     border: 1px solid #ccc;
-    padding: 8px;
-    font-size: 10pt;
+    padding: 5px;
+    font-size: 8pt;
     vertical-align: top;
 }
 
@@ -94,43 +105,46 @@ th {
 
 .service-table {
     table-layout: fixed;
+    font-size: 8pt;
 }
 
-    .service-table td {
-        vertical-align: top;
-        padding: 12px;
-        background-color: #f9f9f9;
-    }
+.service-table td {
+    vertical-align: top;
+    padding: 8px;
+    background-color: #f9f9f9;
+}
 
 .form-label {
     font-weight: 500;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
     display: block;
+    font-size: 8pt;
 }
 
 .form-control {
     width: 100%;
-    padding: 6px;
+    padding: 4px;
     border: 1px solid #ccc;
     border-radius: 3px;
-    font-size: 10pt;
+    font-size: 8pt;
     background-color: #f8f9fa;
     box-sizing: border-box;
 }
 
 textarea.form-control {
     resize: vertical;
-    min-height: 60px;
+    min-height: 40px;
 }
 
 .form-check-inline {
     display: inline-block;
-    margin-right: 10px;
+    margin-right: 8px;
+    font-size: 8pt;
 }
 
 .service-item {
-    margin-bottom: 12px;
-    padding: 8px;
+    margin-bottom: 8px;
+    padding: 5px;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     background-color: #fff;
@@ -139,8 +153,8 @@ textarea.form-control {
 .custom-checkbox {
     display: flex;
     align-items: center;
-    margin-bottom: 6px;
-    font-size: 10pt;
+    margin-bottom: 4px;
+    font-size: 8pt;
 }
 
 .custom-checkbox-input {
@@ -149,24 +163,24 @@ textarea.form-control {
 
 .custom-checkbox-label {
     position: relative;
-    padding-left: 24px;
+    padding-left: 20px;
     cursor: default;
-    line-height: 1.5;
+    line-height: 1.4;
     color: #333;
 }
 
-    .custom-checkbox-label::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 3px;
-        width: 16px;
-        height: 16px;
-        border: 2px solid #005b96;
-        border-radius: 4px;
-        background-color: #fff;
-        box-sizing: border-box;
-    }
+.custom-checkbox-label::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #005b96;
+    border-radius: 4px;
+    background-color: #fff;
+    box-sizing: border-box;
+}
 
 .custom-checkbox-input:checked + .custom-checkbox-label::before {
     background-color: #005b96;
@@ -176,9 +190,9 @@ textarea.form-control {
 .custom-checkbox-input:checked + .custom-checkbox-label::after {
     content: '\2713';
     position: absolute;
-    left: 4px;
-    top: 2px;
-    font-size: 12px;
+    left: 3px;
+    top: 1px;
+    font-size: 10px;
     color: #fff;
     font-weight: bold;
 }
@@ -189,9 +203,9 @@ textarea.form-control {
 }
 
 .service-details {
-    margin-top: 6px;
-    padding-left: 24px;
-    font-size: 9pt;
+    margin-top: 4px;
+    padding-left: 20px;
+    font-size: 7pt;
     color: #555;
 }
 
@@ -202,7 +216,7 @@ textarea.form-control {
 
 .detail-content {
     background-color: #f5f5f5;
-    padding: 6px;
+    padding: 4px;
     border-radius: 3px;
     border: 1px solid #e0e0e0;
     word-wrap: break-word;
@@ -214,8 +228,8 @@ textarea.form-control {
     left: 15mm;
     right: 15mm;
     text-align: center;
-    font-size: 9pt;
+    font-size: 8pt;
     color: #666;
     border-top: 1px solid #ccc;
-    padding-top: 5px;
+    padding-top: 3px;
 }
