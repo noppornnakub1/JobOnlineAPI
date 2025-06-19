@@ -17,6 +17,7 @@
 		<GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
 		<GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
 		<GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+		<StaticWebAssetFingerprintingEnabled>false</StaticWebAssetFingerprintingEnabled>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -99,6 +100,9 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
+		<None Update="wwwroot\css\ITRequestForm.css">
+    		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  		</None>
 	</ItemGroup>
 
 	<ItemGroup>
