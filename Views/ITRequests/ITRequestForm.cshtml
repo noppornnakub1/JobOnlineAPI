@@ -8,6 +8,9 @@
 <body>
     @{
         var model = Model as Dictionary<string, object> ?? new Dictionary<string, object>();
+        var itRequests = model.TryGetValue("ITRequests", out var itRequestsObj) && itRequestsObj is IEnumerable<object> itReqs
+        ? itReqs.Cast<dynamic>().ToList()
+        : new List<dynamic>();
     }
     <div class="page">
         <div class="header">
@@ -69,61 +72,58 @@
             </table>
             <h6><strong>Service Types</strong></h6>
             @{
-                var serviceList = model.TryGetValue("ServicesList", out var servicesObj) && servicesObj is IEnumerable<object> services ? services.Cast<Dictionary<string, object>>().ToList() : new List<Dictionary<string, object>>();
-                var serviceIds = model.TryGetValue("ServiceTypes", out var serviceTypesObj) && serviceTypesObj is IEnumerable<string> st ? st.ToList() : new List<string>();
+                var serviceList = model.TryGetValue("ServicesList", out var servicesObj) && servicesObj is IEnumerable<object> services
+                ? services.Cast<Dictionary<string, object>>().ToList()
+                : new List<Dictionary<string, object>>();
+                var serviceTypes = serviceList.GroupBy(s => new
+                {
+                    TypeId = s.TryGetValue("SERVICE_TYPE", out var st) && st != null ? Convert.ToInt32(st) : 0,
+                    TypeDescription = s.TryGetValue("TYPE_DESCRIPTION", out var td) ? td?.ToString() ?? "Unknown" : "Unknown"
+                }).OrderBy(g => g.Key.TypeId);
             }
-            <table>
-                <tr>
-                    <td style="width: 25%;">
-                        @foreach (var service in serviceList.Take(5))
+            @if (serviceTypes.Any())
+            {
+                <table class="service-table">
+                    <tr>
+                        @foreach (var serviceTypeGroup in serviceTypes)
                         {
-                            var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "";
-                            var serviceId = service.TryGetValue("ID", out var id) ? id?.ToString() : null;
-                            var isDisabled = new[] { "Internet", "Messaging", "Upload file on Online Storage" }.Contains(serviceDesc);
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" @(serviceId != null && serviceIds.Contains(serviceId) ? "checked" : "") disabled />
-                                <label class="form-check-label @(isDisabled ? "text-danger" : "")">
-                                    @serviceDesc @(isDisabled ? "(N/A)" : "")
-                                </label>
-                            </div>
+                            var columnWidth = Math.Round(100.0 / serviceTypes.Count(), 2);
+                            <td style="width: @(columnWidth.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%;">
+                                <div class="service-section">
+                                    <h6>@(serviceTypeGroup.Key.TypeDescription) (Type @(serviceTypeGroup.Key.TypeId))</h6>
+                                    @foreach (var service in serviceTypeGroup.OrderBy(s => s.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0))
+                                    {
+                                        var serviceId = service.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0;
+                                        var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() ?? "N/A" : "N/A";
+                                        var requiresDetail = service.TryGetValue("REQUIRES_DETAIL", out var rd) && rd is bool requiresDetailFlag && requiresDetailFlag;
+                                        var isSelected = service.TryGetValue("IsSelected", out var selected) && selected is bool sel && sel;
+                                        var reqDetail = isSelected && requiresDetail
+                                        ? itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.REQ_DETAIL?.ToString() ?? "No details provided"
+                                        : null;
+                                        <div class="service-item">
+                                            <div class="custom-checkbox">
+                                                <input type="checkbox" class="custom-checkbox-input" @(isSelected ? "checked" : "") disabled />
+                                                <label class="custom-checkbox-label @(isSelected ? "selected" : "")">@serviceDesc</label>
+                                            </div>
+                                            @if (reqDetail != null)
+                                            {
+                                                <div class="service-details">
+                                                    <label class="detail-label">Details:</label>
+                                                    <div class="detail-content">@(string.IsNullOrWhiteSpace(reqDetail) ? "No details provided" : reqDetail)</div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </td>
                         }
-                    </td>
-                    <td style="width: 25%;">
-                        @foreach (var service in serviceList.Skip(5).Take(5))
-                        {
-                            var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "";
-                            var serviceId = service.TryGetValue("ID", out var id) ? id?.ToString() : null;
-                            var isDisabled = new[] { "FTP Upload & Download", "Teamviewer", "Remote Desktop" }.Contains(serviceDesc);
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" @(serviceId != null && serviceIds.Contains(serviceId) ? "checked" : "") disabled />
-                                <label class="form-check-label @(isDisabled ? "text-danger" : "")">
-                                    @serviceDesc @(isDisabled ? "(N/A)" : "")
-                                </label>
-                            </div>
-                        }
-                    </td>
-                    <td style="width: 25%;">
-                        @foreach (var service in serviceList.Skip(10).Take(5))
-                        {
-                            var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "";
-                            var serviceId = service.TryGetValue("ID", out var id) ? id?.ToString() : null;
-                            var isDisabled = new[] { "Request New System or Report", "Domain Service" }.Contains(serviceDesc);
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" @(serviceId != null && serviceIds.Contains(serviceId) ? "checked" : "") disabled />
-                                <label class="form-check-label @(isDisabled ? "text-danger" : "")">
-                                    @serviceDesc @(isDisabled ? "(N/A)" : "")
-                                </label>
-                            </div>
-                        }
-                    </td>
-                    <td style="width: 25%;">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" @(serviceIds.Contains("0") ? "checked" : "") disabled />
-                            <label class="form-check-label">Others</label>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+                    </tr>
+                </table>
+            }
+            else
+            {
+                <p>No service types available.</p>
+            }
             <div style="page-break-inside: avoid;">
                 <label class="form-label fw-semibold">New User Request</label>
                 <textarea class="form-control" rows="3" readonly>@(model.TryGetValue("NewUserDetails", out var newUserDetails) ? newUserDetails?.ToString() : "N/A")</textarea>
