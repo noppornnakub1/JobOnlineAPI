@@ -178,11 +178,6 @@ namespace JobOnlineAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(reqNo) && !applicantId.HasValue)
-                {
-                    return BadRequest(new { Error = "At least one of reqNo or applicantId is required." });
-                }
-
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
                 parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
@@ -196,7 +191,20 @@ namespace JobOnlineAPI.Controllers
                 );
 
                 var itRequests = multi.Read<dynamic>().ToList();
-                var services = multi.Read<dynamic>().ToList();
+                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s => new Dictionary<string, object>
+                {
+                    ["ID"] = s.ID,
+                    ["SERVICE_DESCRIPTION"] = s.SERVICE_DESCRIPTION,
+                    ["SERVICE_TYPE"] = s.SERVICE_TYPE,
+                    ["TYPE_DESCRIPTION"] = s.TYPE_DESCRIPTION,
+                    ["CREATED_BY"] = s.CREATED_BY,
+                    ["CREATED_DATE"] = s.CREATED_DATE,
+                    ["MODIFIED_BY"] = s.MODIFIED_BY,
+                    ["MODIFIED_DATE"] = s.MODIFIED_DATE,
+                    ["IsSelected"] = s.IsSelected,
+                    ["REQUIRES_DETAIL"] = s.REQUIRES_DETAIL
+                }).ToList();
+
                 var errorMessage = parameters.Get<string>("ErrorMessage");
 
                 if (!string.IsNullOrEmpty(errorMessage))
@@ -204,16 +212,11 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest(new { Error = errorMessage });
                 }
 
-                if (itRequests.Count == 0)
-                {
-                    return Ok(new { ITRequests = new List<object>(), Services = services, Message = "No IT requests found." });
-                }
-
                 return Ok(new
                 {
                     ITRequests = itRequests,
-                    Services = services,
-                    Message = "IT requests and services retrieved successfully."
+                    Services = servicesList,
+                    Message = itRequests.Count == 0 ? "No IT requests found." : "IT requests and services retrieved successfully."
                 });
             }
             catch (Exception ex)
@@ -227,11 +230,6 @@ namespace JobOnlineAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(reqNo) && !applicantId.HasValue)
-                {
-                    return BadRequest(new { Error = "At least one of reqNo or applicantId is required." });
-                }
-
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
                 parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
@@ -245,7 +243,7 @@ namespace JobOnlineAPI.Controllers
                 );
 
                 var itRequests = multi.Read<dynamic>().ToList();
-                var servicesList = multi.Read<dynamic>().Select(s => new Dictionary<string, object>
+                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s => new Dictionary<string, object>
                 {
                     ["ID"] = s.ID,
                     ["SERVICE_DESCRIPTION"] = s.SERVICE_DESCRIPTION,
@@ -311,7 +309,7 @@ namespace JobOnlineAPI.Controllers
 
                 var viewAsPdf = new ViewAsPdf("ITRequestForm", dataDict)
                 {
-                    FileName = $"ITRequest_{(reqNo ?? "Applicant_" + applicantId)}.pdf",
+                    FileName = $"ITRequest_{(reqNo ?? "Applicant_" + applicantId ?? "All")}.pdf",
                     PageSize = Rotativa.AspNetCore.Options.Size.A4,
                     PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 20, 10),
                     CustomSwitches = "--encoding UTF-8 --disable-smart-shrinking --dpi 300"
