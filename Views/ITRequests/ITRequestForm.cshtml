@@ -125,11 +125,7 @@
                 <p>No service types available.</p>
             }
             <div style="page-break-inside: avoid;">
-                <label class="form-label fw-semibold">New User Request</label>
-                <textarea class="form-control" rows="3" readonly>@(model.TryGetValue("NewUserDetails", out var newUserDetails) ? newUserDetails?.ToString() : "N/A")</textarea>
-            </div>
-            <div style="page-break-inside: avoid;">
-                <label class="form-label fw-semibold">Service Details</label>
+                <label class="form-label fw-semibold">Request Details</label>
                 <textarea class="form-control" rows="5" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? serviceDetails?.ToString() : "N/A")</textarea>
             </div>
         </div>

@@ -291,7 +291,7 @@ namespace JobOnlineAPI.Controllers
                     ["ITRequests"] = itRequests,
                     ["ServicesList"] = servicesList,
                     ["NewUserDetails"] = firstResult.REQ_DETAIL ?? "Request user for new employee: New User",
-                    ["ServiceDetails"] = firstResult.REQ_DETAIL ?? "Require software installation and VPN setup",
+                    ["ServiceDetails"] = firstResult.REQUEST_DETAILS ?? "N/A",
                     ["ReceivedDate"] = firstResult.IT_ACK_DATE is DateTime itDate ? itDate : DateTime.Now,
                     ["AssignedTo"] = firstResult.IT_PIC ?? "IT Support",
                     ["ITDetails"] = firstResult.IT_COMMENT ?? "Installation completed",
@@ -346,6 +346,7 @@ namespace JobOnlineAPI.Controllers
                     servicesList.AppendLine("<div style='margin-bottom: 15px;'>");
                     servicesList.AppendLine($"<p><strong>Service:</strong> {(requestData.TryGetValue("SERVICE_ID", out var serviceId) && serviceId != null ? serviceId.ToString() : "N/A")}</p>");
                     servicesList.AppendLine($"<p><strong>Details:</strong> {(requestData.TryGetValue("REQ_DETAIL", out var detail) && detail != null ? detail.ToString() : "N/A")}</p>");
+                    servicesList.AppendLine($"<p><strong>Request Details:</strong> {(requestData.TryGetValue("REQUEST_DETAILS", out var reqDetails) && reqDetails != null ? reqDetails.ToString() : "N/A")}</p>");
                     servicesList.AppendLine($"<p><strong>Status:</strong> {(requestData.TryGetValue("REQ_STATUS", out var statusObj) && statusObj != null ? statusObj.ToString() : "N/A")}</p>");
                     servicesList.AppendLine($"<p><strong>File:</strong> {(requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? $"<a href='{System.Web.HttpUtility.HtmlEncode(filePath)}'>View File</a>" : "N/A")}</p>");
                     servicesList.AppendLine("</div>");
