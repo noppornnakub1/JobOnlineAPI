@@ -178,22 +178,32 @@ namespace JobOnlineAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(reqNo) && !applicantId.HasValue)
-                {
-                    return BadRequest(new { Error = "At least one of reqNo or applicantId is required." });
-                }
-
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
                 parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
                 parameters.Add("ApplicantID", applicantId);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
-                var results = await connection.QueryAsync<dynamic>(
+                using var multi = await connection.QueryMultipleAsync(
                     "usp_GetT_EMP_IT_REQ_ByReqNo",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
+
+                var itRequests = multi.Read<dynamic>().ToList();
+                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s => new Dictionary<string, object>
+                {
+                    ["ID"] = s.ID,
+                    ["SERVICE_DESCRIPTION"] = s.SERVICE_DESCRIPTION,
+                    ["SERVICE_TYPE"] = s.SERVICE_TYPE,
+                    ["TYPE_DESCRIPTION"] = s.TYPE_DESCRIPTION,
+                    ["CREATED_BY"] = s.CREATED_BY,
+                    ["CREATED_DATE"] = s.CREATED_DATE,
+                    ["MODIFIED_BY"] = s.MODIFIED_BY,
+                    ["MODIFIED_DATE"] = s.MODIFIED_DATE,
+                    ["IsSelected"] = s.IsSelected,
+                    ["REQUIRES_DETAIL"] = s.REQUIRES_DETAIL
+                }).ToList();
 
                 var errorMessage = parameters.Get<string>("ErrorMessage");
 
@@ -202,15 +212,11 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest(new { Error = errorMessage });
                 }
 
-                if (results == null || !results.Any())
-                {
-                    return Ok(new { ITRequests = new List<object>(), Message = "No IT requests found." });
-                }
-
                 return Ok(new
                 {
-                    ITRequests = results,
-                    Message = "IT requests retrieved successfully."
+                    ITRequests = itRequests,
+                    Services = servicesList,
+                    Message = itRequests.Count == 0 ? "No IT requests found." : "IT requests and services retrieved successfully."
                 });
             }
             catch (Exception ex)
@@ -224,22 +230,32 @@ namespace JobOnlineAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(reqNo) && !applicantId.HasValue)
-                {
-                    return BadRequest(new { Error = "At least one of reqNo or applicantId is required." });
-                }
-
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
                 parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
                 parameters.Add("ApplicantID", applicantId);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
-                var results = await connection.QueryAsync<dynamic>(
+                using var multi = await connection.QueryMultipleAsync(
                     "usp_GetT_EMP_IT_REQ_ByReqNo",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
+
+                var itRequests = multi.Read<dynamic>().ToList();
+                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s => new Dictionary<string, object>
+                {
+                    ["ID"] = s.ID,
+                    ["SERVICE_DESCRIPTION"] = s.SERVICE_DESCRIPTION,
+                    ["SERVICE_TYPE"] = s.SERVICE_TYPE,
+                    ["TYPE_DESCRIPTION"] = s.TYPE_DESCRIPTION,
+                    ["CREATED_BY"] = s.CREATED_BY,
+                    ["CREATED_DATE"] = s.CREATED_DATE,
+                    ["MODIFIED_BY"] = s.MODIFIED_BY,
+                    ["MODIFIED_DATE"] = s.MODIFIED_DATE,
+                    ["IsSelected"] = s.IsSelected,
+                    ["REQUIRES_DETAIL"] = s.REQUIRES_DETAIL
+                }).ToList();
 
                 var errorMessage = parameters.Get<string>("ErrorMessage");
 
@@ -248,29 +264,11 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest(new { Error = errorMessage });
                 }
 
-                var firstResult = results.FirstOrDefault();
+                var firstResult = itRequests.FirstOrDefault();
                 if (firstResult == null)
                 {
                     return NotFound(new { Message = $"No IT requests found for REQ_NO: {reqNo}, ApplicantID: {applicantId}" });
                 }
-
-                var servicesList = new List<Dictionary<string, object>>
-                {
-                    new() { ["ID"] = "1", ["SERVICE_DESCRIPTION"] = "Email" },
-                    new() { ["ID"] = "2", ["SERVICE_DESCRIPTION"] = "VPN" },
-                    new() { ["ID"] = "3", ["SERVICE_DESCRIPTION"] = "File Sharing" },
-                    new() { ["ID"] = "4", ["SERVICE_DESCRIPTION"] = "Reset Password" },
-                    new() { ["ID"] = "5", ["SERVICE_DESCRIPTION"] = "Unlock User" },
-                    new() { ["ID"] = "6", ["SERVICE_DESCRIPTION"] = "New User" },
-                    new() { ["ID"] = "7", ["SERVICE_DESCRIPTION"] = "Install Software" },
-                    new() { ["ID"] = "8", ["SERVICE_DESCRIPTION"] = "Internet" },
-                    new() { ["ID"] = "9", ["SERVICE_DESCRIPTION"] = "Messaging" },
-                    new() { ["ID"] = "10", ["SERVICE_DESCRIPTION"] = "FTP Upload & Download" },
-                    new() { ["ID"] = "11", ["SERVICE_DESCRIPTION"] = "Teamviewer" },
-                    new() { ["ID"] = "12", ["SERVICE_DESCRIPTION"] = "Remote Desktop" },
-                    new() { ["ID"] = "13", ["SERVICE_DESCRIPTION"] = "Request New System or Report" },
-                    new() { ["ID"] = "14", ["SERVICE_DESCRIPTION"] = "Domain Service" }
-                };
 
                 var dataDict = new Dictionary<string, object>
                 {
@@ -288,10 +286,10 @@ namespace JobOnlineAPI.Controllers
                     ["CoordinatorPhone"] = firstResult.CoordinatorPhone ?? "082-345-6789",
                     ["ApplicantID"] = firstResult.ApplicantID ?? 0,
                     ["StartDate"] = firstResult.StartDate is DateTime startDate ? startDate : DateTime.Now,
-                    ["ServiceTypes"] = results.Select(r => r.SERVICE_ID?.ToString()).Where(id => id != null).Distinct().ToList(),
+                    ["ITRequests"] = itRequests,
                     ["ServicesList"] = servicesList,
                     ["NewUserDetails"] = firstResult.REQ_DETAIL ?? "Request user for new employee: New User",
-                    ["ServiceDetails"] = firstResult.REQ_DETAIL ?? "Require software installation and VPN setup",
+                    ["ServiceDetails"] = firstResult.REQUEST_DETAILS ?? "N/A",
                     ["ReceivedDate"] = firstResult.IT_ACK_DATE is DateTime itDate ? itDate : DateTime.Now,
                     ["AssignedTo"] = firstResult.IT_PIC ?? "IT Support",
                     ["ITDetails"] = firstResult.IT_COMMENT ?? "Installation completed",
@@ -311,7 +309,7 @@ namespace JobOnlineAPI.Controllers
 
                 var viewAsPdf = new ViewAsPdf("ITRequestForm", dataDict)
                 {
-                    FileName = $"ITRequest_{(reqNo ?? "Applicant_" + applicantId)}.pdf",
+                    FileName = $"ITRequest_{(reqNo ?? "Applicant_" + applicantId ?? "All")}.pdf",
                     PageSize = Rotativa.AspNetCore.Options.Size.A4,
                     PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 20, 10),
                     CustomSwitches = "--encoding UTF-8 --disable-smart-shrinking --dpi 300"
@@ -346,6 +344,7 @@ namespace JobOnlineAPI.Controllers
                     servicesList.AppendLine("<div style='margin-bottom: 15px;'>");
                     servicesList.AppendLine($"<p><strong>Service:</strong> {(requestData.TryGetValue("SERVICE_ID", out var serviceId) && serviceId != null ? serviceId.ToString() : "N/A")}</p>");
                     servicesList.AppendLine($"<p><strong>Details:</strong> {(requestData.TryGetValue("REQ_DETAIL", out var detail) && detail != null ? detail.ToString() : "N/A")}</p>");
+                    servicesList.AppendLine($"<p><strong>Request Details:</strong> {(requestData.TryGetValue("REQUEST_DETAILS", out var reqDetails) && reqDetails != null ? reqDetails.ToString() : "N/A")}</p>");
                     servicesList.AppendLine($"<p><strong>Status:</strong> {(requestData.TryGetValue("REQ_STATUS", out var statusObj) && statusObj != null ? statusObj.ToString() : "N/A")}</p>");
                     servicesList.AppendLine($"<p><strong>File:</strong> {(requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? $"<a href='{System.Web.HttpUtility.HtmlEncode(filePath)}'>View File</a>" : "N/A")}</p>");
                     servicesList.AppendLine("</div>");
