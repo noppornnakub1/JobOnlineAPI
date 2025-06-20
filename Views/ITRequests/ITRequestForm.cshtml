@@ -27,14 +27,20 @@
         model.TryGetValue("CoordinatorPhone", out coordinatorPhone);
     }
     <div class="page">
-        <div class="header">
-            <img src="/images/logo.png" alt="Company Logo" style="height: 30px; display: inline-block; vertical-align: middle; margin-right: 4px;" />
-            <div style="display: inline-block; vertical-align: middle;">
-                <h1>IT Request Form</h1>
-                <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? Truncate(formNumber?.ToString(), 50) : "N/A")</p>
-                <p>Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</p>
-            </div>
-        </div>
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 33.33%; vertical-align: middle; border-style: none;">
+                    <img src="/images/logo.png" alt="Company Logo" style="height: 30px; display: inline-block; vertical-align: middle; margin-right: 4px;" />
+                </td>
+                <td style="width: 33.33%; vertical-align: middle; text-align: center; border-style: none;">
+                    <h1 style="margin: 0; vertical-align: middle;">IT Request Form</h1>
+                </td>
+                <td style="width: 33.33%; vertical-align: middle; border-style: none; padding: 2px; padding-left: 10mm;">
+                    <p style="margin: 0; font-size: 3mm; line-height: 7.5mm; vertical-align: middle;">Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? Truncate(formNumber?.ToString(), 50) : "N/A")</p>
+                    <p style="margin: 0; font-size: 3mm; line-height: 7.5mm; vertical-align: middle; min-width: 80mm; white-space: nowrap;">Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</p>
+                </td>
+            </tr>
+        </table>
         <div class="container container-requester">
             <h2>Section 1: Requester</h2>
             <table>
