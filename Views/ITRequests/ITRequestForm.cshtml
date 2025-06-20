@@ -100,43 +100,51 @@
                 {
                     TypeId = s.TryGetValue("SERVICE_TYPE", out var st) && st != null ? Convert.ToInt32(st) : 0,
                     TypeDescription = s.TryGetValue("TYPE_DESCRIPTION", out var td) ? td?.ToString() : "Unknown"
-                }).OrderBy(g => g.Key.TypeId);
+                }).OrderBy(g => g.Key.TypeId).ToList();
             }
             @if (serviceTypes.Any())
             {
                 <table class="service-table">
                     <tr>
-                        <td>
-                            @foreach (var serviceTypeGroup in serviceTypes)
+                        @{
+                            int columnCount = 3;
+                            var groupsPerColumn = (int)Math.Ceiling((double)serviceTypes.Count / columnCount);
+                            for (int col = 0; col < columnCount; col++)
                             {
-                                <div class="service-section">
-                                    <h6>@(serviceTypeGroup.Key.TypeDescription) (Type @(serviceTypeGroup.Key.TypeId))</h6>
-                                    @foreach (var service in serviceTypeGroup.OrderBy(s => s.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0))
+                                <td style="width: 33.33%;">
+                                    @for (int i = col * groupsPerColumn; i < Math.Min((col + 1) * groupsPerColumn, serviceTypes.Count); i++)
                                     {
-                                        var serviceId = service.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0;
-                                        var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "N/A";
-                                        var requiresDetail = service.TryGetValue("REQUIRES_DETAIL", out var rd) && rd is bool requiresDetailFlag && requiresDetailFlag;
-                                        var isSelected = service.TryGetValue("IsSelected", out var selected) && selected is bool sel && sel;
-                                        var reqDetail = isSelected && requiresDetail
-                                        ? Truncate(itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.REQ_DETAIL?.ToString(), 50)
-                                        : null;
-                                        <div class="service-item">
-                                            <div class="custom-checkbox">
-                                                <input type="checkbox" class="custom-checkbox-input" @(isSelected ? "checked" : "") disabled />
-                                                <label class="custom-checkbox-label @(isSelected ? "selected" : "")">@Truncate(serviceDesc, 50)</label>
-                                            </div>
-                                            @if (reqDetail != null)
+                                        var serviceTypeGroup = serviceTypes[i];
+                                        <div class="service-section">
+                                            <h6>@(serviceTypeGroup.Key.TypeDescription) (Type @(serviceTypeGroup.Key.TypeId))</h6>
+                                            @foreach (var service in serviceTypeGroup.OrderBy(s => s.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0))
                                             {
-                                                <div class="service-details">
-                                                    <label class="detail-label">Details:</label>
-                                                    <div class="detail-content">@reqDetail</div>
+                                                var serviceId = service.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0;
+                                                var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "N/A";
+                                                var requiresDetail = service.TryGetValue("REQUIRES_DETAIL", out var rd) && rd is bool requiresDetailFlag && requiresDetailFlag;
+                                                var isSelected = service.TryGetValue("IsSelected", out var selected) && selected is bool sel && sel;
+                                                var reqDetail = isSelected && requiresDetail
+                                                ? Truncate(itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.REQ_DETAIL?.ToString(), 50)
+                                                : null;
+                                                <div class="service-item">
+                                                    <div class="custom-checkbox">
+                                                        <input type="checkbox" class="custom-checkbox-input" @(isSelected ? "checked" : "") disabled />
+                                                        <label class="custom-checkbox-label @(isSelected ? "selected" : "")">@Truncate(serviceDesc, 50)</label>
+                                                    </div>
+                                                    @if (reqDetail != null)
+                                                    {
+                                                        <div class="service-details">
+                                                            <label class="detail-label">Details:</label>
+                                                            <div class="detail-content">@reqDetail</div>
+                                                        </div>
+                                                    }
                                                 </div>
                                             }
                                         </div>
                                     }
-                                </div>
+                                </td>
                             }
-                        </td>
+                        }
                     </tr>
                 </table>
             }
@@ -163,19 +171,22 @@
                     <td>@(model.TryGetValue("ITDetails", out var itDetails) ? Truncate(itDetails?.ToString(), 50) : "N/A")</td>
                 </tr>
             </table>
-            <div>
+            <div class="priority-section">
                 <label class="form-label fw-semibold">Priority</label>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" @(model.TryGetValue("Priority", out var priority) && priority?.ToString() == "High" ? "checked" : "") disabled />
-                    <label class="form-check-label">High</label>
+                @{
+                    string priorityValue = model.TryGetValue("Priority", out var priority) ? priority?.ToString() ?? "" : "";
+                }
+                <div class="custom-checkbox custom-checkbox-inline">
+                    <input type="checkbox" class="custom-checkbox-input" @(priorityValue == "High" ? "checked" : "") disabled />
+                    <label class="custom-checkbox-label @(priorityValue == "High" ? "selected" : "")">High</label>
                 </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" @(priority?.ToString() == "Medium" ? "checked" : "") disabled />
-                    <label class="form-check-label">Medium</label>
+                <div class="custom-checkbox custom-checkbox-inline">
+                    <input type="checkbox" class="custom-checkbox-input" @(priorityValue == "Medium" ? "checked" : "") disabled />
+                    <label class="custom-checkbox-label @(priorityValue == "Medium" ? "selected" : "")">Medium</label>
                 </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" @(priority?.ToString() == "Low" ? "checked" : "") disabled />
-                    <label class="form-check-label">Low</label>
+                <div class="custom-checkbox custom-checkbox-inline">
+                    <input type="checkbox" class="custom-checkbox-input" @(priorityValue == "Low" ? "checked" : "") disabled />
+                    <label class="custom-checkbox-label @(priorityValue == "Low" ? "selected" : "")">Low</label>
                 </div>
             </div>
             <h6><strong>Approval and Acceptance</strong></h6>

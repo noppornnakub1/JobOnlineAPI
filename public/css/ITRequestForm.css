@@ -44,21 +44,33 @@ body {
 }
 
 .header {
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
     margin-bottom: 6px;
     border-bottom: 1px solid #333;
     padding-bottom: 3px;
 }
 
-    .header h1 {
-        font-size: 12pt;
-        margin: 0;
-    }
+.header-logo {
+    height: 30px;
+    margin-right: 4px;
+}
 
-    .header p {
-        font-size: 6pt;
-        margin: 1px 0;
-    }
+.header-text {
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 12pt;
+    margin: 0;
+}
+
+.header p {
+    font-size: 6pt;
+    margin: 1px 0;
+}
 
 h2 {
     font-size: 9pt;
@@ -128,18 +140,8 @@ textarea.form-control {
     min-height: 20px;
 }
 
-.form-check-inline {
-    display: inline-block;
-    margin-right: 3px;
-    font-size: 6pt;
-}
-
-.service-item {
-    margin-bottom: 3px;
-    padding: 2px;
-    border: 1px solid #e0e0e0;
-    border-radius: 2px;
-    background-color: #fff;
+.priority-section {
+    margin-top: 4px;
 }
 
 .custom-checkbox {
@@ -147,6 +149,11 @@ textarea.form-control {
     align-items: center;
     margin-bottom: 1px;
     font-size: 6pt;
+}
+
+.custom-checkbox-inline {
+    display: inline-flex;
+    margin-right: 10px;
 }
 
 .custom-checkbox-input {
@@ -192,6 +199,14 @@ textarea.form-control {
 .custom-checkbox-label.selected {
     font-weight: 600;
     color: #005b96;
+}
+
+.service-item {
+    margin-bottom: 3px;
+    padding: 2px;
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    background-color: #fff;
 }
 
 .service-details {
