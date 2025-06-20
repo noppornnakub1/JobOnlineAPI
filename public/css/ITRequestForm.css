@@ -39,8 +39,16 @@ body {
 .container {
     border: 1px solid #ccc;
     padding: 4px;
-    margin-bottom: 3px;
     width: 90%;
+}
+
+.container-requester {
+    margin-bottom: 0;
+}
+
+.container-it {
+    margin-top: 0;
+    border-top: none;
 }
 
 .header {

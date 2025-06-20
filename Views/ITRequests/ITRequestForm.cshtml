@@ -20,7 +20,7 @@
             return input.Substring(0, maxLength) + "...";
         }
 
-        // Initialize variables to avoid unassigned variable error
+        // Initialize variables for Coordinator fields
         object? coordinatorName = null;
         object? coordinatorPhone = null;
         model.TryGetValue("CoordinatorName", out coordinatorName);
@@ -35,7 +35,7 @@
                 <p>Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</p>
             </div>
         </div>
-        <div class="container">
+        <div class="container container-requester">
             <h2>Section 1: Requester</h2>
             <table>
                 <tr>
@@ -156,6 +156,8 @@
                 <label class="form-label fw-semibold">Request Details</label>
                 <textarea class="form-control" rows="2" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? Truncate(serviceDetails?.ToString(), 100) : "N/A")</textarea>
             </div>
+        </div>
+        <div class="container container-it">
             <h2>Section 2: IT</h2>
             <table>
                 <tr>
