@@ -231,10 +231,7 @@ textarea.form-control {
     font-size: 8pt;
     color: #666;
     border-top: 1px solid #ccc;
-<<<<<<<< HEAD:public/css/ITRequestForm.css
+
     padding-top: 3px;
 }
-========
-    padding-top: 5px;
-}
->>>>>>>> 15424ee89f80ec9cd40f7d5a92079b19a17b110c:css/ITRequestForm.css
+
