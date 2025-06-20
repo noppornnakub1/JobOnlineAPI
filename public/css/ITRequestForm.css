@@ -1,12 +1,10 @@
-﻿/* กำหนดฟอนต์ Noto Sans Thai สำหรับภาษาไทย */
-@font-face {
+﻿@font-face {
     font-family: 'Noto Sans Thai';
     src: url('../fonts/NotoSansThai-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
 }
 
-/* กำหนดฟอนต์น้ำหนักปานกลาง */
 @font-face {
     font-family: 'Noto Sans Thai';
     src: url('../fonts/NotoSansThai-Medium.ttf') format('truetype');
@@ -14,7 +12,6 @@
     font-style: normal;
 }
 
-/* กำหนดฟอนต์น้ำหนักกึ่งหนา */
 @font-face {
     font-family: 'Noto Sans Thai';
     src: url('../fonts/NotoSansThai-SemiBold.ttf') format('truetype');
@@ -22,237 +19,209 @@
     font-style: normal;
 }
 
-/* ตั้งค่าพื้นฐานของหน้าเว็บ */
 body {
     font-family: 'Noto Sans Thai', Arial, sans-serif;
-    font-size: 10pt;
+    font-size: 8pt;
     color: #333;
     margin: 0;
     padding: 0;
+    line-height: 1.2;
 }
 
-/* ปรับขนาดหน้าให้เต็ม A4 และลดระยะห่าง */
 .page {
     width: 210mm;
-    min-height: 297mm;
+    min-height: 197mm;
     box-sizing: border-box;
-    padding: 5mm;
+    padding: 3mm;
     position: relative;
 }
 
-/* ปรับคอนเทนเนอร์ให้ใช้พื้นที่เต็ม */
 .container {
     border: 1px solid #ccc;
-    padding: 8px;
-    margin-bottom: 5px;
+    padding: 4px;
+    margin-bottom: 3px;
     width: 90%;
 }
 
-/* ปรับส่วนหัวให้กระชับ */
 .header {
     text-align: center;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #333;
-    padding-bottom: 5px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 3px;
 }
 
-    /* หัวข้อหลักในส่วนหัว */
     .header h1 {
-        font-size: 14pt;
+        font-size: 12pt;
         margin: 0;
     }
 
-    /* ข้อความย่อยในส่วนหัว */
     .header p {
-        font-size: 8pt;
-        margin: 2px 0;
+        font-size: 6pt;
+        margin: 1px 0;
     }
 
-/* หัวข้อย่อย */
 h2 {
-    font-size: 11pt;
-    margin: 8px 0 6px;
+    font-size: 9pt;
+    margin: 4px 0 3px;
     color: #333;
 }
 
-/* หัวข้อขนาดเล็กที่มีสีและเส้นขอบด้านล่าง */
 h6 {
-    font-size: 9pt;
+    font-size: 7pt;
     font-weight: 600;
-    margin: 6px 0;
+    margin: 3px 0;
     color: #005b96;
     border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 2px;
+    padding-bottom: 1px;
 }
 
-/* ปรับตารางให้เต็มความกว้าง */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
-/* สไตล์สำหรับเซลล์ในตาราง */
 th, td {
     border: 1px solid #ccc;
-    padding: 4px;
-    font-size: 8pt;
+    padding: 2px;
+    font-size: 6pt;
     vertical-align: top;
 }
 
-/* หัวตารางที่มีพื้นหลังและจัดชิดซ้าย */
 th {
     background-color: #f0f0f0;
     font-weight: 600;
     text-align: left;
 }
 
-/* ตารางบริการ */
 .service-table {
     table-layout: fixed;
-    font-size: 8pt;
+    font-size: 6pt;
     width: 100%;
 }
 
-    /* เซลล์ในตารางบริการ */
     .service-table td {
         vertical-align: top;
-        padding: 6px;
+        padding: 3px;
         background-color: #f9f9f9;
     }
 
-/* ป้ายกำกับฟอร์ม */
 .form-label {
     font-weight: 500;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     display: block;
-    font-size: 8pt;
+    font-size: 6pt;
 }
 
-/* ช่องกรอกข้อมูลในฟอร์ม */
 .form-control {
     width: 100%;
-    padding: 3px;
+    padding: 1px;
     border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 8pt;
+    border-radius: 2px;
+    font-size: 6pt;
     background-color: #f8f9fa;
     box-sizing: border-box;
 }
 
-/* กล่องข้อความที่ปรับขนาดได้เฉพาะแนวตั้ง */
 textarea.form-control {
     resize: vertical;
-    min-height: 30px;
+    min-height: 20px;
 }
 
-/* ตัวเลือกแบบอินไลน์ เช่น checkbox */
 .form-check-inline {
     display: inline-block;
-    margin-right: 6px;
-    font-size: 8pt;
+    margin-right: 3px;
+    font-size: 6pt;
 }
 
-/* กล่องสำหรับรายการบริการ */
 .service-item {
-    margin-bottom: 6px;
-    padding: 4px;
+    margin-bottom: 3px;
+    padding: 2px;
     border: 1px solid #e0e0e0;
-    border-radius: 4px;
+    border-radius: 2px;
     background-color: #fff;
 }
 
-/* Checkbox แบบกำหนดเอง */
 .custom-checkbox {
     display: flex;
     align-items: center;
-    margin-bottom: 3px;
-    font-size: 8pt;
+    margin-bottom: 1px;
+    font-size: 6pt;
 }
 
-/* ซ่อน checkbox เดิม */
 .custom-checkbox-input {
     display: none;
 }
 
-/* สร้างกล่อง checkbox ด้วย pseudo-element */
 .custom-checkbox-label {
     position: relative;
-    padding-left: 18px;
+    padding-left: 14px;
     cursor: default;
-    line-height: 1.4;
+    line-height: 1.2;
     color: #333;
 }
 
-    /* รูปแบบกล่อง checkbox ก่อนเลือก */
     .custom-checkbox-label::before {
         content: '';
         position: absolute;
         left: 0;
-        top: 2px;
-        width: 12px;
-        height: 12px;
-        border: 2px solid #005b96;
-        border-radius: 4px;
+        top: 1px;
+        width: 8px;
+        height: 8px;
+        border: 1px solid #005b96;
+        border-radius: 2px;
         background-color: #fff;
         box-sizing: border-box;
     }
 
-/* รูปแบบเมื่อ checkbox ถูกเลือก */
 .custom-checkbox-input:checked + .custom-checkbox-label::before {
     background-color: #005b96;
     border-color: #005b96;
 }
 
-/* แสดงเครื่องหมายถูกเมื่อเลือก */
 .custom-checkbox-input:checked + .custom-checkbox-label::after {
     content: '\2713';
     position: absolute;
-    left: 2px;
-    top: 1px;
-    font-size: 9px;
+    left: 1px;
+    top: 0;
+    font-size: 7px;
     color: #fff;
     font-weight: bold;
 }
 
-/* สไตล์เมื่อ checkbox ถูกเลือก */
 .custom-checkbox-label.selected {
     font-weight: 600;
     color: #005b96;
 }
 
-/* รายละเอียดบริการ */
 .service-details {
-    margin-top: 3px;
-    padding-left: 18px;
-    font-size: 7pt;
+    margin-top: 1px;
+    padding-left: 14px;
+    font-size: 5pt;
     color: #555;
 }
 
-/* ป้ายกำกับรายละเอียด */
 .detail-label {
     font-weight: 500;
     color: #333;
 }
 
-/* เนื้อหารายละเอียด */
 .detail-content {
     background-color: #f5f5f5;
-    padding: 3px;
-    border-radius: 3px;
+    padding: 1px;
+    border-radius: 2px;
     border: 1px solid #e0e0e0;
     word-wrap: break-word;
 }
 
-/* ปรับส่วนท้ายให้กระชับ */
 .footer {
     position: absolute;
-    bottom: 5mm;
-    left: 10mm;
-    right: 10mm;
+    bottom: 3mm;
+    left: 6mm;
+    right: 6mm;
     text-align: center;
-    font-size: 8pt;
+    font-size: 6pt;
     color: #666;
     border-top: 1px solid #ccc;
-    padding-top: 2px;
+    padding-top: 1px;
 }

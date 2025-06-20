@@ -3,57 +3,64 @@
 <head>
     <meta charset="utf-8" />
     <title>IT Request Form</title>
-    <!-- ลิงก์ไปยังไฟล์ CSS ภายนอก -->
     <link href="/css/ITRequestForm.css" rel="stylesheet" />
 </head>
 <body>
-    <!-- ดึงข้อมูลจาก Model เพื่อใช้ในฟอร์ม -->
     @{
         var model = Model as Dictionary<string, object> ?? new Dictionary<string, object>();
         var itRequests = model.TryGetValue("ITRequests", out var itRequestsObj) && itRequestsObj is IEnumerable<object> itReqs
         ? itReqs.Cast<dynamic>().ToList()
         : new List<dynamic>();
+
+        // Helper function to truncate long text, accepting nullable string
+        string Truncate(string? input, int maxLength)
+        {
+            if (string.IsNullOrEmpty(input) || input.Length <= maxLength)
+                return input ?? "N/A";
+            return input.Substring(0, maxLength) + "...";
+        }
+
+        // Initialize variables to avoid unassigned variable error
+        object? coordinatorName = null;
+        object? coordinatorPhone = null;
+        model.TryGetValue("CoordinatorName", out coordinatorName);
+        model.TryGetValue("CoordinatorPhone", out coordinatorPhone);
     }
-    <!-- หน้าแรกของฟอร์ม -->
     <div class="page">
-        <!-- ส่วนหัวของหน้า -->
         <div class="header">
-            <!-- แสดงโลโก้และข้อมูลฟอร์ม -->
-            <img src="/images/logo.png" alt="Company Logo" style="height: 40px; display: inline-block; vertical-align: middle; margin-right: 8px;" />
+            <img src="/images/logo.png" alt="Company Logo" style="height: 30px; display: inline-block; vertical-align: middle; margin-right: 4px;" />
             <div style="display: inline-block; vertical-align: middle;">
                 <h1>IT Request Form</h1>
-                <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? formNumber?.ToString() : "N/A")</p>
+                <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? Truncate(formNumber?.ToString(), 50) : "N/A")</p>
                 <p>Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</p>
             </div>
         </div>
-        <!-- คอนเทนเนอร์สำหรับข้อมูลผู้ร้องขอ -->
         <div class="container">
-            <h2>Section 1: For Requester</h2>
-            <!-- ตารางข้อมูลผู้ร้องขอ -->
+            <h2>Section 1: Requester</h2>
             <table>
                 <tr>
                     <th style="width: 30%;">Company</th>
-                    <td>@(model.TryGetValue("Company", out var company) && company != null ? company.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("Company", out var company) ? Truncate(company?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Cost Center</th>
-                    <td>@(model.TryGetValue("CostCenter", out var costCenter) && costCenter != null ? costCenter.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("CostCenter", out var costCenter) ? Truncate(costCenter?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Requester Full Name</th>
-                    <td>@(model.TryGetValue("RequesterName", out var requesterName) ? requesterName?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("RequesterName", out var requesterName) ? Truncate(requesterName?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Nickname</th>
-                    <td>@(model.TryGetValue("Nickname", out var nickname) ? nickname?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("Nickname", out var nickname) ? Truncate(nickname?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Employee No.</th>
-                    <td>@(model.TryGetValue("EmployeeId", out var employeeId) ? employeeId?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Job Title</th>
-                    <td>@(model.TryGetValue("JobTitle", out var jobTitle) && jobTitle != null ? jobTitle.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("JobTitle", out var jobTitle) ? Truncate(jobTitle?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Start Date</th>
@@ -61,26 +68,29 @@
                 </tr>
                 <tr>
                     <th>Mobile Phone</th>
-                    <td>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? mobilePhone?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? Truncate(mobilePhone?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Name - Surname (Eng)</th>
-                    <td>@(model.TryGetValue("NameSurname", out var nameSurname) ? nameSurname?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("NameSurname", out var nameSurname) ? Truncate(nameSurname?.ToString(), 50) : "N/A")</td>
                 </tr>
-                <tr>
-                    <th>Coordinator Name</th>
-                    <td>@(model.TryGetValue("CoordinatorName", out var coordinatorName) ? coordinatorName?.ToString() : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>Coordinator Phone</th>
-                    <td>@(model.TryGetValue("CoordinatorPhone", out var coordinatorPhone) ? coordinatorPhone?.ToString() : "N/A")</td>
-                </tr>
+                @if ((coordinatorName != null && !string.IsNullOrEmpty(coordinatorName.ToString())) ||
+                (coordinatorPhone != null && !string.IsNullOrEmpty(coordinatorPhone.ToString())))
+                {
+                    <tr>
+                        <th>Coordinator Name</th>
+                        <td>@Truncate(coordinatorName?.ToString(), 50)</td>
+                    </tr>
+                    <tr>
+                        <th>Coordinator Phone</th>
+                        <td>@Truncate(coordinatorPhone?.ToString(), 50)</td>
+                    </tr>
+                }
                 <tr>
                     <th>Applicant ID</th>
-                    <td>@(model.TryGetValue("ApplicantID", out var applicantId) ? applicantId?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("ApplicantID", out var applicantId) ? Truncate(applicantId?.ToString(), 50) : "N/A")</td>
                 </tr>
             </table>
-            <!-- ส่วนประเภทบริการ -->
             <h6><strong>Service Types</strong></h6>
             @{
                 var serviceList = model.TryGetValue("ServicesList", out var servicesObj) && servicesObj is IEnumerable<object> services
@@ -89,94 +99,70 @@
                 var serviceTypes = serviceList.GroupBy(s => new
                 {
                     TypeId = s.TryGetValue("SERVICE_TYPE", out var st) && st != null ? Convert.ToInt32(st) : 0,
-                    TypeDescription = s.TryGetValue("TYPE_DESCRIPTION", out var td) ? td?.ToString() ?? "Unknown" : "Unknown"
+                    TypeDescription = s.TryGetValue("TYPE_DESCRIPTION", out var td) ? td?.ToString() : "Unknown"
                 }).OrderBy(g => g.Key.TypeId);
             }
             @if (serviceTypes.Any())
             {
-                <!-- ตารางแสดงประเภทบริการ -->
                 <table class="service-table">
                     <tr>
-                        @foreach (var serviceTypeGroup in serviceTypes)
-                        {
-                            var columnWidth = Math.Round(100.0 / serviceTypes.Count(), 2);
-                            <td style="width: @(columnWidth.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%;">
+                        <td>
+                            @foreach (var serviceTypeGroup in serviceTypes)
+                            {
                                 <div class="service-section">
                                     <h6>@(serviceTypeGroup.Key.TypeDescription) (Type @(serviceTypeGroup.Key.TypeId))</h6>
                                     @foreach (var service in serviceTypeGroup.OrderBy(s => s.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0))
                                     {
                                         var serviceId = service.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0;
-                                        var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() ?? "N/A" : "N/A";
+                                        var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "N/A";
                                         var requiresDetail = service.TryGetValue("REQUIRES_DETAIL", out var rd) && rd is bool requiresDetailFlag && requiresDetailFlag;
                                         var isSelected = service.TryGetValue("IsSelected", out var selected) && selected is bool sel && sel;
                                         var reqDetail = isSelected && requiresDetail
-                                        ? itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.REQ_DETAIL?.ToString() ?? "No details provided"
+                                        ? Truncate(itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.REQ_DETAIL?.ToString(), 50)
                                         : null;
                                         <div class="service-item">
                                             <div class="custom-checkbox">
                                                 <input type="checkbox" class="custom-checkbox-input" @(isSelected ? "checked" : "") disabled />
-                                                <label class="custom-checkbox-label @(isSelected ? "selected" : "")">@serviceDesc</label>
+                                                <label class="custom-checkbox-label @(isSelected ? "selected" : "")">@Truncate(serviceDesc, 50)</label>
                                             </div>
                                             @if (reqDetail != null)
                                             {
                                                 <div class="service-details">
                                                     <label class="detail-label">Details:</label>
-                                                    <div class="detail-content">@(string.IsNullOrWhiteSpace(reqDetail) ? "No details provided" : reqDetail)</div>
+                                                    <div class="detail-content">@reqDetail</div>
                                                 </div>
                                             }
                                         </div>
                                     }
                                 </div>
-                            </td>
-                        }
+                            }
+                        </td>
                     </tr>
                 </table>
             }
             else
             {
-                <p>ไม่มีประเภทบริการ</p>
+                <p>No service types available</p>
             }
-            <!-- รายละเอียดการร้องขอ -->
             <div style="page-break-inside: avoid;">
                 <label class="form-label fw-semibold">Request Details</label>
-                <textarea class="form-control" rows="4" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? serviceDetails?.ToString() : "N/A")</textarea>
+                <textarea class="form-control" rows="2" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? Truncate(serviceDetails?.ToString(), 100) : "N/A")</textarea>
             </div>
-        </div>
-        <!-- ส่วนท้ายของหน้า -->
-        <div class="footer">
-            <p>Page 1/2 - Generated by IT Request System</p>
-        </div>
-    </div>
-    <!-- หน้าที่สองของฟอร์ม -->
-    <div class="page">
-        <!-- ส่วนหัวของหน้า -->
-        <div class="header">
-            <img src="/images/logo.png" alt="Company Logo" style="height: 40px; display: inline-block; vertical-align: middle; margin-right: 8px;" />
-            <div style="display: inline-block; vertical-align: middle;">
-                <h1>IT Request Form</h1>
-                <p>Form No.: @(model.TryGetValue("FormNumber", out var formNumber2) ? formNumber2?.ToString() : "N/A")</p>
-                <p>Date: @(model.TryGetValue("RequestDate", out var requestDate2) && requestDate2 is DateTime requestDateValue2 ? requestDateValue2.ToString("dd-MM-yyyy") : "N/A")</p>
-            </div>
-        </div>
-        <!-- คอนเทนเนอร์สำหรับข้อมูลฝ่ายไอที -->
-        <div class="container">
-            <h2>Section 2: For IT</h2>
-            <!-- ตารางข้อมูลฝ่ายไอที -->
+            <h2>Section 2: IT</h2>
             <table>
                 <tr>
-                    <th style="width: 50%;">Received Date</th>
+                    <th style="width: 30%;">Received Date</th>
                     <td>@(model.TryGetValue("ReceivedDate", out var receivedDate) && receivedDate is DateTime receivedDateValue ? receivedDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
                 </tr>
                 <tr>
                     <th>Assigned To</th>
-                    <td>@(model.TryGetValue("AssignedTo", out var assignedTo) ? assignedTo?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("AssignedTo", out var assignedTo) ? Truncate(assignedTo?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
                     <th>IT Details</th>
-                    <td>@(model.TryGetValue("ITDetails", out var itDetails) ? itDetails?.ToString() : "N/A")</td>
+                    <td>@(model.TryGetValue("ITDetails", out var itDetails) ? Truncate(itDetails?.ToString(), 50) : "N/A")</td>
                 </tr>
             </table>
-            <!-- ระดับความสำคัญ -->
             <div>
                 <label class="form-label fw-semibold">Priority</label>
                 <div class="form-check form-check-inline">
@@ -192,58 +178,39 @@
                     <label class="form-check-label">Low</label>
                 </div>
             </div>
-            <!-- การอนุมัติและยอมรับ -->
             <h6><strong>Approval and Acceptance</strong></h6>
             <table>
                 <tr>
-                    <th style="width: 33.33%;">Requester</th>
-                    <th style="width: 33.33%;">Approver</th>
-                    <th style="width: 33.33%;">User (UAT/Acceptance)</th>
+                    <th style="width: 20%;">Role</th>
+                    <th style="width: 40%;">Name</th>
+                    <th style="width: 40%;">Date</th>
                 </tr>
                 <tr>
-                    <td>
-                        <input type="text" class="form-control my-1" value="@(model.TryGetValue("RequesterName", out var reqName) ? reqName?.ToString() : "N/A")" readonly />
-                        <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime requesterDateValue ? requesterDateValue.ToString("dd-MM-yyyy") : "N/A")" readonly />
-                    </td>
-                    <td>
-                        <textarea class="form-control my-1" rows="2" readonly>@(model.TryGetValue("ApproverText", out var approverText) ? approverText?.ToString() : "N/A")</textarea>
-                        <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime approverDateValue ? approverDateValue.ToString("dd-MM-yyyy") : "N/A")" readonly />
-                    </td>
-                    <td>
-                        <input type="text" class="form-control my-1" value="@(model.TryGetValue("UatUser", out var uatUser) ? uatUser?.ToString() : "N/A")" readonly />
-                        <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate", out var uatDate) && uatDate is DateTime uatDateValue ? uatDateValue.ToString("dd-MM-yyyy") : "N/A")" readonly />
-                    </td>
+                    <td>Requester</td>
+                    <td>@(model.TryGetValue("RequesterName", out var reqName) ? Truncate(reqName?.ToString(), 50) : "N/A")</td>
+                    <td>@(model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime requesterDateValue ? requesterDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>IT Officer</th>
-                    <th>Approver (Other Systems)</th>
-                    <th>User (UAT/Acceptance)</th>
+                    <td>Approver</td>
+                    <td>@(model.TryGetValue("ApproverText", out var approverText) ? Truncate(approverText?.ToString(), 50) : "N/A")</td>
+                    <td>@(model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime approverDateValue ? approverDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
                 </tr>
                 <tr>
-                    <td>
-                        <input type="text" class="form-control my-1" value="@(model.TryGetValue("ITOfficer", out var itOfficer) ? itOfficer?.ToString() : "N/A")" readonly />
-                        <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("ITDate", out var itDate) && itDate is DateTime itOfficerDate ? itOfficerDate.ToString("dd-MM-yyyy") : "N/A")" readonly />
-                    </td>
-                    <td>
-                        <textarea class="form-control my-1" rows="2" readonly>@(model.TryGetValue("OtherApproverText", out var otherApprover) ? otherApprover?.ToString() : "N/A")</textarea>
-                        <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherApproverDate ? otherApproverDate.ToString("dd-MM-yyyy") : "N/A")" readonly />
-                    </td>
-                    <td>
-                        <input type="text" class="form-control my-1" value="@(model.TryGetValue("UatUser2", out var uatUser2) ? uatUser2?.ToString() : "N/A")" readonly />
-                        <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="@(model.TryGetValue("UatDate2", out var uatDate2) && uatDate2 is DateTime uatDate2Value ? uatDate2Value.ToString("dd-MM-yyyy") : "N/A")" readonly />
-                    </td>
+                    <td>User (UAT)</td>
+                    <td>@(model.TryGetValue("UatUser", out var uatUser) ? Truncate(uatUser?.ToString(), 50) : "N/A")</td>
+                    <td>@(model.TryGetValue("UatDate", out var uatDate) && uatDate is DateTime uatDateValue ? uatDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
+                </tr>
+                <tr>
+                    <td>IT Officer</td>
+                    <td>@(model.TryGetValue("ITOfficer", out var itOfficer) ? Truncate(itOfficer?.ToString(), 50) : "N/A")</td>
+                    <td>@(model.TryGetValue("ITDate", out var itDate) && itDate is DateTime itOfficerDate ? itOfficerDate.ToString("dd-MM-yyyy") : "N/A")</td>
+                </tr>
+                <tr>
+                    <td>Other Approver</td>
+                    <td>@(model.TryGetValue("OtherApproverText", out var otherApprover) ? Truncate(otherApprover?.ToString(), 50) : "N/A")</td>
+                    <td>@(model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherApproverDate ? otherApproverDate.ToString("dd-MM-yyyy") : "N/A")</td>
                 </tr>
             </table>
-        </div>
-        <!-- ส่วนท้ายของหน้า -->
-        <div class="footer">
-            <p>Page 2/2 - Generated by IT Request System</p>
         </div>
     </div>
 </body>
