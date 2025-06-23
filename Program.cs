@@ -11,6 +11,9 @@ using JobOnlineAPI.DAL;
 using Microsoft.Extensions.Options;
 using Rotativa.AspNetCore;
 using Microsoft.Extensions.FileProviders;
+using JobOnlineAPI.Filters;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 var options = new WebApplicationOptions
 {
@@ -18,6 +21,8 @@ var options = new WebApplicationOptions
     ContentRootPath = Directory.GetCurrentDirectory()
 };
 var builder = WebApplication.CreateBuilder(options);
+
+builder.Services.AddScoped<ITRequestExampleOperationFilter, ITRequestExampleOperationFilter>();
 
 using var loggerFactory = LoggerFactory.Create(logging =>
 {
@@ -39,7 +44,6 @@ builder.Configuration.Sources.Clear();
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-    // .AddUserSecrets<Program>(optional: false)
     .AddEnvironmentVariables();
 
 // Log connection string and FileStorage path
@@ -151,18 +155,29 @@ builder.Services.AddControllersWithViews()
     {
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "JobOnlineAPI", Version = "v1" });
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
+builder.Services.AddEndpointsApiExplorer();
 
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "JobOnlineAPI", Version = "v1" });
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
     {
-        options.IncludeXmlComments(xmlPath);
+        c.IncludeXmlComments(xmlPath);
     }
-
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    c.MapType<IFormFile>(() => new OpenApiSchema
+    {
+        Type = "file",
+        Format = "binary"
+    });
+    c.OperationFilter<ITRequestExampleOperationFilter>();
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
@@ -172,7 +187,7 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Enter 'Bearer' followed by a space and your JWT token."
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
@@ -187,15 +202,8 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    options.UseAllOfToExtendReferenceSchemas();
+    c.UseAllOfToExtendReferenceSchemas();
 });
-
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-    });
-builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 

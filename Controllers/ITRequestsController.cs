@@ -10,34 +10,78 @@ namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ITRequestsController(IConfiguration configuration, IEmailService emailService) : ControllerBase
+    public class ITRequestsController(IConfiguration configuration, IEmailService emailService, ILogger<ITRequestsController> logger) : ControllerBase
     {
         private readonly IDbConnection _dbConnection = new SqlConnection(configuration.GetConnectionString("DefaultConnection"));
         private readonly IEmailService _emailService = emailService;
+        private readonly ILogger<ITRequestsController> _logger = logger;
         private readonly string _defaultEmail = "default@company.com";
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            WriteIndented = false
+        };
 
         [HttpPost]
-        public async Task<IActionResult> SubmitITRequest([FromBody] JsonElement request)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> SubmitITRequest([FromForm] IFormCollection formCollection)
         {
             try
             {
-                // Validate JSON format
-                if (request.ValueKind != JsonValueKind.Object && request.ValueKind != JsonValueKind.Array)
+                // ดึงข้อมูล JSON และ clean string
+                string? jsonData = formCollection["jsonData"].ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(jsonData))
+                {
+                    _logger.LogWarning("Invalid or missing JSON data.");
+                    return BadRequest(new { Error = "Invalid or missing JSON data." });
+                }
+
+                // Validate JSON
+                JsonDocument request;
+                try
+                {
+                    request = JsonDocument.Parse(jsonData);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning("Invalid JSON format: {Message}", ex.Message);
+                    return BadRequest(new { Error = $"Invalid JSON format: {ex.Message}" });
+                }
+
+                if (request.RootElement.ValueKind != JsonValueKind.Object && request.RootElement.ValueKind != JsonValueKind.Array)
+                {
+                    _logger.LogWarning("Invalid JSON format. Expected object or array.");
                     return BadRequest(new { Error = "Invalid JSON format. Expected a JSON object or array." });
+                }
 
                 List<Dictionary<string, object>> requestDataList = [];
                 string? createdBy = null;
-                bool isArray = request.ValueKind == JsonValueKind.Array;
+                bool isArray = request.RootElement.ValueKind == JsonValueKind.Array;
+
+                // Convert uploaded files to base64 for signatures
+                var signatures = new Dictionary<string, string?>
+                {
+                    ["RequesterSignature"] = await ConvertFileToBase64(formCollection.Files["requesterSignatureFile"]),
+                    ["ApproverSignature"] = await ConvertFileToBase64(formCollection.Files["approverSignatureFile"]),
+                    ["UATUserSignature"] = await ConvertFileToBase64(formCollection.Files["uatUserSignatureFile"]),
+                    ["ITOfficerSignature"] = await ConvertFileToBase64(formCollection.Files["itOfficerSignatureFile"]),
+                    ["OtherApproverSignature"] = await ConvertFileToBase64(formCollection.Files["otherApproverSignatureFile"]),
+                    ["OtherUATUserSignature"] = await ConvertFileToBase64(formCollection.Files["otherUatUserSignatureFile"])
+                };
 
                 // Handle single JSON object
                 if (!isArray)
                 {
-                    if (!request.TryGetProperty("CreatedBy", out var createdByElement) || createdByElement.ValueKind == JsonValueKind.Null || string.IsNullOrWhiteSpace(createdByElement.GetString()))
+                    if (!request.RootElement.TryGetProperty("CreatedBy", out var createdByElement) || createdByElement.ValueKind == JsonValueKind.Null || string.IsNullOrWhiteSpace(createdByElement.GetString()))
+                    {
+                        _logger.LogWarning("CreatedBy is required and cannot be empty.");
                         return BadRequest(new { Error = "CreatedBy is required and cannot be empty." });
+                    }
 
                     createdBy = createdByElement.GetString()!;
                     var requestData = new Dictionary<string, object>();
-                    foreach (var property in request.EnumerateObject())
+                    foreach (var property in request.RootElement.EnumerateObject())
                     {
                         requestData[property.Name] = property.Value.ValueKind switch
                         {
@@ -46,9 +90,9 @@ namespace JobOnlineAPI.Controllers
                             JsonValueKind.True => true,
                             JsonValueKind.False => false,
                             JsonValueKind.Null => string.Empty,
-                            JsonValueKind.Undefined => throw new NotImplementedException("Undefined JSON value not supported"),
-                            JsonValueKind.Object => throw new NotImplementedException("Object JSON value not supported"),
-                            JsonValueKind.Array => throw new NotImplementedException("Array JSON value not supported"),
+                            JsonValueKind.Undefined => throw new NotSupportedException("Undefined JSON value not supported"),
+                            JsonValueKind.Object => throw new NotSupportedException("Nested JSON object not supported"),
+                            JsonValueKind.Array => throw new NotSupportedException("Nested JSON array not supported"),
                             _ => property.Value.ToString() ?? string.Empty
                         };
                     }
@@ -58,18 +102,27 @@ namespace JobOnlineAPI.Controllers
                 else
                 {
                     string? jsonReqNo = null;
-                    foreach (var item in request.EnumerateArray())
+                    foreach (var item in request.RootElement.EnumerateArray())
                     {
                         if (item.ValueKind != JsonValueKind.Object)
+                        {
+                            _logger.LogWarning("Each item in the array must be a JSON object.");
                             return BadRequest(new { Error = "Each item in the array must be a JSON object." });
+                        }
 
                         if (!item.TryGetProperty("CreatedBy", out var createdByElement) || createdByElement.ValueKind == JsonValueKind.Null || string.IsNullOrWhiteSpace(createdByElement.GetString()))
+                        {
+                            _logger.LogWarning("CreatedBy is required and cannot be empty in each array item.");
                             return BadRequest(new { Error = "CreatedBy is required and cannot be empty in each array item." });
+                        }
 
                         if (createdBy == null)
                             createdBy = createdByElement.GetString()!;
                         else if (createdBy != createdByElement.GetString())
+                        {
+                            _logger.LogWarning("All items in the array must have the same CreatedBy value.");
                             return BadRequest(new { Error = "All items in the array must have the same CreatedBy value." });
+                        }
 
                         var requestData = new Dictionary<string, object>();
                         foreach (var property in item.EnumerateObject())
@@ -82,7 +135,10 @@ namespace JobOnlineAPI.Controllers
                                     if (jsonReqNo == null)
                                         jsonReqNo = currentReqNo;
                                     else if (jsonReqNo != currentReqNo)
+                                    {
+                                        _logger.LogWarning("All items in the array must have the same REQ_NO value.");
                                         return BadRequest(new { Error = "All items in the array must have the same REQ_NO value." });
+                                    }
                                 }
                             }
 
@@ -93,9 +149,9 @@ namespace JobOnlineAPI.Controllers
                                 JsonValueKind.True => true,
                                 JsonValueKind.False => false,
                                 JsonValueKind.Null => string.Empty,
-                                JsonValueKind.Undefined => throw new NotImplementedException("Undefined JSON value not supported"),
-                                JsonValueKind.Object => throw new NotImplementedException("Object JSON value not supported"),
-                                JsonValueKind.Array => throw new NotImplementedException("Array JSON value not supported"),
+                                JsonValueKind.Undefined => throw new NotSupportedException("Undefined JSON value not supported"),
+                                JsonValueKind.Object => throw new NotSupportedException("Nested JSON object not supported"),
+                                JsonValueKind.Array => throw new NotSupportedException("Nested JSON array not supported"),
                                 _ => property.Value.ToString() ?? string.Empty
                             };
                         }
@@ -107,9 +163,15 @@ namespace JobOnlineAPI.Controllers
                 {
                     using var connection = new SqlConnection(_dbConnection.ConnectionString);
                     var parameters = new DynamicParameters();
-                    string jsonData = isArray ? JsonSerializer.Serialize<List<Dictionary<string, object>>>(requestDataList) : JsonSerializer.Serialize<Dictionary<string, object>>(requestDataList[0]);
-                    parameters.Add("JsonData", jsonData);
+                    string serializedJsonData = isArray ? JsonSerializer.Serialize(requestDataList, _jsonSerializerOptions) : JsonSerializer.Serialize(requestDataList[0], _jsonSerializerOptions);
+                    parameters.Add("JsonData", serializedJsonData);
                     parameters.Add("CreatedBy", createdBy);
+                    parameters.Add("RequesterSignature", signatures["RequesterSignature"]);
+                    parameters.Add("ApproverSignature", signatures["ApproverSignature"]);
+                    parameters.Add("UATUserSignature", signatures["UATUserSignature"]);
+                    parameters.Add("ITOfficerSignature", signatures["ITOfficerSignature"]);
+                    parameters.Add("OtherApproverSignature", signatures["OtherApproverSignature"]);
+                    parameters.Add("OtherUATUserSignature", signatures["OtherUATUserSignature"]);
                     parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
                     parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
@@ -123,12 +185,18 @@ namespace JobOnlineAPI.Controllers
                     var errorMessage = parameters.Get<string>("ErrorMessage");
 
                     if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        _logger.LogError("Error from stored procedure: {ErrorMessage}", errorMessage);
                         return BadRequest(new { Error = errorMessage });
+                    }
 
                     if (newId == null)
+                    {
+                        _logger.LogError("NewID is null after stored procedure execution.");
                         return StatusCode(500, new { Error = "Failed to process IT request." });
+                    }
 
-                    // Create response from result set
+                    // Create response from result set with adjusted signatures
                     int index = 0;
                     var responseItems = result.Select(r =>
                     {
@@ -138,11 +206,17 @@ namespace JobOnlineAPI.Controllers
                             ITRequestId = r.NewID,
                             r.ReqNo,
                             Message = requestData != null && requestData.ContainsKey("ID") ? "IT request updated successfully." : "IT request created successfully.",
-                            FilePath = requestData != null && requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? filePath.ToString() : null
+                            FilePath = requestData != null && requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? filePath.ToString() : null,
+                            RequesterSignature = signatures["RequesterSignature"],
+                            ApproverSignature = signatures["ApproverSignature"],
+                            UATUserSignature = signatures["UATUserSignature"],
+                            ITOfficerSignature = signatures["ITOfficerSignature"],
+                            OtherApproverSignature = signatures["OtherApproverSignature"],
+                            OtherUATUserSignature = signatures["OtherUATUserSignature"]
                         };
                     }).ToList();
 
-                    // Send a single email for the entire request
+                    // Send a single email for the entire request with signatures
                     var firstResult = result.FirstOrDefault();
                     if (firstResult != null)
                     {
@@ -164,11 +238,13 @@ namespace JobOnlineAPI.Controllers
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Exception in database operation: {Message}", ex.Message);
                     return StatusCode(500, new { Error = "Internal Server Error", Details = ex.Message });
                 }
             }
             catch (JsonException ex)
             {
+                _logger.LogWarning("Invalid JSON format: {Message}", ex.Message);
                 return BadRequest(new { Error = $"Invalid JSON format: {ex.Message}" });
             }
         }
@@ -221,6 +297,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Exception in GetITRequestByReqNo: {Message}", ex.Message);
                 return StatusCode(500, new { Error = "Internal Server Error", Details = ex.Message });
             }
         }
@@ -319,6 +396,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Exception in GenerateForm: {Message}", ex.Message);
                 return StatusCode(500, new { Error = $"Error generating PDF: {ex.Message}" });
             }
         }
@@ -358,13 +436,13 @@ namespace JobOnlineAPI.Controllers
                 if (approvers.Count != 0)
                 {
                     string approverBody = $"""
-                <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                    <p>An IT request #{reqNo} requires your approval.</p>
-                    <h3>Services Requested:</h3>
-                    {servicesList}
-                    <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
-                </div>
-                """;
+                    <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                        <p>An IT request #{reqNo} requires your approval.</p>
+                        <h3>Services Requested:</h3>
+                        {servicesList}
+                        <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
+                    </div>
+                    """;
 
                     foreach (var approver in approvers)
                     {
@@ -374,10 +452,25 @@ namespace JobOnlineAPI.Controllers
                         }
                     }
                 }
+
+                // Email for Requester
+                if (IsValidEmail(requesterEmail))
+                {
+                    string requesterBody = $"""
+                    <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                        <p>Your IT request #{reqNo} has been {action}.</p>
+                        <h3>Services Requested:</h3>
+                        {servicesList}
+                        <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
+                    </div>
+                    """;
+
+                    await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true);
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to send email for IT request #{id}: {ex.Message}");
+                _logger.LogError(ex, "Failed to send email for IT request #{id}: {Message}", id, ex.Message);
             }
         }
 
@@ -392,6 +485,17 @@ namespace JobOnlineAPI.Controllers
             {
                 return false;
             }
+        }
+
+        private static async Task<string?> ConvertFileToBase64(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+                return null;
+
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            var base64String = $"data:{file.ContentType};base64,{Convert.ToBase64String(memoryStream.ToArray())}";
+            return base64String;
         }
     }
 }
