@@ -1,21 +1,14 @@
 ﻿using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class HRStaffController : ControllerBase
+    public class HRStaffController(IHRStaffRepository hrStaffRepository) : ControllerBase
     {
-        private readonly IHRStaffRepository _hrStaffRepository;
-
-        public HRStaffController(IHRStaffRepository hrStaffRepository)
-        {
-            _hrStaffRepository = hrStaffRepository;
-        }
+        private readonly IHRStaffRepository _hrStaffRepository = hrStaffRepository;
 
         [HttpGet]
         public async Task<IEnumerable<HRStaff>> GetHRStaff()
