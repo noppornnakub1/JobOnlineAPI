@@ -11,6 +11,10 @@
         var itRequests = model.TryGetValue("ITRequests", out var itRequestsObj) && itRequestsObj is IEnumerable<object> itReqs
         ? itReqs.Cast<dynamic>().ToList()
         : new List<dynamic>();
+        var signaturesList = model.TryGetValue("SignaturesList", out var signaturesObj) && signaturesObj is IEnumerable<object> sigs
+        ? sigs.Cast<Dictionary<string, object>>().ToList()
+        : new List<Dictionary<string, object>>();
+        var firstSignature = signaturesList.FirstOrDefault();
 
         // Helper function to truncate long text, accepting nullable string
         string Truncate(string? input, int maxLength)
@@ -25,15 +29,25 @@
         object? coordinatorPhone = null;
         model.TryGetValue("CoordinatorName", out coordinatorName);
         model.TryGetValue("CoordinatorPhone", out coordinatorPhone);
+
+        // Initialize variables for dates to avoid scope issues
+        string requesterDate = model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime reqDateValue ? reqDateValue.ToString("dd-MM-yyyy") : "N/A";
+        string approverDate = model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime appDateValue ? appDateValue.ToString("dd-MM-yyyy") : "N/A";
+        string uatDate = model.TryGetValue("UatDate", out var uatDateObj) && uatDateObj is DateTime uatDateValue ? uatDateValue.ToString("dd-MM-yyyy") : "N/A";
+        string itDate = model.TryGetValue("ITDate", out var itDateObj) && itDateObj is DateTime itDateValue ? itDateValue.ToString("dd-MM-yyyy") : "N/A";
+        string otherApproverDate = model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherAppDateValue ? otherAppDateValue.ToString("dd-MM-yyyy") : "N/A";
+        string uatDate2 = model.TryGetValue("UatDate2", out var uatDate2Obj) && uatDate2Obj is DateTime uatDate2Value ? uatDate2Value.ToString("dd-MM-yyyy") : "N/A";
     }
     <div class="page">
         <table style="width: 100%;">
             <tr>
                 <td style="width: 25%; vertical-align: middle; border-style: none;">
-                    <img src="/images/logo.png" alt="Company Logo" style="height: 60px;width:auto; display: inline-block; vertical-align: middle; margin-right: 4px;" />
+                    <img src="/images/logo.png" alt="Company Logo" class="header-logo" />
                 </td>
                 <td style="width: 45%; vertical-align: top; text-align: center; border-style: none;">
-                    <h1 style="margin: 0; vertical-align: middle;">IT Request Form</h1>
+                    <div class="header-text">
+                        <h1>IT Request Form</h1>
+                    </div>
                 </td>
                 <td style="width: 30%; vertical-align: bottom; border-style: none; padding: 2px; padding-left: 15mm;">
                     <h4 style="margin-right: 70px; vertical-align: bottom;">Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? Truncate(formNumber?.ToString(), 50) : "N/A")</h4>
@@ -211,33 +225,99 @@
             <table>
                 <tr>
                     <th style="width: 20%;">Role</th>
-                    <th style="width: 40%;">Name</th>
-                    <th style="width: 40%;">Date</th>
+                    <th style="width: 30%;">Name</th>
+                    <th style="width: 30%;">Signature</th>
+                    <th style="width: 20%;">Date</th>
                 </tr>
                 <tr>
                     <td>Requester</td>
                     <td>@(model.TryGetValue("RequesterName", out var reqName) ? Truncate(reqName?.ToString(), 50) : "N/A")</td>
-                    <td>@(model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime requesterDateValue ? requesterDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
+                    <td>
+                        @if (firstSignature != null && firstSignature.TryGetValue("RequesterSignature", out var reqSig) && reqSig is string requesterSignature && !string.IsNullOrEmpty(requesterSignature))
+                        {
+                            <img src="@requesterSignature" alt="Requester Signature" class="signature-img" />
+                        }
+                        else
+                        {
+                            <span class="signature-placeholder">No Signature</span>
+                        }
+                    </td>
+                    <td>@requesterDate</td>
                 </tr>
                 <tr>
                     <td>Approver</td>
                     <td>@(model.TryGetValue("ApproverText", out var approverText) ? Truncate(approverText?.ToString(), 50) : "N/A")</td>
-                    <td>@(model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime approverDateValue ? approverDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
+                    <td>
+                        @if (firstSignature != null && firstSignature.TryGetValue("ApproverSignature", out var appSig) && appSig is string approverSignature && !string.IsNullOrEmpty(approverSignature))
+                        {
+                            <img src="@approverSignature" alt="Approver Signature" class="signature-img" />
+                        }
+                        else
+                        {
+                            <span class="signature-placeholder">No Signature</span>
+                        }
+                    </td>
+                    <td>@approverDate</td>
                 </tr>
                 <tr>
                     <td>User (UAT)</td>
                     <td>@(model.TryGetValue("UatUser", out var uatUser) ? Truncate(uatUser?.ToString(), 50) : "N/A")</td>
-                    <td>@(model.TryGetValue("UatDate", out var uatDate) && uatDate is DateTime uatDateValue ? uatDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
+                    <td>
+                        @if (firstSignature != null && firstSignature.TryGetValue("UATUserSignature", out var uatSig) && uatSig is string uatSignature && !string.IsNullOrEmpty(uatSignature))
+                        {
+                            <img src="@uatSignature" alt="UAT User Signature" class="signature-img" />
+                        }
+                        else
+                        {
+                            <span class="signature-placeholder">No Signature</span>
+                        }
+                    </td>
+                    <td>@uatDate</td>
                 </tr>
                 <tr>
                     <td>IT Officer</td>
                     <td>@(model.TryGetValue("ITOfficer", out var itOfficer) ? Truncate(itOfficer?.ToString(), 50) : "N/A")</td>
-                    <td>@(model.TryGetValue("ITDate", out var itDate) && itDate is DateTime itOfficerDate ? itOfficerDate.ToString("dd-MM-yyyy") : "N/A")</td>
+                    <td>
+                        @if (firstSignature != null && firstSignature.TryGetValue("ITOfficerSignature", out var itSig) && itSig is string itOfficerSignature && !string.IsNullOrEmpty(itOfficerSignature))
+                        {
+                            <img src="@itOfficerSignature" alt="IT Officer Signature" class="signature-img" />
+                        }
+                        else
+                        {
+                            <span class="signature-placeholder">No Signature</span>
+                        }
+                    </td>
+                    <td>@itDate</td>
                 </tr>
                 <tr>
                     <td>Other Approver</td>
                     <td>@(model.TryGetValue("OtherApproverText", out var otherApprover) ? Truncate(otherApprover?.ToString(), 50) : "N/A")</td>
-                    <td>@(model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherApproverDate ? otherApproverDate.ToString("dd-MM-yyyy") : "N/A")</td>
+                    <td>
+                        @if (firstSignature != null && firstSignature.TryGetValue("OtherApproverSignature", out var otherAppSig) && otherAppSig is string otherApproverSignature && !string.IsNullOrEmpty(otherApproverSignature))
+                        {
+                            <img src="@otherApproverSignature" alt="Other Approver Signature" class="signature-img" />
+                        }
+                        else
+                        {
+                            <span class="signature-placeholder">No Signature</span>
+                        }
+                    </td>
+                    <td>@otherApproverDate</td>
+                </tr>
+                <tr>
+                    <td>Other UAT User</td>
+                    <td>@(model.TryGetValue("UatUser2", out var uatUser2) ? Truncate(uatUser2?.ToString(), 50) : "N/A")</td>
+                    <td>
+                        @if (firstSignature != null && firstSignature.TryGetValue("OtherUATUserSignature", out var otherUatSig) && otherUatSig is string otherUatSignature && !string.IsNullOrEmpty(otherUatSignature))
+                        {
+                            <img src="@otherUatSignature" alt="Other UAT User Signature" class="signature-img" />
+                        }
+                        else
+                        {
+                            <span class="signature-placeholder">No Signature</span>
+                        }
+                    </td>
+                    <td>@uatDate2</td>
                 </tr>
             </table>
         </div>

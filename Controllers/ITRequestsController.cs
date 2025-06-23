@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using JobOnlineAPI.Services;
 using Rotativa.AspNetCore;
+using System.Reflection;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -261,24 +262,29 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
                 using var multi = await connection.QueryMultipleAsync(
-                    "usp_GetT_EMP_IT_REQ_ByReqNo",
+                    "usp_GetT_EMP_IT_REQ_ByReqNoV2",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
 
                 var itRequests = multi.Read<dynamic>().ToList();
-                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s => new Dictionary<string, object>
+                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s =>
                 {
-                    ["ID"] = s.ID,
-                    ["SERVICE_DESCRIPTION"] = s.SERVICE_DESCRIPTION,
-                    ["SERVICE_TYPE"] = s.SERVICE_TYPE,
-                    ["TYPE_DESCRIPTION"] = s.TYPE_DESCRIPTION,
-                    ["CREATED_BY"] = s.CREATED_BY,
-                    ["CREATED_DATE"] = s.CREATED_DATE,
-                    ["MODIFIED_BY"] = s.MODIFIED_BY,
-                    ["MODIFIED_DATE"] = s.MODIFIED_DATE,
-                    ["IsSelected"] = s.IsSelected,
-                    ["REQUIRES_DETAIL"] = s.REQUIRES_DETAIL
+                    var dict = new Dictionary<string, object>();
+                    foreach (var prop in ((IDictionary<string, object>)s))
+                    {
+                        dict[prop.Key] = prop.Value;
+                    }
+                    return dict;
+                }).ToList();
+                var signaturesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(sig =>
+                {
+                    var dict = new Dictionary<string, object>();
+                    foreach (var prop in ((IDictionary<string, object>)sig))
+                    {
+                        dict[prop.Key] = prop.Value;
+                    }
+                    return dict;
                 }).ToList();
 
                 var errorMessage = parameters.Get<string>("ErrorMessage");
@@ -292,7 +298,8 @@ namespace JobOnlineAPI.Controllers
                 {
                     ITRequests = itRequests,
                     Services = servicesList,
-                    Message = itRequests.Count == 0 ? "No IT requests found." : "IT requests and services retrieved successfully."
+                    Signatures = signaturesList,
+                    Message = itRequests.Count == 0 ? "No IT requests found." : "IT requests, services, and signatures retrieved successfully."
                 });
             }
             catch (Exception ex)
@@ -314,24 +321,29 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
                 using var multi = await connection.QueryMultipleAsync(
-                    "usp_GetT_EMP_IT_REQ_ByReqNo",
+                    "usp_GetT_EMP_IT_REQ_ByReqNoV2",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
 
                 var itRequests = multi.Read<dynamic>().ToList();
-                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s => new Dictionary<string, object>
+                var servicesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(s =>
                 {
-                    ["ID"] = s.ID,
-                    ["SERVICE_DESCRIPTION"] = s.SERVICE_DESCRIPTION,
-                    ["SERVICE_TYPE"] = s.SERVICE_TYPE,
-                    ["TYPE_DESCRIPTION"] = s.TYPE_DESCRIPTION,
-                    ["CREATED_BY"] = s.CREATED_BY,
-                    ["CREATED_DATE"] = s.CREATED_DATE,
-                    ["MODIFIED_BY"] = s.MODIFIED_BY,
-                    ["MODIFIED_DATE"] = s.MODIFIED_DATE,
-                    ["IsSelected"] = s.IsSelected,
-                    ["REQUIRES_DETAIL"] = s.REQUIRES_DETAIL
+                    var dict = new Dictionary<string, object>();
+                    foreach (var prop in ((IDictionary<string, object>)s))
+                    {
+                        dict[prop.Key] = prop.Value;
+                    }
+                    return dict;
+                }).ToList();
+                var signaturesList = multi.IsConsumed ? [] : multi.Read<dynamic>().Select(sig =>
+                {
+                    var dict = new Dictionary<string, object>();
+                    foreach (var prop in ((IDictionary<string, object>)sig))
+                    {
+                        dict[prop.Key] = prop.Value;
+                    }
+                    return dict;
                 }).ToList();
 
                 var errorMessage = parameters.Get<string>("ErrorMessage");
@@ -346,6 +358,8 @@ namespace JobOnlineAPI.Controllers
                 {
                     return NotFound(new { Message = $"No IT requests found for REQ_NO: {reqNo}, ApplicantID: {applicantId}" });
                 }
+
+                var firstSignature = signaturesList.FirstOrDefault();
 
                 var dataDict = new Dictionary<string, object>
                 {
@@ -365,23 +379,24 @@ namespace JobOnlineAPI.Controllers
                     ["StartDate"] = firstResult.StartDate is DateTime startDate ? startDate : DateTime.Now,
                     ["ITRequests"] = itRequests,
                     ["ServicesList"] = servicesList,
+                    ["SignaturesList"] = signaturesList,
                     ["NewUserDetails"] = firstResult.REQ_DETAIL ?? "Request user for new employee: New User",
                     ["ServiceDetails"] = firstResult.REQUEST_DETAILS ?? "N/A",
                     ["ReceivedDate"] = firstResult.IT_ACK_DATE is DateTime itDate ? itDate : DateTime.Now,
                     ["AssignedTo"] = firstResult.IT_PIC ?? "IT Support",
                     ["ITDetails"] = firstResult.IT_COMMENT ?? "Installation completed",
                     ["Priority"] = firstResult.REQ_LEVEL ?? "Medium",
-                    ["RequesterDate"] = firstResult.REQ_DATE is DateTime reqDate ? reqDate : DateTime.Now,
+                    ["RequesterDate"] = firstResult.RequesterTimestamp is DateTime reqTimestamp ? reqTimestamp : (firstResult.REQ_DATE is DateTime reqDate ? reqDate : DateTime.Now),
                     ["ApproverText"] = firstResult.APPROVE_BY ?? "Approver Manager",
-                    ["ApproverDate"] = firstResult.REQ_DATE is DateTime appDate ? appDate : DateTime.Now,
+                    ["ApproverDate"] = firstResult.ApproverTimestamp is DateTime appTimestamp ? appTimestamp : (firstResult.REQ_DATE is DateTime appDate ? appDate : DateTime.Now),
                     ["UatUser"] = firstResult.ACK_BY ?? "Test User",
-                    ["UatDate"] = firstResult.REQ_DATE is DateTime uatDate ? uatDate : DateTime.Now,
+                    ["UatDate"] = firstResult.UATUserTimestamp is DateTime uatTimestamp ? uatTimestamp : (firstResult.REQ_DATE is DateTime uatDate ? uatDate : DateTime.Now),
                     ["ITOfficer"] = firstResult.CLOSE_BY ?? "IT Officer",
-                    ["ITDate"] = firstResult.REQ_DATE is DateTime itOfficerDate ? itOfficerDate : DateTime.Now,
-                    ["OtherApproverText"] = "N/A",
-                    ["OtherApproverDate"] = DateTime.Now,
-                    ["UatUser2"] = "N/A",
-                    ["UatDate2"] = DateTime.Now
+                    ["ITDate"] = firstResult.ITOfficerTimestamp is DateTime itOfficerTimestamp ? itOfficerTimestamp : (firstResult.REQ_DATE is DateTime itOfficerDate ? itOfficerDate : DateTime.Now),
+                    ["OtherApproverText"] = firstSignature != null && firstSignature.TryGetValue("OtherApproverSignature", out var otherAppSig) && otherAppSig != null ? "Other Approver" : "N/A",
+                    ["OtherApproverDate"] = firstSignature != null && firstSignature.TryGetValue("OtherApproverTimestamp", out var otherAppTs) && otherAppTs is DateTime otherAppTimestamp ? otherAppTimestamp : DateTime.Now,
+                    ["UatUser2"] = firstSignature != null && firstSignature.TryGetValue("OtherUATUserSignature", out var otherUatSig) && otherUatSig != null ? "Other UAT User" : "N/A",
+                    ["UatDate2"] = firstSignature != null && firstSignature.TryGetValue("OtherUATUserTimestamp", out var otherUatTs) && otherUatTs is DateTime otherUatTimestamp ? otherUatTimestamp : DateTime.Now
                 };
 
                 var viewAsPdf = new ViewAsPdf("ITRequestForm", dataDict)
