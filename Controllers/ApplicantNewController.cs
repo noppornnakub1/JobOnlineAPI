@@ -705,10 +705,18 @@ namespace JobOnlineAPI.Controllers
                 {
                     int emailSuccessCount = await SendHrEmails(requestData);
                 }
+                else if (typeMail == "Acknowledge")
+                {
+                    int emailSuccessCount = await SendHrEmails(requestData);
+                }
+                else if (typeMail == "Confirmed")
+                {
+                    int emailSuccessCount = await SendHrEmails(requestData);
+                }  
                 else if (typeMail == "notiMail")
                 {
                     int emailSuccessCount = await SendMailNoti(requestData);
-                }
+                } 
 
                 if (typeMail != "notiMail") {
                     await UpdateStatusInDatabaseV2(requestData);
