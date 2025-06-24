@@ -36,7 +36,8 @@ namespace JobOnlineAPI.Filters
                                     ["itOfficerSignatureFile"] = new OpenApiSchema { Type = "file", Format = "binary", Nullable = true },
                                     ["otherApproverSignatureFile"] = new OpenApiSchema { Type = "file", Format = "binary", Nullable = true },
                                     ["otherUatUserSignatureFile"] = new OpenApiSchema { Type = "file", Format = "binary", Nullable = true },
-                                    ["jsonData"] = new OpenApiSchema { Type = "string", Format = "json", Description = "JSON object or array of IT request details" }
+                                    ["jsonData"] = new OpenApiSchema { Type = "string", Format = "json", Description = "JSON object or array of IT request details" },
+                                    ["signatureId"] = new OpenApiSchema { Type = "string", Format = "int32", Description = "Signature ID for the request (optional)", Nullable = true }
                                 },
                                 Required = new HashSet<string> { "jsonData" }
                             }
@@ -62,7 +63,8 @@ namespace JobOnlineAPI.Filters
                                         "RequesterEmail": "testuser@company.com"
                                     }
                                 ]
-                                """)
+                                """),
+                            ["signatureId"] = new OpenApiString("29")
                         }
                     });
                 }
