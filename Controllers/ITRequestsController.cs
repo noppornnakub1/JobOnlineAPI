@@ -5,7 +5,6 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using JobOnlineAPI.Services;
 using Rotativa.AspNetCore;
-using System.Reflection;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -31,7 +30,7 @@ namespace JobOnlineAPI.Controllers
             try
             {
                 // ดึงข้อมูล JSON และ clean string
-                string? jsonData = formCollection["jsonData"].ToString()?.Trim();
+                string? jsonData = formCollection["jsonData"].FirstOrDefault()?.Trim();
                 if (string.IsNullOrWhiteSpace(jsonData))
                 {
                     _logger.LogWarning("Invalid or missing JSON data.");
@@ -58,6 +57,7 @@ namespace JobOnlineAPI.Controllers
 
                 List<Dictionary<string, object>> requestDataList = [];
                 string? createdBy = null;
+                string? jsonReqNo = null;
                 bool isArray = request.RootElement.ValueKind == JsonValueKind.Array;
 
                 // Convert uploaded files to base64 for signatures
@@ -70,6 +70,10 @@ namespace JobOnlineAPI.Controllers
                     ["OtherApproverSignature"] = await ConvertFileToBase64(formCollection.Files["otherApproverSignatureFile"]),
                     ["OtherUATUserSignature"] = await ConvertFileToBase64(formCollection.Files["otherUatUserSignatureFile"])
                 };
+
+                // ดึง signatureId จาก form
+                string? signatureIdValue = formCollection["signatureId"].FirstOrDefault();
+                int? parsedSignatureId = signatureIdValue != null && int.TryParse(signatureIdValue, out int tempSignatureId) ? tempSignatureId : (int?)null;
 
                 // Handle single JSON object
                 if (!isArray)
@@ -84,6 +88,10 @@ namespace JobOnlineAPI.Controllers
                     var requestData = new Dictionary<string, object>();
                     foreach (var property in request.RootElement.EnumerateObject())
                     {
+                        if (property.Name.Equals("REQ_NO", StringComparison.OrdinalIgnoreCase))
+                        {
+                            jsonReqNo = property.Value.GetString();
+                        }
                         requestData[property.Name] = property.Value.ValueKind switch
                         {
                             JsonValueKind.String => property.Value.GetString() ?? string.Empty,
@@ -102,7 +110,6 @@ namespace JobOnlineAPI.Controllers
                 // Handle JSON array
                 else
                 {
-                    string? jsonReqNo = null;
                     foreach (var item in request.RootElement.EnumerateArray())
                     {
                         if (item.ValueKind != JsonValueKind.Object)
@@ -160,93 +167,87 @@ namespace JobOnlineAPI.Controllers
                     }
                 }
 
-                try
+                using var connection = new SqlConnection(_dbConnection.ConnectionString);
+                var parameters = new DynamicParameters();
+                string serializedJsonData = isArray ? JsonSerializer.Serialize(requestDataList, _jsonSerializerOptions) : JsonSerializer.Serialize(requestDataList[0], _jsonSerializerOptions);
+                parameters.Add("JsonData", serializedJsonData);
+                parameters.Add("CreatedBy", createdBy);
+                parameters.Add("ReqNo", jsonReqNo);
+                parameters.Add("RequesterSignature", signatures["RequesterSignature"]);
+                parameters.Add("ApproverSignature", signatures["ApproverSignature"]);
+                parameters.Add("UATUserSignature", signatures["UATUserSignature"]);
+                parameters.Add("ITOfficerSignature", signatures["ITOfficerSignature"]);
+                parameters.Add("OtherApproverSignature", signatures["OtherApproverSignature"]);
+                parameters.Add("OtherUATUserSignature", signatures["OtherUATUserSignature"]);
+                parameters.Add("SignatureID", parsedSignatureId, DbType.Int32);
+                parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+
+                var result = await connection.QueryAsync(
+                    "usp_DynamicInsertUpdateT_EMP_IT_REQ",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                var newId = parameters.Get<int?>("NewID");
+                var errorMessage = parameters.Get<string>("ErrorMessage");
+
+                if (!string.IsNullOrEmpty(errorMessage))
                 {
-                    using var connection = new SqlConnection(_dbConnection.ConnectionString);
-                    var parameters = new DynamicParameters();
-                    string serializedJsonData = isArray ? JsonSerializer.Serialize(requestDataList, _jsonSerializerOptions) : JsonSerializer.Serialize(requestDataList[0], _jsonSerializerOptions);
-                    parameters.Add("JsonData", serializedJsonData);
-                    parameters.Add("CreatedBy", createdBy);
-                    parameters.Add("RequesterSignature", signatures["RequesterSignature"]);
-                    parameters.Add("ApproverSignature", signatures["ApproverSignature"]);
-                    parameters.Add("UATUserSignature", signatures["UATUserSignature"]);
-                    parameters.Add("ITOfficerSignature", signatures["ITOfficerSignature"]);
-                    parameters.Add("OtherApproverSignature", signatures["OtherApproverSignature"]);
-                    parameters.Add("OtherUATUserSignature", signatures["OtherUATUserSignature"]);
-                    parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
-                    parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-
-                    var result = await connection.QueryAsync(
-                        "usp_DynamicInsertUpdateT_EMP_IT_REQ",
-                        parameters,
-                        commandType: CommandType.StoredProcedure
-                    );
-
-                    var newId = parameters.Get<int?>("NewID");
-                    var errorMessage = parameters.Get<string>("ErrorMessage");
-
-                    if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        _logger.LogError("Error from stored procedure: {ErrorMessage}", errorMessage);
-                        return BadRequest(new { Error = errorMessage });
-                    }
-
-                    if (newId == null)
-                    {
-                        _logger.LogError("NewID is null after stored procedure execution.");
-                        return StatusCode(500, new { Error = "Failed to process IT request." });
-                    }
-
-                    // Create response from result set with adjusted signatures
-                    int index = 0;
-                    var responseItems = result.Select(r =>
-                    {
-                        var requestData = isArray && index < requestDataList.Count ? requestDataList[index++] : requestDataList.FirstOrDefault();
-                        return new
-                        {
-                            ITRequestId = r.NewID,
-                            r.ReqNo,
-                            Message = requestData != null && requestData.ContainsKey("ID") ? "IT request updated successfully." : "IT request created successfully.",
-                            FilePath = requestData != null && requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? filePath.ToString() : null,
-                            RequesterSignature = signatures["RequesterSignature"],
-                            ApproverSignature = signatures["ApproverSignature"],
-                            UATUserSignature = signatures["UATUserSignature"],
-                            ITOfficerSignature = signatures["ITOfficerSignature"],
-                            OtherApproverSignature = signatures["OtherApproverSignature"],
-                            OtherUATUserSignature = signatures["OtherUATUserSignature"]
-                        };
-                    }).ToList();
-
-                    // Send a single email for the entire request with signatures
-                    var firstResult = result.FirstOrDefault();
-                    if (firstResult != null)
-                    {
-                        string? reqNo = firstResult.ReqNo;
-                        string? approver1 = firstResult.APPROVER1;
-                        string? approver2 = firstResult.APPROVER2;
-                        string? approver3 = firstResult.APPROVER3;
-                        string? approver4 = firstResult.APPROVER4;
-                        string? approver5 = firstResult.APPROVER5;
-                        bool isUpdate = requestDataList.Any(data => data.ContainsKey("ID"));
-                        await SendITRequestEmail(requestDataList, newId.Value, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
-                    }
-
-                    return Ok(new
-                    {
-                        ITRequests = responseItems,
-                        Message = requestDataList.Any(data => data.ContainsKey("ID")) ? "IT requests updated successfully." : "Multiple IT requests created successfully."
-                    });
+                    _logger.LogError("Error from stored procedure: {ErrorMessage}", errorMessage);
+                    return BadRequest(new { Error = errorMessage });
                 }
-                catch (Exception ex)
+
+                if (newId == null)
                 {
-                    _logger.LogError(ex, "Exception in database operation: {Message}", ex.Message);
-                    return StatusCode(500, new { Error = "Internal Server Error", Details = ex.Message });
+                    _logger.LogError("NewID is null after stored procedure execution.");
+                    return StatusCode(500, new { Error = "Failed to process IT request." });
                 }
+
+                // Create response from result set with adjusted signatures
+                int index = 0;
+                var responseItems = result.Select(r =>
+                {
+                    var requestData = isArray && index < requestDataList.Count ? requestDataList[index++] : requestDataList.FirstOrDefault();
+                    return new
+                    {
+                        ITRequestId = r.NewID,
+                        r.ReqNo,
+                        Message = requestData != null && requestData.ContainsKey("ID") ? "IT request updated successfully." : "IT request created successfully.",
+                        FilePath = requestData != null && requestData.TryGetValue("FilePath", out var filePath) && filePath != null ? filePath.ToString() : null,
+                        RequesterSignature = signatures["RequesterSignature"] ?? (r.RequesterSignature as string),
+                        ApproverSignature = signatures["ApproverSignature"] ?? (r.ApproverSignature as string),
+                        UATUserSignature = signatures["UATUserSignature"] ?? (r.UATUserSignature as string),
+                        ITOfficerSignature = signatures["ITOfficerSignature"] ?? (r.ITOfficerSignature as string),
+                        OtherApproverSignature = signatures["OtherApproverSignature"] ?? (r.OtherApproverSignature as string),
+                        OtherUATUserSignature = signatures["OtherUATUserSignature"] ?? (r.OtherUATUserSignature as string)
+                    };
+                }).ToList();
+
+                // Send a single email for the entire request with signatures
+                var firstResult = result.FirstOrDefault();
+                if (firstResult != null)
+                {
+                    string? reqNo = firstResult.ReqNo;
+                    string? approver1 = firstResult.APPROVER1;
+                    string? approver2 = firstResult.APPROVER2;
+                    string? approver3 = firstResult.APPROVER3;
+                    string? approver4 = firstResult.APPROVER4;
+                    string? approver5 = firstResult.APPROVER5;
+                    bool isUpdate = requestDataList.Any(data => data.ContainsKey("ID"));
+                    await SendITRequestEmail(requestDataList, newId.Value, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
+                }
+
+                return Ok(new
+                {
+                    ITRequests = responseItems,
+                    Message = requestDataList.Any(data => data.ContainsKey("ID")) ? "IT requests updated successfully." : "Multiple IT requests created successfully."
+                });
             }
-            catch (JsonException ex)
+            catch (Exception ex)
             {
-                _logger.LogWarning("Invalid JSON format: {Message}", ex.Message);
-                return BadRequest(new { Error = $"Invalid JSON format: {ex.Message}" });
+                _logger.LogError(ex, "Exception in SubmitITRequest: {Message}", ex.Message);
+                return StatusCode(500, new { Error = "Internal Server Error", Details = ex.Message });
             }
         }
 
