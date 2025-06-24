@@ -705,13 +705,9 @@ namespace JobOnlineAPI.Controllers
                 {
                     int emailSuccessCount = await SendHrEmails(requestData);
                 }
-                else if (typeMail == "Acknowledge")
-                {
-                    int emailSuccessCount = await SendHrEmails(requestData);
-                }
                 else if (typeMail == "Confirmed")
                 {
-                    int emailSuccessCount = await SendHrEmails(requestData);
+                    int emailSuccessCount = await SendManagerEmails(requestData);
                 }  
                 else if (typeMail == "notiMail")
                 {
@@ -895,6 +891,66 @@ namespace JobOnlineAPI.Controllers
             using var connection = _context.CreateConnection();
             var emailParameters = new DynamicParameters();
             emailParameters.Add("@Role", 2);
+            emailParameters.Add("@Department", null);
+
+            var staffList = await connection.QueryAsync<dynamic>(
+                "EXEC sp_GetDateSendEmail @Role = @Role, @Department = @Department",
+                emailParameters);
+
+            int successCount = 0;
+            foreach (var staff in staffList)
+            {
+                string? hrEmail = staff.EMAIL?.Trim();
+                if (string.IsNullOrWhiteSpace(hrEmail))
+                    continue;
+
+                try
+                {
+                    await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true);
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send email to {HrEmail} for applicant status update: {Message}", hrEmail, ex.Message);
+                }
+            }
+
+            return successCount;
+        }
+
+        private async Task<int> SendManagerEmails(ApplicantRequestData requestData)
+        {
+            var candidateNames = requestData.Candidates?
+                .Select((candidateObj, index) =>
+                {
+                    var candidateDict = candidateObj as IDictionary<string, object>;
+                    string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
+                    string firstNameThai = candidateDict.TryGetValue("FirstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
+                    string lastNameThai = candidateDict.TryGetValue("LastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
+                    string Status = (candidateDict.TryGetValue("Status", out var StatusObj) && StatusObj?.ToString() == "Success") ? "สำเร็จ" : "ไม่สำเร็จ";
+                    return $"ลำดับที่ {index + 1}: {title} {firstNameThai} {lastNameThai} สถานะ {Status}".Trim();
+                }).ToList() ?? [];
+
+            string candidateNamesString = string.Join("<br>", candidateNames);
+
+
+            string hrBody = $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ {requestData.RequesterName}</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>ทางฝ่าย ฝ่ายสรรหาบุคลากร ขอแจ้งผลการเจรจากับผู้สมัครเพื่อรับเข้าทำงาน โดยมีรายละเอียดดังต่อไปนี้</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>
+                        ตำแหน่ง {requestData.JobTitle}<br>
+                        {candidateNamesString}
+                    </p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>* สำหรับผู้สมัครที่ต่อรองสำเร็จ ทางฝ่ายฯ จะทำการดำเนินการตามกระบวนการถัดไป เพื่อทำการรับผู้สมัครเข้าเป็นพนักงานและกำหนดวันที่เริ่มงานต่อไป *</p>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
+
+            using var connection = _context.CreateConnection();
+            var emailParameters = new DynamicParameters();
+            emailParameters.Add("@Role", 3);
             emailParameters.Add("@Department", null);
 
             var staffList = await connection.QueryAsync<dynamic>(
