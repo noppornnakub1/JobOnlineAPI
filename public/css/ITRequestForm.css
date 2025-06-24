@@ -143,9 +143,26 @@ th {
     box-sizing: border-box;
 }
 
+.form-control-custome {
+    width: 100%;
+    padding: 1px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    font-size: 6pt;
+    background-color: #f8f9fa;
+    box-sizing: border-box;
+}
+
 textarea.form-control {
     resize: vertical;
-    min-height: 20px;
+    min-height: 90px;
+    overflow: hidden
+}
+
+textarea.form-control-custome {
+    resize: vertical;
+    min-height: 70px;
+    overflow: hidden
 }
 
 .priority-section {

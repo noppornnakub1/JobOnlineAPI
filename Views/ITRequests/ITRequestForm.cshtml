@@ -69,59 +69,57 @@
             </table>
             <table>
                 <tr>
-                    <th style="width: 30%;">Company</th>
+                    <th style="width: 30%;">บริษัท</th>
                     <td>@(model.TryGetValue("Company", out var company) ? Truncate(company?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Cost Center</th>
+                    <th>แผนก</th>
                     <td>@(model.TryGetValue("CostCenter", out var costCenter) ? Truncate(costCenter?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Requester Full Name</th>
+                    <th>ผู้ขอ (TH)</th>
                     <td>@(model.TryGetValue("RequesterName", out var requesterName) ? Truncate(requesterName?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Nickname</th>
+                    <th>ผู้ขอ (Eng)</th>
+                    <td>@(model.TryGetValue("NameSurname", out var nameSurname) ? Truncate(nameSurname?.ToString(), 50) : "N/A")</td>
+                </tr>
+                <tr>
+                    <th>ชื่อเล่น</th>
                     <td>@(model.TryGetValue("Nickname", out var nickname) ? Truncate(nickname?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Employee No.</th>
+                    <th>รหัสพนักงาน</th>
                     <td>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Job Title</th>
+                    <th>ตำแหน่ง</th>
                     <td>@(model.TryGetValue("JobTitle", out var jobTitle) ? Truncate(jobTitle?.ToString(), 50) : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Start Date</th>
+                    <th>วันที่เริ่มงาน</th>
                     <td>@(model.TryGetValue("StartDate", out var startDate) && startDate is DateTime startDateValue ? startDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
                 </tr>
                 <tr>
-                    <th>Mobile Phone</th>
+                    <th>เบอร์ติดต่อ</th>
                     <td>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? Truncate(mobilePhone?.ToString(), 50) : "N/A")</td>
                 </tr>
-                <tr>
-                    <th>Name - Surname (Eng)</th>
-                    <td>@(model.TryGetValue("NameSurname", out var nameSurname) ? Truncate(nameSurname?.ToString(), 50) : "N/A")</td>
-                </tr>
+
                 @if ((coordinatorName != null && !string.IsNullOrEmpty(coordinatorName.ToString())) ||
                 (coordinatorPhone != null && !string.IsNullOrEmpty(coordinatorPhone.ToString())))
                 {
                     <tr>
-                        <th>Coordinator Name</th>
+                        <th>ชื่อผู้ประสานงาน</th>
                         <td>@Truncate(coordinatorName?.ToString(), 50)</td>
                     </tr>
                     <tr>
-                        <th>Coordinator Phone</th>
+                        <th>เบอร์ติดต่อผู้ประสานงาน</th>
                         <td>@Truncate(coordinatorPhone?.ToString(), 50)</td>
                     </tr>
                 }
-                <tr>
-                    <th>Applicant ID</th>
-                    <td>@(model.TryGetValue("ApplicantID", out var applicantId) ? Truncate(applicantId?.ToString(), 50) : "N/A")</td>
-                </tr>
+
             </table>
-            <h6><strong>Service Types</strong></h6>
+            <h6><strong>Service Request</strong></h6>
             @{
                 var serviceList = model.TryGetValue("ServicesList", out var servicesObj) && servicesObj is IEnumerable<object> services
                 ? services.Cast<Dictionary<string, object>>().ToList()
@@ -146,7 +144,6 @@
                                     {
                                         var serviceTypeGroup = serviceTypes[i];
                                         <div class="service-section">
-                                            <h6>@(serviceTypeGroup.Key.TypeDescription) (Type @(serviceTypeGroup.Key.TypeId))</h6>
                                             @foreach (var service in serviceTypeGroup.OrderBy(s => s.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0))
                                             {
                                                 var serviceId = service.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0;
@@ -184,7 +181,7 @@
             }
             <div style="page-break-inside: avoid;">
                 <label class="form-label fw-semibold">Request Details</label>
-                <textarea class="form-control" rows="2" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? Truncate(serviceDetails?.ToString(), 100) : "N/A")</textarea>
+                <textarea class="form-control" rows="2" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? Truncate(serviceDetails?.ToString(), 1000) : "N/A")</textarea>
             </div>
         </div>
         <div class="container container-it">
@@ -198,11 +195,11 @@
                     <th>Assigned To</th>
                     <td>@(model.TryGetValue("AssignedTo", out var assignedTo) ? Truncate(assignedTo?.ToString(), 50) : "N/A")</td>
                 </tr>
-                <tr>
-                    <th>IT Details</th>
-                    <td>@(model.TryGetValue("ITDetails", out var itDetails) ? Truncate(itDetails?.ToString(), 50) : "N/A")</td>
-                </tr>
             </table>
+            <div style="page-break-inside: avoid;">
+                <label class="form-label fw-semibold">IT Details</label>
+                <textarea class="form-control-custome" rows="2" readonly>@(model.TryGetValue("ITDetails", out var itDetails) ? Truncate(itDetails?.ToString(), 1000) : "N/A")</textarea>
+            </div>
             <div class="priority-section">
                 <label class="form-label fw-semibold">Priority</label>
                 @{
@@ -229,8 +226,7 @@
                     </tr>
                 </table>
             </div>
-            <h6><strong>Approval and Acceptance</strong></h6>
-            <table>
+            <table style="margin-top: 10px">
                 <tr>
                     <th style="width: 33%; text-align: center;">ผู้ขอให้บริการ</th>
                     <th style="width: 33%; text-align: center;">ผู้อนุมัติ</th>
