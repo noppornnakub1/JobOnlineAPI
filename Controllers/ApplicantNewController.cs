@@ -921,15 +921,30 @@ namespace JobOnlineAPI.Controllers
         private async Task<int> SendManagerEmails(ApplicantRequestData requestData)
         {
             var candidateNames = requestData.Candidates?
+                .Where(candidateObj =>
+                {
+                    var candidateDict = candidateObj as IDictionary<string, object>;
+                    return candidateDict.TryGetValue("Status", out var statusObj) &&
+                        (statusObj?.ToString() == "Success" || statusObj?.ToString() == "Unsuccess" || statusObj?.ToString() == "Cancel");
+                })
                 .Select((candidateObj, index) =>
                 {
                     var candidateDict = candidateObj as IDictionary<string, object>;
                     string title = candidateDict.TryGetValue("title", out var titleObj) ? titleObj?.ToString() ?? "" : "";
                     string firstNameThai = candidateDict.TryGetValue("FirstNameThai", out var firstNameObj) ? firstNameObj?.ToString() ?? "" : "";
                     string lastNameThai = candidateDict.TryGetValue("LastNameThai", out var lastNameObj) ? lastNameObj?.ToString() ?? "" : "";
-                    string Status = (candidateDict.TryGetValue("Status", out var StatusObj) && StatusObj?.ToString() == "Success") ? "สำเร็จ" : "ไม่สำเร็จ";
-                    return $"ลำดับที่ {index + 1}: {title} {firstNameThai} {lastNameThai} สถานะ {Status}".Trim();
-                }).ToList() ?? [];
+
+                    string statusText = "";
+                    if (candidateDict.TryGetValue("Status", out var statusObj))
+                    {
+                        if(statusObj?.ToString() == "Success") statusText = "สำเร็จ";
+                        if(statusObj?.ToString() == "Unsuccess") statusText = "ต่อรองไม่สำเร็จ";
+                        if(statusObj?.ToString() == "Cancel") statusText = "ยกเลิก";
+                    }
+
+                    return $"ลำดับที่ {index + 1}: {title} {firstNameThai} {lastNameThai} สถานะ {statusText}".Trim();
+                })
+                .ToList() ?? [];
 
             string candidateNamesString = string.Join("<br>", candidateNames);
 
