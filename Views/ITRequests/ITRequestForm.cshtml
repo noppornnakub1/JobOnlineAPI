@@ -69,14 +69,17 @@
 					<td style="border: none !important; word-wrap:normal">
 						<span style="font-weight:bold">ผู้ขอ (TH) : </span>@(model.TryGetValue("RequesterName", out var requesterName) ? Truncate(requesterName?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> ผู้ขอ (Eng) : </span>@(model.TryGetValue("NameSurname", out var nameSurname) ? Truncate(nameSurname?.ToString(), 50) : "N/A")
+					</td>
+				</tr>
+				<tr>
+					<td style="border: none !important; word-wrap:normal">
+						<span style="font-weight:bold">รหัสพนักงาน : </span>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> ชื่อเล่น : </span>@(model.TryGetValue("Nickname", out var nickname) ? Truncate(nickname?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> เบอร์ติดต่อ : </span>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? Truncate(mobilePhone?.ToString(), 50) : "N/A")
 					</td>
 				</tr>
-
 				<tr>
 					<td style="border: none !important; word-wrap:normal">
-						<span style="font-weight:bold">รหัสพนักงาน : </span>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> ตำแหน่ง : </span>@(model.TryGetValue("JobTitle", out var jobTitle) ? Truncate(jobTitle?.ToString(), 100) : "N/A")
 						<span style="font-weight:bold"> วันที่เริ่มงาน : </span>@(model.TryGetValue("StartDate", out var startDate) && startDate is DateTime startDateValue ? startDateValue.ToString("dd-MM-yyyy") : "N/A")
 					</td>
@@ -180,11 +183,9 @@
 			<h2>Section 2: IT</h2>
 			<table>
 				<tr>
-					<th style="width: 30%;">Received Date</th>
+					<th style="width: 15%;">Received Date</th>
 					<td>@(model.TryGetValue("ReceivedDate", out var receivedDate) && receivedDate is DateTime receivedDateValue ? receivedDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
-				</tr>
-				<tr>
-					<th>Assigned To</th>
+					<th style="width: 15%;">Assigned To</th>
 					<td>@(model.TryGetValue("AssignedTo", out var assignedTo) ? Truncate(assignedTo?.ToString(), 50) : "N/A")</td>
 				</tr>
 			</table>
