@@ -234,6 +234,9 @@
 							<br>
 							<span>@requesterDate</span>
 						}
+						else{
+							<div class="box"></div>
+						}
 					</td>
 					<td style="text-align: center;">
 						@if (firstSignature != null && firstSignature.TryGetValue("ApproverSignature", out var appSig) && appSig is string approverSignature && !string.IsNullOrEmpty(approverSignature))
@@ -243,6 +246,10 @@
 							<br>
 							<span>@approverDate</span>
 						}
+						else
+						{
+							<div class="box"></div>
+						}
 					</td>
 					<td style="text-align: center;">
 						@if (firstSignature != null && firstSignature.TryGetValue("UATUserSignature", out var uatSig) && uatSig is string uatSignature && !string.IsNullOrEmpty(uatSignature))
@@ -251,6 +258,10 @@
 							<span>@(model.TryGetValue("UatUser", out var uatUser) ? Truncate(uatUser?.ToString(), 50) : "N/A")</span>
 							<br>
 							<span>@uatDate</span>
+						}
+						else
+						{
+							<div class="box"></div>
 						}
 					</td>
 				</tr>
@@ -276,6 +287,10 @@
 							<br>
 							<span>@itDate</span>
 						}
+						else
+						{
+							<div class="box"></div>
+						}
 					</td>
 					<td style="text-align: center;">
 						@if (firstSignature != null && firstSignature.TryGetValue("OtherApproverSignature", out var otherAppSig) && otherAppSig is string otherApproverSignature && !string.IsNullOrEmpty(otherApproverSignature))
@@ -285,6 +300,10 @@
 							<br>
 							<span>@otherApproverDate</span>
 						}
+						else
+						{
+							<div class="box"></div>
+						}
 					</td>
 					<td style="text-align: center;">
 						@if (firstSignature != null && firstSignature.TryGetValue("OtherUATUserSignature", out var otherUatSig) && otherUatSig is string otherUatSignature && !string.IsNullOrEmpty(otherUatSignature))
@@ -293,6 +312,10 @@
 							<span>@(model.TryGetValue("UatUser2", out var uatUser2) ? Truncate(uatUser2?.ToString(), 50) : "N/A")</span>
 							<br>
 							<span>@uatDate2</span>
+						}
+						else
+						{
+							<div class="box"></div>
 						}
 					</td>
 				</tr>
