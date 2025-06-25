@@ -60,23 +60,23 @@
 			<h2>Section 1: Requester</h2>
 			<table>
 				<tr>
-					<td style="border: none !important;">
+					<td style="border: none !important; word-wrap:normal">
 						<span style="font-weight:bold">บริษัท : </span>@(model.TryGetValue("Company", out var company) ? Truncate(company?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> แผนก : </span>@(model.TryGetValue("CostCenter", out var costCenter) ? Truncate(costCenter?.ToString(), 50) : "N/A")
 					</td>
 				</tr>
 				<tr>
-					<td style="border: none !important;">
+					<td style="border: none !important; word-wrap:normal">
 						<span style="font-weight:bold">ผู้ขอ (TH) : </span>@(model.TryGetValue("RequesterName", out var requesterName) ? Truncate(requesterName?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> ผู้ขอ (Eng) : </span>@(model.TryGetValue("NameSurname", out var nameSurname) ? Truncate(nameSurname?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> ชื่อเล่น : </span>@(model.TryGetValue("Nickname", out var nickname) ? Truncate(nickname?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> เบอร์ติดต่อ : </span>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? Truncate(mobilePhone?.ToString(), 50) : "N/A")
-						<span style="font-weight:bold">รหัสพนักงาน : </span>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")
 					</td>
 				</tr>
 
 				<tr>
-					<td style="border: none !important;">
+					<td style="border: none !important; word-wrap:normal">
+						<span style="font-weight:bold">รหัสพนักงาน : </span>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")
 						<span style="font-weight:bold"> ตำแหน่ง : </span>@(model.TryGetValue("JobTitle", out var jobTitle) ? Truncate(jobTitle?.ToString(), 100) : "N/A")
 						<span style="font-weight:bold"> วันที่เริ่มงาน : </span>@(model.TryGetValue("StartDate", out var startDate) && startDate is DateTime startDateValue ? startDateValue.ToString("dd-MM-yyyy") : "N/A")
 					</td>
@@ -84,7 +84,7 @@
 				<tr>
 					@if ((coordinatorName != null && !string.IsNullOrEmpty(coordinatorName.ToString())) || (coordinatorPhone != null && !string.IsNullOrEmpty(coordinatorPhone.ToString())))
 					{
-						<td style="border: none !important;">
+						<td style="border: none !important; word-wrap:normal">
 							<span style="font-weight:bold">ผู้ประสานงาน : </span>@Truncate(coordinatorName?.ToString(), 50)
 							<span style="font-weight:bold"> เบอร์ติดต่อ : </span>@(model.TryGetValue("CoordinatorPhone", out coordinatorPhone) ? Truncate(coordinatorPhone?.ToString(), 50) : "-")
 						</td>
