@@ -1328,6 +1328,33 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        [HttpGet("GetCheckData")]
+        [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetCheckData([FromQuery] string? Email, int? JobID)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+
+                var parameters = new DynamicParameters();
+                parameters.Add($"@Email", Email);
+                parameters.Add($"@JobID", JobID);
+                parameters.Add($"@UseBypass", true);
+                var result = await connection.QueryAsync(
+                    "sp_Userlogin",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve applicant data for ID {ApplicantId}: {Message}", JobID, ex.Message);
+                return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+
         private BadRequestObjectResult? ValidateConsentInput(IDictionary<string, object?> data)
         {
             if (!data.ContainsKey("UserId") || !data.ContainsKey("confirmConsent"))
