@@ -280,14 +280,17 @@ namespace JobOnlineAPI.Controllers
                 int jobId = jobIdObj is JsonElement j && j.ValueKind == JsonValueKind.Number
                     ? j.GetInt32()
                     : Convert.ToInt32(jobIdObj);
-
+                    
                 await ConnectToNetworkShareAsync();
                 try
                 {
                     var fileMetadatas = await ProcessFilesAsync(files);
                     var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
                     MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
-                    await SendEmailsAsync(req, dbResult);
+                    // if (string.IsNullOrWhiteSpace(typeMail))
+                    // {
+                        await SendEmailsAsync(req, dbResult);
+                    // }
 
                     return Ok(new { ApplicantID = dbResult.ApplicantId, Message = "Application and files submitted successfully." });
                 }
@@ -447,22 +450,52 @@ namespace JobOnlineAPI.Controllers
             using var conn = _context.CreateConnection();
             var results = await conn.QueryAsync<dynamic>("sp_GetDateSendEmailV3", new { JobID = dbResult.ApplicantId }, commandType: CommandType.StoredProcedure);
             var firstHr = results.FirstOrDefault(x => Convert.ToInt32(x.Role) == 2);
-
-            if (!string.IsNullOrEmpty(dbResult.ApplicantEmail))
+            string? typeMail = null;
+            if (req.TryGetValue("TypeMail", out var typeMailObj) && typeMailObj != null)
             {
-                string applicantBody = GenerateEmailBody(true, dbResult.CompanyName, fullNameThai, jobTitle, firstHr);
-                await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true);
+                typeMail = typeMailObj is JsonElement t && t.ValueKind == JsonValueKind.String
+                    ? t.GetString()
+                    : typeMailObj.ToString();
             }
 
-            foreach (var x in results)
+            if (!string.IsNullOrWhiteSpace(typeMail) && typeMail == "Applicant")
             {
-                var emailStaff = (x.EMAIL ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(emailStaff))
-                    continue;
-
-                string managerBody = GenerateEmailBody(false, emailStaff, fullNameThai, jobTitle, null, dbResult.ApplicantId);
-                await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true);
+                string managerBody = $@"
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ทุกท่าน</p>
+                        <p style='font-weight: bold; margin: 0 0 10px 0;'>ผู้สมัคร คุณ  {fullNameThai} ตำแหน่ง {jobTitle}</p>
+                        <br>
+                        <p style='margin: 0 0 10px 0;'>ได้ทำการกรอกข้อมูลในการสมัครงานเพิ่มเติมรอบ ที่ 2 หลังจากที่ได้รับคัดเลือกให้เข้าเป็นพนักงาน เรียบร้อยแล้ว ขั้นตอนถัดไป แผนก HR จะต้องทำการเข้าสู่ระบบและไปที่เมนูการว่าจ้าง เพื่อไปทำการตรวจและยืนยันข้อมูลของผู้สมัคร</p>
+                        <br>
+                        <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    </div>";
+                foreach (var x in results)
+                {
+                    var emailStaff = (x.EMAIL ?? "").Trim();
+                    if (string.IsNullOrWhiteSpace(emailStaff))
+                        continue;
+                    await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update infomation", managerBody, true);
+                }
             }
+            else
+            {
+                if (!string.IsNullOrEmpty(dbResult.ApplicantEmail))
+                {
+                    string applicantBody = GenerateEmailBody(true, dbResult.CompanyName, fullNameThai, jobTitle, firstHr);
+                    await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true);
+                }
+
+                foreach (var x in results)
+                {
+                    var emailStaff = (x.EMAIL ?? "").Trim();
+                    if (string.IsNullOrWhiteSpace(emailStaff))
+                        continue;
+
+                    string managerBody = GenerateEmailBody(false, emailStaff, fullNameThai, jobTitle, null, dbResult.ApplicantId);
+                    await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true);
+                }
+            }
+
         }
 
         private static string GetFullName(IDictionary<string, object?> req, string firstNameKey, string lastNameKey)
