@@ -1,310 +1,326 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <title>IT Request Form</title>
-    <link href="../css/ITRequestForm.css" rel="stylesheet" />
+	<meta charset="utf-8" />
+	<title>IT Request Form</title>
+	<link href="../css/ITRequestForm.css" rel="stylesheet" />
 </head>
 <body>
-    @{
-        var model = Model as Dictionary<string, object> ?? new Dictionary<string, object>();
-        var itRequests = model.TryGetValue("ITRequests", out var itRequestsObj) && itRequestsObj is IEnumerable<object> itReqs
-        ? itReqs.Cast<dynamic>().ToList()
-        : new List<dynamic>();
-        var signaturesList = model.TryGetValue("SignaturesList", out var signaturesObj) && signaturesObj is IEnumerable<object> sigs
-        ? sigs.Cast<Dictionary<string, object>>().ToList()
-        : new List<Dictionary<string, object>>();
-        var firstSignature = signaturesList.FirstOrDefault();
+	@{
+		var model = Model as Dictionary<string, object> ?? new Dictionary<string, object>();
+		var itRequests = model.TryGetValue("ITRequests", out var itRequestsObj) && itRequestsObj is IEnumerable<object> itReqs
+		? itReqs.Cast<dynamic>().ToList()
+		: new List<dynamic>();
+		var signaturesList = model.TryGetValue("SignaturesList", out var signaturesObj) && signaturesObj is IEnumerable<object> sigs
+		? sigs.Cast<Dictionary<string, object>>().ToList()
+		: new List<Dictionary<string, object>>();
+		var firstSignature = signaturesList.FirstOrDefault();
+		var jobDetail = false;
+		var allJdDetails = new List<string>(); // เก็บทุกค่า jdDetail
+														// Helper function to truncate long text, accepting nullable string
+		string Truncate(string? input, int maxLength)
+		{
+			if (string.IsNullOrEmpty(input) || input.Length <= maxLength)
+				return input ?? "N/A";
+			return input.Substring(0, maxLength) + "...";
+		}
 
-        // Helper function to truncate long text, accepting nullable string
-        string Truncate(string? input, int maxLength)
-        {
-            if (string.IsNullOrEmpty(input) || input.Length <= maxLength)
-                return input ?? "N/A";
-            return input.Substring(0, maxLength) + "...";
-        }
+		// Initialize variables for Coordinator fields
+		object? coordinatorName = null;
+		object? coordinatorPhone = null;
+		model.TryGetValue("CoordinatorName", out coordinatorName);
+		model.TryGetValue("CoordinatorPhone", out coordinatorPhone);
 
-        // Initialize variables for Coordinator fields
-        object? coordinatorName = null;
-        object? coordinatorPhone = null;
-        model.TryGetValue("CoordinatorName", out coordinatorName);
-        model.TryGetValue("CoordinatorPhone", out coordinatorPhone);
+		// Initialize variables for dates to avoid scope issues
+		string requesterDate = model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime reqDateValue ? reqDateValue.ToString("dd-MM-yyyy") : "N/A";
+		string approverDate = model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime appDateValue ? appDateValue.ToString("dd-MM-yyyy") : "N/A";
+		string uatDate = model.TryGetValue("UatDate", out var uatDateObj) && uatDateObj is DateTime uatDateValue ? uatDateValue.ToString("dd-MM-yyyy") : "N/A";
+		string itDate = model.TryGetValue("ITDate", out var itDateObj) && itDateObj is DateTime itDateValue ? itDateValue.ToString("dd-MM-yyyy") : "N/A";
+		string otherApproverDate = model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherAppDateValue ? otherAppDateValue.ToString("dd-MM-yyyy") : "N/A";
+		string uatDate2 = model.TryGetValue("UatDate2", out var uatDate2Obj) && uatDate2Obj is DateTime uatDate2Value ? uatDate2Value.ToString("dd-MM-yyyy") : "N/A";
+	}
+	<div class="page">
+		<table style="width: 100%;">
+			<tr>
+				<td style="width: 25%; vertical-align: middle; border-style: none;">
+					<img src="/images/logo.png" alt="Company Logo" class="header-logo" />
+				</td>
+				<td style="width: 45%; vertical-align: top; text-align: center; border-style: none;">
+					<div class="header-text">
+						<h1>IT Request Form</h1>
+					</div>
+				</td>
+				<td style="width: 30%; vertical-align: bottom; border-style: none; padding: 2px; text-align: right;">
+					<h4 style="margin-right: 70px; vertical-align: bottom;">Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? Truncate(formNumber?.ToString(), 50) : "N/A")</h4>
+					<h4 style="margin-right: 70px; vertical-align: bottom;">Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</h4>
+				</td>
+			</tr>
+		</table>
+		<div class="container container-requester">
+			<h2>Section 1: Requester</h2>
+			<table>
+				<tr>
+					<td style="border: none !important; word-wrap:normal">
+						<span style="font-weight:bold">บริษัท : </span>@(model.TryGetValue("Company", out var company) ? Truncate(company?.ToString(), 50) : "N/A")
+						<span style="font-weight:bold"> แผนก : </span>@(model.TryGetValue("CostCenter", out var costCenter) ? Truncate(costCenter?.ToString(), 50) : "N/A")
+					</td>
+				</tr>
+				<tr>
+					<td style="border: none !important; word-wrap:normal">
+						<span style="font-weight:bold">ผู้ขอ (TH) : </span>@(model.TryGetValue("RequesterName", out var requesterName) ? Truncate(requesterName?.ToString(), 50) : "N/A")
+						<span style="font-weight:bold"> ผู้ขอ (Eng) : </span>@(model.TryGetValue("NameSurname", out var nameSurname) ? Truncate(nameSurname?.ToString(), 50) : "N/A")
+					</td>
+				</tr>
+				<tr>
+					<td style="border: none !important; word-wrap:normal">
+						<span style="font-weight:bold">รหัสพนักงาน : </span>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")
+						<span style="font-weight:bold"> ชื่อเล่น : </span>@(model.TryGetValue("Nickname", out var nickname) ? Truncate(nickname?.ToString(), 50) : "N/A")
+						<span style="font-weight:bold"> เบอร์ติดต่อ : </span>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? Truncate(mobilePhone?.ToString(), 50) : "N/A")
+					</td>
+				</tr>
+				<tr>
+					<td style="border: none !important; word-wrap:normal">
+						<span style="font-weight:bold"> ตำแหน่ง : </span>@(model.TryGetValue("JobTitle", out var jobTitle) ? Truncate(jobTitle?.ToString(), 100) : "N/A")
+						<span style="font-weight:bold"> วันที่เริ่มงาน : </span>@(model.TryGetValue("StartDate", out var startDate) && startDate is DateTime startDateValue ? startDateValue.ToString("dd-MM-yyyy") : "N/A")
+					</td>
+				</tr>
+				<tr>
+					@if ((coordinatorName != null && !string.IsNullOrEmpty(coordinatorName.ToString())) || (coordinatorPhone != null && !string.IsNullOrEmpty(coordinatorPhone.ToString())))
+					{
+						<td style="border: none !important; word-wrap:normal">
+							<span style="font-weight:bold">ผู้ประสานงาน : </span>@Truncate(coordinatorName?.ToString(), 50)
+							<span style="font-weight:bold"> เบอร์ติดต่อ : </span>@(model.TryGetValue("CoordinatorPhone", out coordinatorPhone) ? Truncate(coordinatorPhone?.ToString(), 50) : "-")
+						</td>
+					}
+				</tr>
 
-        // Initialize variables for dates to avoid scope issues
-        string requesterDate = model.TryGetValue("RequesterDate", out var reqDate) && reqDate is DateTime reqDateValue ? reqDateValue.ToString("dd-MM-yyyy") : "N/A";
-        string approverDate = model.TryGetValue("ApproverDate", out var appDate) && appDate is DateTime appDateValue ? appDateValue.ToString("dd-MM-yyyy") : "N/A";
-        string uatDate = model.TryGetValue("UatDate", out var uatDateObj) && uatDateObj is DateTime uatDateValue ? uatDateValue.ToString("dd-MM-yyyy") : "N/A";
-        string itDate = model.TryGetValue("ITDate", out var itDateObj) && itDateObj is DateTime itDateValue ? itDateValue.ToString("dd-MM-yyyy") : "N/A";
-        string otherApproverDate = model.TryGetValue("OtherApproverDate", out var otherAppDate) && otherAppDate is DateTime otherAppDateValue ? otherAppDateValue.ToString("dd-MM-yyyy") : "N/A";
-        string uatDate2 = model.TryGetValue("UatDate2", out var uatDate2Obj) && uatDate2Obj is DateTime uatDate2Value ? uatDate2Value.ToString("dd-MM-yyyy") : "N/A";
-    }
-    <div class="page">
-        <table style="width: 100%;">
-            <tr>
-                <td style="width: 25%; vertical-align: middle; border-style: none;">
-                    <img src="/images/logo.png" alt="Company Logo" class="header-logo" />
-                </td>
-                <td style="width: 45%; vertical-align: top; text-align: center; border-style: none;">
-                    <div class="header-text">
-                        <h1>IT Request Form</h1>
-                    </div>
-                </td>
-                <td style="width: 30%; vertical-align: bottom; border-style: none; padding: 2px; padding-left: 15mm;">
-                    <h4 style="margin-right: 70px; vertical-align: bottom;">Form No.: @(model.TryGetValue("FormNumber", out var formNumber) ? Truncate(formNumber?.ToString(), 50) : "N/A")</h4>
-                </td>
-            </tr>
-        </table>
-        <div class="container container-requester">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="width: 25%; vertical-align: middle; border-style: none !important;">
-                        <h2>Section 1: Requester</h2>
-                    </td>
-                    <td style="width: 55%; vertical-align: top; text-align: center; border-style: none !important;">
-                    </td>
-                    <td style="width: 20%; vertical-align: bottom; border-style: none !important; padding: 2px; padding-left: 15mm;">
-                        <h4 style="margin-right: 10px; vertical-align: bottom;">Date: @(model.TryGetValue("RequestDate", out var requestDate) && requestDate is DateTime requestDateValue ? requestDateValue.ToString("dd-MM-yyyy") : "N/A")</h4>
-                    </td>
-                </tr>
-            </table>
-            <table>
-                <tr>
-                    <th style="width: 30%;">บริษัท</th>
-                    <td>@(model.TryGetValue("Company", out var company) ? Truncate(company?.ToString(), 50) : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>แผนก</th>
-                    <td>@(model.TryGetValue("CostCenter", out var costCenter) ? Truncate(costCenter?.ToString(), 50) : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>ผู้ขอ (TH)</th>
-                    <td>@(model.TryGetValue("RequesterName", out var requesterName) ? Truncate(requesterName?.ToString(), 50) : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>ผู้ขอ (Eng)</th>
-                    <td>@(model.TryGetValue("NameSurname", out var nameSurname) ? Truncate(nameSurname?.ToString(), 50) : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>ชื่อเล่น</th>
-                    <td>@(model.TryGetValue("Nickname", out var nickname) ? Truncate(nickname?.ToString(), 50) : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>รหัสพนักงาน</th>
-                    <td>@(model.TryGetValue("EmployeeId", out var employeeId) ? Truncate(employeeId?.ToString(), 50) : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>ตำแหน่ง</th>
-                    <td>@(model.TryGetValue("JobTitle", out var jobTitle) ? Truncate(jobTitle?.ToString(), 50) : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>วันที่เริ่มงาน</th>
-                    <td>@(model.TryGetValue("StartDate", out var startDate) && startDate is DateTime startDateValue ? startDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>เบอร์ติดต่อ</th>
-                    <td>@(model.TryGetValue("MobilePhone", out var mobilePhone) ? Truncate(mobilePhone?.ToString(), 50) : "N/A")</td>
-                </tr>
+			</table>
+			<h6 style="margin-top: 5px;"><strong>Service Request</strong></h6>
+			@{
+				var serviceList = model.TryGetValue("ServicesList", out var servicesObj) && servicesObj is IEnumerable<object> services
+				? services.Cast<Dictionary<string, object>>().ToList()
+				: new List<Dictionary<string, object>>();
+				var serviceTypes = serviceList.GroupBy(s => new
+				{
+					TypeId = s.TryGetValue("SERVICE_TYPE", out var st) && st != null ? Convert.ToInt32(st) : 0,
+					TypeDescription = s.TryGetValue("TYPE_DESCRIPTION", out var td) ? td?.ToString() : "Unknown"
+				}).OrderBy(g => g.Key.TypeId).ToList();
+			}
+			@if (serviceTypes.Any())
+			{
+				<table class="service-table">
+					<tr>
+						@{
+							int columnCount = 3;
 
-                @if ((coordinatorName != null && !string.IsNullOrEmpty(coordinatorName.ToString())) ||
-                (coordinatorPhone != null && !string.IsNullOrEmpty(coordinatorPhone.ToString())))
-                {
-                    <tr>
-                        <th>ชื่อผู้ประสานงาน</th>
-                        <td>@Truncate(coordinatorName?.ToString(), 50)</td>
-                    </tr>
-                    <tr>
-                        <th>เบอร์ติดต่อผู้ประสานงาน</th>
-                        <td>@Truncate(coordinatorPhone?.ToString(), 50)</td>
-                    </tr>
-                }
+							var groupsPerColumn = (int)Math.Ceiling((double)serviceTypes.Count / columnCount);
+							for (int col = 0; col < columnCount; col++)
+							{
+								<td style="width: 33.33%;">
+									@for (int i = col * groupsPerColumn; i < Math.Min((col + 1) * groupsPerColumn, serviceTypes.Count); i++)
+									{
+										var serviceTypeGroup = serviceTypes[i];
+										<div class="service-section">
+											@foreach (var service in serviceTypeGroup.OrderBy(s => s.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0))
+											{
+												var serviceId = service.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0;
+												var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "N/A";
+												var requiresDetail = service.TryGetValue("REQUIRES_DETAIL", out var rd) && rd is bool requiresDetailFlag && requiresDetailFlag;
+												jobDetail = service.TryGetValue("REQUIRES_JOB_DETAILS", out var jd) && jd is bool jobDetailFlag && jobDetailFlag;
+												var isSelected = service.TryGetValue("IsSelected", out var selected) && selected is bool sel && sel;
+												var reqDetail = isSelected && requiresDetail
+												? Truncate(itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.REQ_DETAIL?.ToString(), 500)
+												: null;
+												var jdDetail = isSelected && jobDetail
+												? Truncate(itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.JOB_DETAILS?.ToString(), 500)
+												: null;
+												<div class="service-item">
+													<div class="custom-checkbox">
+														<input type="checkbox" class="custom-checkbox-input" @(isSelected ? "checked" : "") disabled />
+														<label class="custom-checkbox-label @(isSelected ? "selected" : "")">@Truncate(serviceDesc, 50)</label>
+													</div>
+													@if (reqDetail != null && reqDetail != "")
+													{
+														<div class="service-details">
+															<label class="detail-label">Details:</label>
+															<div class="detail-content">@reqDetail</div>
+														</div>
+													}
+													@if (jdDetail != null)
+													{
+														allJdDetails.Add(jdDetail);
+													}
+												</div>
+											}
+										</div>
+										@if (i == 1)
+										{
+											<div class="service-details-custom">
+												<label class="detail-label">Details:</label>
+												<div class="detail-content">@(allJdDetails.Any() ? string.Join("\n", allJdDetails) : "N/A")</div>
+											</div>
+										}
 
-            </table>
-            <h6><strong>Service Request</strong></h6>
-            @{
-                var serviceList = model.TryGetValue("ServicesList", out var servicesObj) && servicesObj is IEnumerable<object> services
-                ? services.Cast<Dictionary<string, object>>().ToList()
-                : new List<Dictionary<string, object>>();
-                var serviceTypes = serviceList.GroupBy(s => new
-                {
-                    TypeId = s.TryGetValue("SERVICE_TYPE", out var st) && st != null ? Convert.ToInt32(st) : 0,
-                    TypeDescription = s.TryGetValue("TYPE_DESCRIPTION", out var td) ? td?.ToString() : "Unknown"
-                }).OrderBy(g => g.Key.TypeId).ToList();
-            }
-            @if (serviceTypes.Any())
-            {
-                <table class="service-table">
-                    <tr>
-                        @{
-                            int columnCount = 3;
-                            var groupsPerColumn = (int)Math.Ceiling((double)serviceTypes.Count / columnCount);
-                            for (int col = 0; col < columnCount; col++)
-                            {
-                                <td style="width: 33.33%;">
-                                    @for (int i = col * groupsPerColumn; i < Math.Min((col + 1) * groupsPerColumn, serviceTypes.Count); i++)
-                                    {
-                                        var serviceTypeGroup = serviceTypes[i];
-                                        <div class="service-section">
-                                            @foreach (var service in serviceTypeGroup.OrderBy(s => s.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0))
-                                            {
-                                                var serviceId = service.TryGetValue("ID", out var id) && id != null ? Convert.ToInt32(id) : 0;
-                                                var serviceDesc = service.TryGetValue("SERVICE_DESCRIPTION", out var desc) ? desc?.ToString() : "N/A";
-                                                var requiresDetail = service.TryGetValue("REQUIRES_DETAIL", out var rd) && rd is bool requiresDetailFlag && requiresDetailFlag;
-                                                var isSelected = service.TryGetValue("IsSelected", out var selected) && selected is bool sel && sel;
-                                                var reqDetail = isSelected && requiresDetail
-                                                ? Truncate(itRequests.FirstOrDefault(r => r.SERVICE_ID == serviceId)?.REQ_DETAIL?.ToString(), 50)
-                                                : null;
-                                                <div class="service-item">
-                                                    <div class="custom-checkbox">
-                                                        <input type="checkbox" class="custom-checkbox-input" @(isSelected ? "checked" : "") disabled />
-                                                        <label class="custom-checkbox-label @(isSelected ? "selected" : "")">@Truncate(serviceDesc, 50)</label>
-                                                    </div>
-                                                    @if (reqDetail != null)
-                                                    {
-                                                        <div class="service-details">
-                                                            <label class="detail-label">Details:</label>
-                                                            <div class="detail-content">@reqDetail</div>
-                                                        </div>
-                                                    }
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </td>
-                            }
-                        }
-                    </tr>
-                </table>
-            }
-            else
-            {
-                <p>No service types available</p>
-            }
-            <div style="page-break-inside: avoid;">
-                <label class="form-label fw-semibold">Request Details</label>
-                <textarea class="form-control" rows="2" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? Truncate(serviceDetails?.ToString(), 1000) : "N/A")</textarea>
-            </div>
-        </div>
-        <div class="container container-it">
-            <h2>Section 2: IT</h2>
-            <table>
-                <tr>
-                    <th style="width: 30%;">Received Date</th>
-                    <td>@(model.TryGetValue("ReceivedDate", out var receivedDate) && receivedDate is DateTime receivedDateValue ? receivedDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
-                </tr>
-                <tr>
-                    <th>Assigned To</th>
-                    <td>@(model.TryGetValue("AssignedTo", out var assignedTo) ? Truncate(assignedTo?.ToString(), 50) : "N/A")</td>
-                </tr>
-            </table>
-            <div style="page-break-inside: avoid;">
-                <label class="form-label fw-semibold">IT Details</label>
-                <textarea class="form-control-custome" rows="2" readonly>@(model.TryGetValue("ITDetails", out var itDetails) ? Truncate(itDetails?.ToString(), 1000) : "N/A")</textarea>
-            </div>
-            <div class="priority-section">
-                <label class="form-label fw-semibold">Priority</label>
-                @{
-                    string priorityValue = model.TryGetValue("Priority", out var priority) ? priority?.ToString() ?? "" : "";
-                }
-                <table style="width: 100%; border-collapse: collapse;border: none;">
-                    <tr style="vertical-align: middle;">
-                        <td style="border: none; padding: 2px;">
-                            <div style="display: inline-flex; align-items: center; gap: 15px;">
-                                <div class="custom-checkbox custom-checkbox-inline" style="display: inline-block; margin-right: 15px; vertical-align: middle;">
-                                    <input type="checkbox" class="custom-checkbox-input" @(priorityValue == "High" ? "checked" : "") disabled />
-                                    <label class="custom-checkbox-label @(priorityValue == "High" ? "selected" : "")">High</label>
-                                </div>
-                                <div class="custom-checkbox custom-checkbox-inline" style="display: inline-block; margin-right: 15px; vertical-align: middle;">
-                                    <input type="checkbox" class="custom-checkbox-input" @(priorityValue == "Medium" ? "checked" : "") disabled />
-                                    <label class="custom-checkbox-label @(priorityValue == "Medium" ? "selected" : "")">Medium</label>
-                                </div>
-                                <div class="custom-checkbox custom-checkbox-inline" style="display: inline-block; margin-right: 15px; vertical-align: middle;">
-                                    <input type="checkbox" class="custom-checkbox-input" @(priorityValue == "Low" ? "checked" : "") disabled />
-                                    <label class="custom-checkbox-label @(priorityValue == "Low" ? "selected" : "")">Low</label>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <table style="margin-top: 10px">
-                <tr>
-                    <th style="width: 33%; text-align: center;">ผู้ขอให้บริการ</th>
-                    <th style="width: 33%; text-align: center;">ผู้อนุมัติ</th>
-                    <th style="width: 33%; text-align: center;">สำหรับ User (UAT/รับมอบงาน)</th>
-                </tr>
-                <tr>
-                    <td style="text-align: center;">
-                        @if (firstSignature != null && firstSignature.TryGetValue("RequesterSignature", out var reqSig) && reqSig is string requesterSignature && !string.IsNullOrEmpty(requesterSignature))
-                        {
-                            <img src="@requesterSignature" alt="Requester Signature" class="signature-img" />
-                            <span>@(model.TryGetValue("RequesterName", out var reqName) ? Truncate(reqName?.ToString(), 50) : "N/A")</span>
-                            <br>
-                            <span>@requesterDate</span>
-                        }
-                    </td>
-                    <td style="text-align: center;">
-                        @if (firstSignature != null && firstSignature.TryGetValue("ApproverSignature", out var appSig) && appSig is string approverSignature && !string.IsNullOrEmpty(approverSignature))
-                        {
-                            <img src="@approverSignature" alt="Approver Signature" class="signature-img" />
-                            <span>@(model.TryGetValue("ApproverText", out var approverText) ? Truncate(approverText?.ToString(), 50) : "N/A")</span>
-                            <br>
-                            <span>@approverDate</span>
-                        }
-                    </td>
-                    <td style="text-align: center;">
-                        @if (firstSignature != null && firstSignature.TryGetValue("UATUserSignature", out var uatSig) && uatSig is string uatSignature && !string.IsNullOrEmpty(uatSignature))
-                        {
-                            <img src="@uatSignature" alt="UAT User Signature" class="signature-img" />
-                            <span>@(model.TryGetValue("UatUser", out var uatUser) ? Truncate(uatUser?.ToString(), 50) : "N/A")</span>
-                            <br>
-                            <span>@uatDate</span>
-                        }
-                    </td>
-                </tr>
-            </table>
-            <table>
-                <tr>
-                    <th style="width: 33%; text-align: center;">เจ้าหน้าที่ฝ่าย IT</th>
-                    <th style="width: 33%; text-align: center;">
-                        เฉพาะกรณีกระทบหน่วยงานอื่น
-                        ผู้ที่ได้รับมอบหมาย
-                    </th>
-                    <th style="width: 33%; text-align: center;">
-                        สำหรับ User (UAT/รับมอบงาน)
-                        เฉพาะกรณีกระทบหน่วยงานอื่น
-                    </th>
-                </tr>
-                <tr>
-                    <td style="text-align: center;">
-                        @if (firstSignature != null && firstSignature.TryGetValue("ITOfficerSignature", out var itSig) && itSig is string itOfficerSignature && !string.IsNullOrEmpty(itOfficerSignature))
-                        {
-                            <img src="@itOfficerSignature" alt="IT Officer Signature" class="signature-img" />
-                            <span>@(model.TryGetValue("ITOfficer", out var itOfficer) ? Truncate(itOfficer?.ToString(), 50) : "N/A")</span>
-                            <br>
-                            <span>@itDate</span>
-                        }
-                    </td>
-                    <td style="text-align: center;">
-                        @if (firstSignature != null && firstSignature.TryGetValue("OtherApproverSignature", out var otherAppSig) && otherAppSig is string otherApproverSignature && !string.IsNullOrEmpty(otherApproverSignature))
-                        {
-                            <img src="@otherApproverSignature" alt="Other Approver Signature" class="signature-img" />
-                            <span>@(model.TryGetValue("OtherApproverText", out var otherApprover) ? Truncate(otherApprover?.ToString(), 50) : "N/A")</span>
-                            <br>
-                            <span>@otherApproverDate</span>
-                        }
-                    </td>
-                    <td style="text-align: center;">
-                        @if (firstSignature != null && firstSignature.TryGetValue("OtherUATUserSignature", out var otherUatSig) && otherUatSig is string otherUatSignature && !string.IsNullOrEmpty(otherUatSignature))
-                        {
-                            <img src="@otherUatSignature" alt="Other UAT User Signature" class="signature-img" />
-                            <span>@(model.TryGetValue("UatUser2", out var uatUser2) ? Truncate(uatUser2?.ToString(), 50) : "N/A")</span>
-                            <br>
-                            <span>@uatDate2</span>
-                        }
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
+									}
+
+								</td>
+							}
+						}
+					</tr>
+				</table>
+			}
+			else
+			{
+				<p>No service types available</p>
+			}
+
+			<div style="page-break-inside: avoid;">
+				<label class="form-label fw-semibold">Request Details</label>
+				<textarea class="form-control" rows="2" readonly>@(model.TryGetValue("ServiceDetails", out var serviceDetails) ? Truncate(serviceDetails?.ToString(), 1000) : "N/A")</textarea>
+			</div>
+		</div>
+		<div class="container container-it">
+			<h2>Section 2: IT</h2>
+			<table>
+				<tr>
+					<th style="width: 15%;">Received Date</th>
+					<td>@(model.TryGetValue("ReceivedDate", out var receivedDate) && receivedDate is DateTime receivedDateValue ? receivedDateValue.ToString("dd-MM-yyyy") : "N/A")</td>
+					<th style="width: 15%;">Assigned To</th>
+					<td>@(model.TryGetValue("AssignedTo", out var assignedTo) ? Truncate(assignedTo?.ToString(), 50) : "N/A")</td>
+				</tr>
+			</table>
+			<div style="page-break-inside: avoid;">
+				<label class="form-label fw-semibold">IT Details</label>
+				<textarea class="form-control-custome" rows="2" readonly>@(model.TryGetValue("ITDetails", out var itDetails) ? Truncate(itDetails?.ToString(), 1000) : "N/A")</textarea>
+			</div>
+			<div class="priority-section">
+				<label class="form-label fw-semibold">Priority</label>
+				@{
+					string priorityValue = model.TryGetValue("Priority", out var priority) ? priority?.ToString() ?? "" : "";
+				}
+				<table style="width: 100%; border-collapse: collapse;border: none;">
+					<tr style="vertical-align: middle;">
+						<td style="border: none; padding: 2px;">
+							<div style="display: inline-flex; align-items: center; gap: 15px;">
+								<div class="custom-checkbox custom-checkbox-inline" style="display: inline-block; margin-right: 15px; vertical-align: middle;">
+									<input type="checkbox" class="custom-checkbox-input" @(priorityValue == "High" ? "checked" : "") disabled />
+									<label class="custom-checkbox-label @(priorityValue == "High" ? "selected" : "")">High</label>
+								</div>
+								<div class="custom-checkbox custom-checkbox-inline" style="display: inline-block; margin-right: 15px; vertical-align: middle;">
+									<input type="checkbox" class="custom-checkbox-input" @(priorityValue == "Medium" ? "checked" : "") disabled />
+									<label class="custom-checkbox-label @(priorityValue == "Medium" ? "selected" : "")">Medium</label>
+								</div>
+								<div class="custom-checkbox custom-checkbox-inline" style="display: inline-block; margin-right: 15px; vertical-align: middle;">
+									<input type="checkbox" class="custom-checkbox-input" @(priorityValue == "Low" ? "checked" : "") disabled />
+									<label class="custom-checkbox-label @(priorityValue == "Low" ? "selected" : "")">Low</label>
+								</div>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+			<table style="margin-top: 10px">
+				<tr>
+					<th style="width: 33%; text-align: center;">ผู้ขอให้บริการ</th>
+					<th style="width: 33%; text-align: center;">ผู้อนุมัติ</th>
+					<th style="width: 33%; text-align: center;">สำหรับ User (UAT/รับมอบงาน)</th>
+				</tr>
+				<tr>
+					<td style="text-align: center;">
+						@if (firstSignature != null && firstSignature.TryGetValue("RequesterSignature", out var reqSig) && reqSig is string requesterSignature && !string.IsNullOrEmpty(requesterSignature))
+						{
+							<img src="@requesterSignature" alt="Requester Signature" class="signature-img" />
+							<span>@(model.TryGetValue("RequesterName", out var reqName) ? Truncate(reqName?.ToString(), 50) : "N/A")</span>
+							<br>
+							<span>@requesterDate</span>
+						}
+						else{
+							<div class="box"></div>
+						}
+					</td>
+					<td style="text-align: center;">
+						@if (firstSignature != null && firstSignature.TryGetValue("ApproverSignature", out var appSig) && appSig is string approverSignature && !string.IsNullOrEmpty(approverSignature))
+						{
+							<img src="@approverSignature" alt="Approver Signature" class="signature-img" />
+							<span>@(model.TryGetValue("ApproverText", out var approverText) ? Truncate(approverText?.ToString(), 50) : "N/A")</span>
+							<br>
+							<span>@approverDate</span>
+						}
+						else
+						{
+							<div class="box"></div>
+						}
+					</td>
+					<td style="text-align: center;">
+						@if (firstSignature != null && firstSignature.TryGetValue("UATUserSignature", out var uatSig) && uatSig is string uatSignature && !string.IsNullOrEmpty(uatSignature))
+						{
+							<img src="@uatSignature" alt="UAT User Signature" class="signature-img" />
+							<span>@(model.TryGetValue("UatUser", out var uatUser) ? Truncate(uatUser?.ToString(), 50) : "N/A")</span>
+							<br>
+							<span>@uatDate</span>
+						}
+						else
+						{
+							<div class="box"></div>
+						}
+					</td>
+				</tr>
+			</table>
+			<table>
+				<tr>
+					<th style="width: 33%; text-align: center;">เจ้าหน้าที่ฝ่าย IT</th>
+					<th style="width: 33%; text-align: center;">
+						เฉพาะกรณีกระทบหน่วยงานอื่น
+						ผู้ที่ได้รับมอบหมาย
+					</th>
+					<th style="width: 33%; text-align: center;">
+						สำหรับ User (UAT/รับมอบงาน)
+						เฉพาะกรณีกระทบหน่วยงานอื่น
+					</th>
+				</tr>
+				<tr>
+					<td style="text-align: center;">
+						@if (firstSignature != null && firstSignature.TryGetValue("ITOfficerSignature", out var itSig) && itSig is string itOfficerSignature && !string.IsNullOrEmpty(itOfficerSignature))
+						{
+							<img src="@itOfficerSignature" alt="IT Officer Signature" class="signature-img" />
+							<span>@(model.TryGetValue("ITOfficer", out var itOfficer) ? Truncate(itOfficer?.ToString(), 50) : "N/A")</span>
+							<br>
+							<span>@itDate</span>
+						}
+						else
+						{
+							<div class="box"></div>
+						}
+					</td>
+					<td style="text-align: center;">
+						@if (firstSignature != null && firstSignature.TryGetValue("OtherApproverSignature", out var otherAppSig) && otherAppSig is string otherApproverSignature && !string.IsNullOrEmpty(otherApproverSignature))
+						{
+							<img src="@otherApproverSignature" alt="Other Approver Signature" class="signature-img" />
+							<span>@(model.TryGetValue("OtherApproverText", out var otherApprover) ? Truncate(otherApprover?.ToString(), 50) : "N/A")</span>
+							<br>
+							<span>@otherApproverDate</span>
+						}
+						else
+						{
+							<div class="box"></div>
+						}
+					</td>
+					<td style="text-align: center;">
+						@if (firstSignature != null && firstSignature.TryGetValue("OtherUATUserSignature", out var otherUatSig) && otherUatSig is string otherUatSignature && !string.IsNullOrEmpty(otherUatSignature))
+						{
+							<img src="@otherUatSignature" alt="Other UAT User Signature" class="signature-img" />
+							<span>@(model.TryGetValue("UatUser2", out var uatUser2) ? Truncate(uatUser2?.ToString(), 50) : "N/A")</span>
+							<br>
+							<span>@uatDate2</span>
+						}
+						else
+						{
+							<div class="box"></div>
+						}
+					</td>
+				</tr>
+			</table>
+		</div>
+	</div>
 </body>
 </html>
