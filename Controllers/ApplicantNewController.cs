@@ -284,7 +284,7 @@ namespace JobOnlineAPI.Controllers
                 await ConnectToNetworkShareAsync();
                 try
                 {
-                    List<Dictionary<string, object>> fileMetadatas = new();
+                    List<Dictionary<string, object>> fileMetadatas = [];
 
                     if (files != null && files.Count > 0)
                     {
