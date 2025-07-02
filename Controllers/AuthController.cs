@@ -1,7 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Services;
+using System.Threading.Tasks;
 using Dapper;
+using System;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -74,7 +79,6 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest(new { Error = errorMessage });
                 }
 
-                // ส่งอีเมล OTP
                 string subject = request.Action == "REGISTER" ? "รหัส OTP สำหรับสมัครสมาชิก" : "รหัส OTP สำหรับรีเซ็ตรหัสผ่าน";
                 string body = $@"<div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
                                     <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ผู้ใช้</p>
@@ -151,7 +155,7 @@ namespace JobOnlineAPI.Controllers
         /// <summary>
         /// สมัครสมาชิกผู้ใช้ใหม่
         /// </summary>
-        /// <param name="request">ข้อมูลอีเมล, รหัสผ่าน, และการยินยอมเงื่อนไข</param>
+        /// <param name="request">ข้อมูลอีเมลและรหัสผ่าน</param>
         /// <returns>สถานะการสมัครสมาชิก</returns>
         /// <response code="200">สมัครสมาชิกสำเร็จ</response>
         /// <response code="400">ข้อมูลไม่ถูกต้องหรืออีเมลซ้ำ</response>
@@ -176,13 +180,13 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                // เข้ารหัสรหัสผ่านด้วย SHA256
+                string passwordHash = HashPassword(request.Password);
 
                 using var connection = _context.CreateConnection();
                 var parameters = new DynamicParameters();
                 parameters.Add("@Email", request.Email);
                 parameters.Add("@PasswordHash", passwordHash);
-                parameters.Add("@ConfirmConsent", request.ConfirmConsent ?? "Yes");
                 parameters.Add("@ErrorMessage", dbType: System.Data.DbType.String, direction: System.Data.ParameterDirection.Output, size: 500);
 
                 await connection.ExecuteAsync("[dbo].[usp_RegisterUser]",
@@ -246,7 +250,7 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                string passwordHash = HashPassword(request.Password);
 
                 using var connection = _context.CreateConnection();
                 var parameters = new DynamicParameters();
@@ -287,6 +291,12 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        private static string HashPassword(string password)
+        {
+            var hashedBytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
+            return BitConverter.ToString(hashedBytes).Replace("-", "").ToLower();
+        }
+
         private static bool IsValidEmail(string email)
         {
             try
@@ -317,7 +327,6 @@ namespace JobOnlineAPI.Controllers
     {
         public required string Email { get; set; }
         public required string Password { get; set; }
-        public required string ConfirmConsent { get; set; }
     }
 
     public class ResetPasswordRequest

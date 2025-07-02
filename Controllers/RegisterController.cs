@@ -8,14 +8,9 @@ namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class RegisterController : ControllerBase
+    public class RegisterController(IDbConnection dbConnection) : ControllerBase
     {
-        private readonly IDbConnection _dbConnection;
-
-        public RegisterController(IDbConnection dbConnection)
-        {
-            _dbConnection = dbConnection;
-        }
+        private readonly IDbConnection _dbConnection = dbConnection;
 
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] Dictionary<string, object> data)
