@@ -284,13 +284,21 @@ namespace JobOnlineAPI.Controllers
                 await ConnectToNetworkShareAsync();
                 try
                 {
-                    var fileMetadatas = await ProcessFilesAsync(files);
+                    List<Dictionary<string, object>> fileMetadatas = [];
+
+                    if (files != null && files.Count > 0)
+                    {
+                        fileMetadatas = await ProcessFilesAsync(files);
+                    }
+
                     var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
-                    MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
-                    // if (string.IsNullOrWhiteSpace(typeMail))
-                    // {
-                        await SendEmailsAsync(req, dbResult);
-                    // }
+
+                    if (files != null && files.Count > 0)
+                    {
+                        MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
+                    }
+
+                    await SendEmailsAsync(req, dbResult);
 
                     return Ok(new { ApplicantID = dbResult.ApplicantId, Message = "Application and files submitted successfully." });
                 }
@@ -387,7 +395,8 @@ namespace JobOnlineAPI.Controllers
 
             // await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
             // await conn.ExecuteAsync("InsertOrUpdateApplicantDataV8", param, commandType: CommandType.StoredProcedure);
-            await conn.ExecuteAsync("InsertOrUpdateApplicantDataV9", param, commandType: CommandType.StoredProcedure);
+            // await conn.ExecuteAsync("InsertOrUpdateApplicantDataV9", param, commandType: CommandType.StoredProcedure);
+            await conn.ExecuteAsync("InsertOrUpdateApplicantDataV10", param, commandType: CommandType.StoredProcedure);
 
             return (
                 param.Get<int>("ApplicantID"),
