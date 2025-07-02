@@ -158,7 +158,7 @@ namespace JobOnlineAPI.Controllers
         /// <param name="request">ข้อมูลอีเมลและรหัสผ่าน</param>
         /// <returns>สถานะการสมัครสมาชิก</returns>
         /// <response code="200">สมัครสมาชิกสำเร็จ</response>
-        /// <response code="400">ข้อมูลไม่ถูกต้องหรืออีเมลซ้ำ</response>
+        /// <response code="400">ข้อมูลไม่ถูกต้อง, อีเมลซ้ำ, หรือ OTP ไม่ถูกต้อง</response>
         /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
         [HttpPost("register")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -180,7 +180,6 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                // เข้ารหัสรหัสผ่านด้วย SHA256
                 string passwordHash = HashPassword(request.Password);
 
                 using var connection = _context.CreateConnection();
