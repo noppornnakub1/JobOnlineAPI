@@ -282,30 +282,38 @@ namespace JobOnlineAPI.Controllers
                     : Convert.ToInt32(jobIdObj);
                     
                 await ConnectToNetworkShareAsync();
+                // try
+                // {
+                //     List<Dictionary<string, object>> fileMetadatas = [];
+
+                //     if (files != null && files.Count > 0)
+                //     {
+                //         fileMetadatas = await ProcessFilesAsync(files);
+                //     }
+
+                //     var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
+
+                //     if (files != null && files.Count > 0)
+                //     {
+                //         MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
+                //     }
+
+                //     await SendEmailsAsync(req, dbResult);
+
+                //     return Ok(new { ApplicantID = dbResult.ApplicantId, Message = "Application and files submitted successfully." });
+                // }
                 try
                 {
-                    List<Dictionary<string, object>> fileMetadatas = [];
-
-                    if (files != null && files.Count > 0)
-                    {
-                        fileMetadatas = await ProcessFilesAsync(files);
-                    }
-
+                    var fileMetadatas = await ProcessFilesAsync(files);
                     var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
-
-                    if (files != null && files.Count > 0)
-                    {
-                        MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
-                    }
-
+                    MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
                     await SendEmailsAsync(req, dbResult);
-
                     return Ok(new { ApplicantID = dbResult.ApplicantId, Message = "Application and files submitted successfully." });
                 }
                 finally
-                {
-                    DisconnectFromNetworkShare();
-                }
+            {
+                DisconnectFromNetworkShare();
+            }
             }
             catch (JsonException ex)
             {
