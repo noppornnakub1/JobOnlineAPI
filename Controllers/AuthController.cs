@@ -153,12 +153,12 @@ namespace JobOnlineAPI.Controllers
         }
 
         /// <summary>
-        /// สมัครสมาชิกผู้ใช้ใหม่
+        /// สมัครสมาชิกผู้ใช้ใหม่ (ต้องยืนยัน OTP ก่อน)
         /// </summary>
         /// <param name="request">ข้อมูลอีเมลและรหัสผ่าน</param>
         /// <returns>สถานะการสมัครสมาชิก</returns>
         /// <response code="200">สมัครสมาชิกสำเร็จ</response>
-        /// <response code="400">ข้อมูลไม่ถูกต้อง, อีเมลซ้ำ, หรือ OTP ไม่ถูกต้อง</response>
+        /// <response code="400">ข้อมูลไม่ถูกต้อง, อีเมลซ้ำ, หรือ OTP ไม่ได้รับการยืนยัน</response>
         /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
         [HttpPost("register")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -222,12 +222,12 @@ namespace JobOnlineAPI.Controllers
         }
 
         /// <summary>
-        /// รีเซ็ตรหัสผ่านผู้ใช้
+        /// รีเซ็ตรหัสผ่านผู้ใช้ (ต้องยืนยัน OTP ก่อน)
         /// </summary>
         /// <param name="request">ข้อมูลอีเมลและรหัสผ่านใหม่</param>
         /// <returns>สถานะการรีเซ็ตรหัสผ่าน</returns>
         /// <response code="200">รีเซ็ตรหัสผ่านสำเร็จ</response>
-        /// <response code="400">ข้อมูลไม่ถูกต้องหรืออีเมลไม่พบ</response>
+        /// <response code="400">ข้อมูลไม่ถูกต้อง, อีเมลไม่พบ, หรือ OTP ไม่ได้รับการยืนยัน</response>
         /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
         [HttpPost("reset-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
