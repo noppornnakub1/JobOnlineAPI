@@ -2,11 +2,15 @@
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Services;
 using Dapper;
-using System.Security.Cryptography;
-using System.Net.Mail;
 
 namespace JobOnlineAPI.Controllers
 {
+    /// <summary>
+    /// API สำหรับการจัดการการสมัครสมาชิกและรีเซ็ตรหัสผ่านด้วย OTP
+    /// </summary>
+    /// <remarks>
+    /// Constructor: รับ DapperContext, IEmailService, และ ILogger
+    /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController(DapperContext context, IEmailService emailService, ILogger<AuthController> logger) : ControllerBase
@@ -15,8 +19,18 @@ namespace JobOnlineAPI.Controllers
         private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         private readonly ILogger<AuthController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        // POST: api/auth/request-otp
+        /// <summary>
+        /// ขอ OTP สำหรับสมัครสมาชิกหรือรีเซ็ตรหัสผ่าน
+        /// </summary>
+        /// <param name="request">ข้อมูลอีเมลและประเภทการดำเนินการ (REGISTER หรือ RESET)</param>
+        /// <returns>สถานะการส่ง OTP</returns>
+        /// <response code="200">ส่ง OTP ไปยังอีเมลเรียบร้อย</response>
+        /// <response code="400">ข้อมูลไม่ถูกต้องหรืออีเมลซ้ำ</response>
+        /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
         [HttpPost("request-otp")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> RequestOTP([FromBody] OTPRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Action))
@@ -40,20 +54,18 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                // สร้าง OTP ด้วย RandomNumberGenerator
-                string otp = GetGenerateOTP();
-
                 using var connection = _context.CreateConnection();
                 var parameters = new DynamicParameters();
                 parameters.Add("@Email", request.Email);
                 parameters.Add("@Action", request.Action);
-                parameters.Add("@OTP", otp); // ส่ง OTP จาก Backend
+                parameters.Add("@OTP", dbType: System.Data.DbType.String, direction: System.Data.ParameterDirection.Output, size: 6);
                 parameters.Add("@ErrorMessage", dbType: System.Data.DbType.String, direction: System.Data.ParameterDirection.Output, size: 500);
 
                 await connection.ExecuteAsync("[dbo].[usp_GenerateOTP]",
                     parameters,
                     commandType: System.Data.CommandType.StoredProcedure);
 
+                string otp = parameters.Get<string>("@OTP");
                 string errorMessage = parameters.Get<string>("@ErrorMessage");
 
                 if (!string.IsNullOrEmpty(errorMessage))
@@ -62,7 +74,7 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest(new { Error = errorMessage });
                 }
 
-                // ส่งอีเมล OTP ด้วย IEmailService
+                // ส่งอีเมล OTP
                 string subject = request.Action == "REGISTER" ? "รหัส OTP สำหรับสมัครสมาชิก" : "รหัส OTP สำหรับรีเซ็ตรหัสผ่าน";
                 string body = $@"<div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
                                     <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ผู้ใช้</p>
@@ -76,11 +88,6 @@ namespace JobOnlineAPI.Controllers
                 _logger.LogInformation("RequestOTP: ส่ง OTP สำเร็จสำหรับ Email: {Email}, Action: {Action}", request.Email, request.Action);
                 return Ok(new { Message = "ส่ง OTP ไปยังอีเมลเรียบร้อยแล้ว" });
             }
-            catch (SmtpException ex)
-            {
-                _logger.LogError(ex, "RequestOTP: ไม่สามารถส่งอีเมลไปยัง {Email}: {Message}", request.Email, ex.Message);
-                return StatusCode(500, new { Error = "ไม่สามารถส่งอีเมล OTP ได้" });
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "RequestOTP: เกิดข้อผิดพลาดสำหรับ Email: {Email}: {Message}", request.Email, ex.Message);
@@ -88,8 +95,18 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        // POST: api/auth/verify-otp
+        /// <summary>
+        /// ยืนยัน OTP ที่ผู้ใช้ป้อน
+        /// </summary>
+        /// <param name="request">ข้อมูลอีเมลและ OTP</param>
+        /// <returns>สถานะการยืนยัน OTP</returns>
+        /// <response code="200">ยืนยัน OTP สำเร็จหรือไม่สำเร็จ</response>
+        /// <response code="400">ข้อมูลไม่ถูกต้องหรือ OTP ไม่ถูกต้อง</response>
+        /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
         [HttpPost("verify-otp")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> VerifyOTP([FromBody] OTPVerifyRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.OTP))
@@ -131,8 +148,18 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        // POST: api/auth/register
+        /// <summary>
+        /// สมัครสมาชิกผู้ใช้ใหม่
+        /// </summary>
+        /// <param name="request">ข้อมูลอีเมล, รหัสผ่าน, และการยินยอมเงื่อนไข</param>
+        /// <returns>สถานะการสมัครสมาชิก</returns>
+        /// <response code="200">สมัครสมาชิกสำเร็จ</response>
+        /// <response code="400">ข้อมูลไม่ถูกต้องหรืออีเมลซ้ำ</response>
+        /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
         [HttpPost("register")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -149,7 +176,6 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                // เข้ารหัสรหัสผ่านด้วย BCrypt
                 string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
                 using var connection = _context.CreateConnection();
@@ -174,7 +200,6 @@ namespace JobOnlineAPI.Controllers
 
                 _logger.LogInformation("Register: สมัครสมาชิกสำเร็จสำหรับ Email: {Email}", request.Email);
 
-                // ส่งอีเมลต้อนรับ (ถ้าต้องการ)
                 string welcomeBody = $@"<div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
                                         <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ผู้ใช้</p>
                                         <p style='margin: 0 0 10px 0;'>ยินดีต้อนรับสู่ ONEE Jobs!</p>
@@ -186,11 +211,6 @@ namespace JobOnlineAPI.Controllers
 
                 return Ok(new { Message = "สมัครสมาชิกสำเร็จ" });
             }
-            catch (SmtpException ex)
-            {
-                _logger.LogError(ex, "Register: ไม่สามารถส่งอีเมลต้อนรับไปยัง {Email}: {Message}", request.Email, ex.Message);
-                return Ok(new { Message = "สมัครสมาชิกสำเร็จ แต่ไม่สามารถส่งอีเมลต้อนรับได้" });
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Register: เกิดข้อผิดพลาดสำหรับ Email: {Email}: {Message}", request.Email, ex.Message);
@@ -198,8 +218,18 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        // POST: api/auth/reset-password
+        /// <summary>
+        /// รีเซ็ตรหัสผ่านผู้ใช้
+        /// </summary>
+        /// <param name="request">ข้อมูลอีเมลและรหัสผ่านใหม่</param>
+        /// <returns>สถานะการรีเซ็ตรหัสผ่าน</returns>
+        /// <response code="200">รีเซ็ตรหัสผ่านสำเร็จ</response>
+        /// <response code="400">ข้อมูลไม่ถูกต้องหรืออีเมลไม่พบ</response>
+        /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
         [HttpPost("reset-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -216,7 +246,6 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                // เข้ารหัสรหัสผ่านด้วย BCrypt
                 string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
                 using var connection = _context.CreateConnection();
@@ -240,7 +269,6 @@ namespace JobOnlineAPI.Controllers
 
                 _logger.LogInformation("ResetPassword: รีเซ็ตรหัสผ่านสำเร็จสำหรับ Email: {Email}", request.Email);
 
-                // ส่งอีเมลยืนยันการรีเซ็ต (ถ้าต้องการ)
                 string resetBody = $@"<div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
                                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ผู้ใช้</p>
                                        <p style='margin: 0 0 10px 0;'>การรีเซ็ตรหัสผ่านสำหรับอีเมล {request.Email} สำเร็จแล้ว</p>
@@ -252,11 +280,6 @@ namespace JobOnlineAPI.Controllers
 
                 return Ok(new { Message = "รีเซ็ตรหัสผ่านสำเร็จ" });
             }
-            catch (SmtpException ex)
-            {
-                _logger.LogError(ex, "ResetPassword: ไม่สามารถส่งอีเมลยืนยันไปยัง {Email}: {Message}", request.Email, ex.Message);
-                return Ok(new { Message = "รีเซ็ตรหัสผ่านสำเร็จ แต่ไม่สามารถส่งอีเมลยืนยันได้" });
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ResetPassword: เกิดข้อผิดพลาดสำหรับ Email: {Email}: {Message}", request.Email, ex.Message);
@@ -264,16 +287,6 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        // ฟังก์ชันสร้าง OTP ด้วย RandomNumberGenerator
-        private static string GetGenerateOTP()
-        {
-            byte[] randomBytes = new byte[4];
-            RandomNumberGenerator.Fill(randomBytes);
-            int otpValue = Math.Abs(BitConverter.ToInt32(randomBytes, 0) % 1000000);
-            return otpValue.ToString("D6"); // สร้าง OTP 6 หลัก
-        }
-
-        // ฟังก์ชันช่วยตรวจสอบรูปแบบอีเมล
         private static bool IsValidEmail(string email)
         {
             try
@@ -288,11 +301,10 @@ namespace JobOnlineAPI.Controllers
         }
     }
 
-    // คลาสสำหรับรับข้อมูลจาก request
     public class OTPRequest
     {
         public required string Email { get; set; }
-        public required string Action { get; set; } // REGISTER หรือ RESET
+        public required string Action { get; set; }
     }
 
     public class OTPVerifyRequest
@@ -305,7 +317,7 @@ namespace JobOnlineAPI.Controllers
     {
         public required string Email { get; set; }
         public required string Password { get; set; }
-        public required string ConfirmConsent { get; set; } // Yes หรือ No
+        public required string ConfirmConsent { get; set; }
     }
 
     public class ResetPasswordRequest
