@@ -8,6 +8,8 @@ using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
 using JobOnlineAPI.Models;
+using static System.Net.WebRequestMethods;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
 namespace JobOnlineAPI.Controllers
@@ -103,14 +105,14 @@ namespace JobOnlineAPI.Controllers
 
             if (isProduction)
             {
-                _basePath = _fileStorageConfig.ProductionPath!;
+                _basePath = _fileStorageConfig.ProductionPath;
                 _username = null;
                 _password = null;
                 _useNetworkShare = false;
             }
             else
             {
-                _basePath = _fileStorageConfig.NetworkPath!;
+                _basePath = _fileStorageConfig.NetworkPath;
                 _username = _fileStorageConfig.NetworkUsername;
                 _password = _fileStorageConfig.NetworkPassword;
                 _useNetworkShare = !string.IsNullOrEmpty(_basePath) && _username != null && _password != null;
@@ -151,7 +153,7 @@ namespace JobOnlineAPI.Controllers
 
         private void FallbackToLocalPath()
         {
-            _currentStorageConfig.BasePath = _fileStorageConfig.ProductionPath!;
+            _currentStorageConfig.BasePath = _fileStorageConfig.ProductionPath; // C:\Production\AppFiles\Applicants
             _currentStorageConfig.UseNetworkShare = false;
             _currentStorageConfig.Username = null;
             _currentStorageConfig.Password = null;
@@ -187,6 +189,7 @@ namespace JobOnlineAPI.Controllers
                     _logger.LogInformation("Attempt {Attempt}/{MaxRetries}: Connecting to {BasePath}", attempt, maxRetries, _currentStorageConfig.BasePath);
                     DisconnectExistingConnections(serverName);
 
+                    // Attempt network connection
                     bool connected = AttemptNetworkConnection();
                     if (!connected)
                     {
@@ -194,6 +197,7 @@ namespace JobOnlineAPI.Controllers
                         continue;
                     }
 
+                    // Create directory if it doesn't exist after connection
                     if (!Directory.Exists(_currentStorageConfig.BasePath))
                     {
                         _logger.LogInformation("Directory not found, attempting to create: {_currentStorageConfig.BasePath}", _currentStorageConfig.BasePath);
@@ -476,7 +480,7 @@ namespace JobOnlineAPI.Controllers
             param.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
             param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
-            await conn.ExecuteAsync("InsertOrUpdateApplicantDataV10", param, commandType: CommandType.StoredProcedure);
+            await conn.ExecuteAsync("InsertOrUpdateApplicantDataV11", param, commandType: CommandType.StoredProcedure);
 
             return (
                 param.Get<int>("ApplicantID"),
