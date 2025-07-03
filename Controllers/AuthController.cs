@@ -4,6 +4,8 @@ using JobOnlineAPI.Services;
 using Dapper;
 using System.Security.Cryptography;
 using System.Text;
+using System.IO;
+using System;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -20,6 +22,11 @@ namespace JobOnlineAPI.Controllers
         private readonly DapperContext _context = context ?? throw new ArgumentNullException(nameof(context));
         private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         private readonly ILogger<AuthController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        private readonly string _templatePath = Path.Combine("Templates", "Email", "RequestOtp.html");
+        private readonly TimeSpan _tokenExpiration = TimeSpan.FromMinutes(10); // โทเคนหมดอายุใน 10 นาที
+
+        // เก็บโทเคนชั่วคราว (ควรใช้ฐานข้อมูลในโปรดักชัน)
+        private static readonly Dictionary<string, (string Otp, DateTime Expires)> _tokenStore = [];
 
         /// <summary>
         /// ขอ OTP สำหรับสมัครสมาชิกหรือรีเซ็ตรหัสผ่าน
@@ -76,18 +83,34 @@ namespace JobOnlineAPI.Controllers
                     return BadRequest(new { Error = errorMessage });
                 }
 
-                string subject = request.Action == "REGISTER" ? "รหัส OTP สำหรับสมัครสมาชิก" : "รหัส OTP สำหรับรีเซ็ตรหัสผ่าน";
-                string body = $@"<div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ผู้ใช้</p>
-                                    <p style='margin: 0 0 10px 0;'>รหัส OTP ของคุณคือ: <strong>{otp}</strong></p>
-                                    <p style='margin: 0 0 10px 0;'>รหัสนี้ใช้ได้ภายใน 10 นาที กรุณานำไปใช้เพื่อยืนยันตัวตน</p>
-                                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                                 </div>";
+                string subject = request.Action == "REGISTER"
+                    ? "✅ ONEE Jobs: รหัส OTP สำหรับการสมัครสมาชิก"
+                    : "🔒 ONEE Jobs: รหัส OTP สำหรับรีเซ็ตรหัสผ่าน";
+                string username = request.Email.Split('@').FirstOrDefault() ?? "ผู้ใช้";
+                string actionDescription = request.Action.Equals("register", StringComparison.CurrentCultureIgnoreCase) ? "การสมัครสมาชิก" : "การรีเซ็ตรหัสผ่าน";
+
+                // สร้างโทเคนและ URL สำหรับคัดลอก
+                string token = Guid.NewGuid().ToString();
+                _tokenStore[token] = (otp, DateTime.UtcNow + _tokenExpiration);
+                string copyUrl = Url.Action("CopyOtp", "Auth", new { otp, token }, Request.Scheme) ?? "#";
+
+                // โหลดและเติมข้อมูลในเทมเพลต
+                string template = System.IO.File.ReadAllText(_templatePath);
+                string body = template
+                    .Replace("{{username}}", username)
+                    .Replace("{{otp}}", otp)
+                    .Replace("{{actionDescription}}", actionDescription)
+                    .Replace("{{copyUrl}}", copyUrl);
 
                 await _emailService.SendEmailAsync(request.Email, subject, body, true);
 
                 _logger.LogInformation("RequestOTP: ส่ง OTP สำเร็จสำหรับ Email: {Email}, Action: {Action}", request.Email, request.Action);
                 return Ok(new { Message = "ส่ง OTP ไปยังอีเมลเรียบร้อยแล้ว" });
+            }
+            catch (Exception ex) when (ex is FileNotFoundException)
+            {
+                _logger.LogError(ex, "RequestOTP: ไม่พบไฟล์เทมเพลต: {Path}", _templatePath);
+                return StatusCode(500, new { Error = "เกิดข้อผิดพลาดในระบบ: ไฟล์เทมเพลตไม่พบ" });
             }
             catch (Exception ex)
             {
@@ -97,10 +120,53 @@ namespace JobOnlineAPI.Controllers
         }
 
         /// <summary>
+        /// หน้าเว็บสำหรับคัดลอก OTP และปิดแท็บทันที
+        /// </summary>
+        /// <param name="otp">รหัส OTP ที่จะคัดลอก</param>
+        /// <param name="token">โทเคนเพื่อยืนยันความถูกต้อง</param>
+        /// <returns>หน้า HTML ด้วย JavaScript เพื่อคัดลอก OTP</returns>
+        [HttpGet("copy-otp")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public IActionResult CopyOtp(string otp, string token)
+        {
+            if (string.IsNullOrEmpty(otp) || string.IsNullOrEmpty(token) ||
+                !_tokenStore.TryGetValue(token, out var tokenData) || tokenData.Otp != otp || tokenData.Expires < DateTime.UtcNow)
+            {
+                _logger.LogWarning("CopyOtp: โทเคนไม่ถูกต้องหรือหมดอายุสำหรับ OTP: {Otp}", otp);
+                return Unauthorized("โทเคนไม่ถูกต้องหรือหมดอายุ");
+            }
+
+            return Content($@"
+                <!DOCTYPE html>
+                <html lang='th'>
+                <head>
+                    <meta charset='UTF-8'>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <title>คัดลอก OTP</title>
+                </head>
+                <body onload='copyAndClose()'>
+                    <script>
+                        function copyAndClose() {{
+                            navigator.clipboard.writeText('{otp}').then(() => {{
+                                alert('OTP ถูกคัดลอกแล้ว!');
+                                window.close(); // ปิดแท็บทันทีหลังคัดลอก
+                            }}).catch(err => {{
+                                alert('ไม่สามารถคัดลอก OTP ได้ กรุณาคัดลอกด้วยตนเอง: {otp}');
+                                window.close(); // ปิดแท็บแม้เกิดข้อผิดพลาด
+                            }});
+                        }}
+                    </script>
+                </body>
+                </html>", "text/html");
+        }
+
+        /// <summary>
         /// ยืนยัน OTP ที่ผู้ใช้ป้อน
         /// </summary>
         /// <param name="request">ข้อมูลอีเมลและ OTP</param>
-        /// <returns>สถานะการยืนยัน OTP</returns>
+        /// <returns>สถานะการยัน OTP</returns>
         /// <response code="200">ยืนยัน OTP สำเร็จหรือไม่สำเร็จ</response>
         /// <response code="400">ข้อมูลไม่ถูกต้องหรือ OTP ไม่ถูกต้อง</response>
         /// <response code="500">เกิดข้อผิดพลาดในระบบ</response>
@@ -140,7 +206,7 @@ namespace JobOnlineAPI.Controllers
                 }
 
                 _logger.LogInformation("VerifyOTP: ยืนยัน OTP สำเร็จสำหรับ Email: {Email}, IsValid: {IsValid}", request.Email, isValid);
-                return Ok(new { IsValid = isValid, Message = isValid ? "ยืนยัน OTP สำเร็จ" : "OTP ไม่ถูกต้อง" });
+                return Ok(new { IsValid = isValid, Message = isValid ? "ยืนยัน OTP สำเร็จ" : "OTP ไม่ถูกต้องหรือหมดอายุ" });
             }
             catch (Exception ex)
             {
@@ -200,14 +266,44 @@ namespace JobOnlineAPI.Controllers
 
                 _logger.LogInformation("Register: สมัครสมาชิกสำเร็จสำหรับ Email: {Email}", request.Email);
 
-                string welcomeBody = $@"<div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                                        <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ผู้ใช้</p>
-                                        <p style='margin: 0 0 10px 0;'>ยินดีต้อนรับสู่ ONEE Jobs!</p>
-                                        <p style='margin: 0 0 10px 0;'>การสมัครสมาชิกของคุณด้วยอีเมล {request.Email} สำเร็จแล้ว</p>
-                                        <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                                     </div>";
+                string subject = "🎉 ยินดีต้อนรับสู่ ONEE Jobs";
+                string body = $@"
+                    <!DOCTYPE html>
+                    <html lang='th'>
+                    <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <style>
+                            body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+                            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
+                            .header {{ background-color: #1a73e8; color: white; text-align: center; padding: 20px; }}
+                            .header h1 {{ margin: 0; font-size: 24px; }}
+                            .content {{ padding: 20px; color: #333; }}
+                            .content p {{ margin: 0 0 15px; line-height: 1.6; }}
+                            .footer {{ text-align: center; padding: 10px; color: #777; font-size: 12px; background-color: #f8f9fa; }}
+                            .footer a {{ color: #1a73e8; text-decoration: none; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class='container'>
+                            <div class='header'>
+                                <h1>ONEE Jobs</h1>
+                            </div>
+                            <div class='content'>
+                                <p>เรียน คุณ {request.Email.Split('@')[0]},</p>
+                                <p>ยินดีต้อนรับสู่ ONEE Jobs! การสมัครสมาชิกของคุณสำเร็จแล้ว</p>
+                                <p>คุณสามารถเริ่มต้นใช้งานระบบของเราได้ทันที กรุณาล็อกอินเพื่อสำรวจโอกาสในการทำงาน</p>
+                                <p>หากมีคำถามเพิ่มเติม อย่าลังเลที่จะติดต่อเรา!</p>
+                            </div>
+                            <div class='footer'>
+                                <p>© 2025 ONEE Jobs | <a href='mailto:support@oneejobs.com'>support@oneejobs.com</a></p>
+                                <p>ข้อความนี้เป็นการแจ้งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>";
 
-                await _emailService.SendEmailAsync(request.Email, "ยินดีต้อนรับสู่ ONEE Jobs", welcomeBody, true);
+                await _emailService.SendEmailAsync(request.Email, subject, body, true);
 
                 return Ok(new { Message = "สมัครสมาชิกสำเร็จ" });
             }
@@ -269,14 +365,43 @@ namespace JobOnlineAPI.Controllers
 
                 _logger.LogInformation("ResetPassword: รีเซ็ตรหัสผ่านสำเร็จสำหรับ Email: {Email}", request.Email);
 
-                string resetBody = $@"<div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                                       <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ผู้ใช้</p>
-                                       <p style='margin: 0 0 10px 0;'>การรีเซ็ตรหัสผ่านสำหรับอีเมล {request.Email} สำเร็จแล้ว</p>
-                                       <p style='margin: 0 0 10px 0;'>กรุณาใช้รหัสผ่านใหม่เพื่อเข้าสู่ระบบ</p>
-                                       <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-                                    </div>";
+                string subject = "🔑 ONEE Jobs: รีเซ็ตรหัสผ่านสำเร็จ";
+                string body = $@"
+                    <!DOCTYPE html>
+                    <html lang='th'>
+                    <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <style>
+                            body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+                            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
+                            .header {{ background-color: #1a73e8; color: white; text-align: center; padding: 20px; }}
+                            .header h1 {{ margin: 0; font-size: 24px; }}
+                            .content {{ padding: 20px; color: #333; }}
+                            .content p {{ margin: 0 0 15px; line-height: 1.6; }}
+                            .footer {{ text-align: center; padding: 10px; color: #777; font-size: 12px; background-color: #f8f9fa; }}
+                            .footer a {{ color: #1a73e8; text-decoration: none; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class='container'>
+                            <div class='header'>
+                                <h1>ONEE Jobs</h1>
+                            </div>
+                            <div class='content'>
+                                <p>เรียน คุณ {request.Email.Split('@')[0]},</p>
+                                <p>การรีเซ็ตรหัสผ่านสำหรับบัญชีอีเมล {request.Email} ของคุณสำเร็จแล้ว</p>
+                                <p>กรุณาใช้รหัสผ่านใหม่เพื่อเข้าสู่ระบบทันที หากคุณไม่ได้ร้องขอการเปลี่ยนแปลงนี้ กรุณาติดต่อทีมสนับสนุนทันที</p>
+                            </div>
+                            <div class='footer'>
+                                <p>© 2025 ONEE Jobs | <a href='mailto:support@oneejobs.com'>support@oneejobs.com</a></p>
+                                <p>ข้อความนี้เป็นการแจ้งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>";
 
-                await _emailService.SendEmailAsync(request.Email, "รีเซ็ตรหัสผ่านสำเร็จ", resetBody, true);
+                await _emailService.SendEmailAsync(request.Email, subject, body, true);
 
                 return Ok(new { Message = "รีเซ็ตรหัสผ่านสำเร็จ" });
             }
