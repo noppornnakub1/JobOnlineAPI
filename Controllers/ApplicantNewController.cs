@@ -112,7 +112,7 @@ namespace JobOnlineAPI.Controllers
             }
             else
             {
-                _basePath = _fileStorageConfig.NetworkPath;
+                _basePath = _fileStorageConfig.NetworkPath!;
                 _username = _fileStorageConfig.NetworkUsername;
                 _password = _fileStorageConfig.NetworkPassword;
                 _useNetworkShare = !string.IsNullOrEmpty(_basePath) && _username != null && _password != null;
