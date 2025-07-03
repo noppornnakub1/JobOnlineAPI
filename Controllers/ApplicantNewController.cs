@@ -103,14 +103,14 @@ namespace JobOnlineAPI.Controllers
 
             if (isProduction)
             {
-                _basePath = _fileStorageConfig.ProductionPath;
+                _basePath = _fileStorageConfig.ProductionPath!;
                 _username = null;
                 _password = null;
                 _useNetworkShare = false;
             }
             else
             {
-                _basePath = _fileStorageConfig.NetworkPath;
+                _basePath = _fileStorageConfig.NetworkPath!;
                 _username = _fileStorageConfig.NetworkUsername;
                 _password = _fileStorageConfig.NetworkPassword;
                 _useNetworkShare = !string.IsNullOrEmpty(_basePath) && _username != null && _password != null;
@@ -151,7 +151,7 @@ namespace JobOnlineAPI.Controllers
 
         private void FallbackToLocalPath()
         {
-            _currentStorageConfig.BasePath = _fileStorageConfig.ProductionPath;
+            _currentStorageConfig.BasePath = _fileStorageConfig.ProductionPath!;
             _currentStorageConfig.UseNetworkShare = false;
             _currentStorageConfig.Username = null;
             _currentStorageConfig.Password = null;
@@ -1464,6 +1464,51 @@ namespace JobOnlineAPI.Controllers
             {
                 _logger.LogError(ex, "Failed to retrieve applicant data for ID {ApplicantId}: {Message}", JobID, ex.Message);
                 return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+
+        [HttpPost("delete-multiple-files")]
+        public async Task<IActionResult> DeleteMultipleFiles([FromBody] List<int> fileIds)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                var jsonFileIds = System.Text.Json.JsonSerializer.Serialize(fileIds);
+
+                var parameters = new { FileIDs = jsonFileIds };
+
+                var deletedFiles = (await connection.QueryAsync<(int FileID, string FilePath)>(
+                    "sp_DeleteApplicantFiles",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                )).ToList();
+
+                foreach (var file in deletedFiles)
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(file.FilePath))
+                        {
+                            System.IO.File.Delete(file.FilePath);
+                            _logger.LogInformation($"ลบไฟล์จริงสำเร็จ: {file.FilePath}");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"ไม่พบไฟล์จริง: {file.FilePath}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"ลบไฟล์จริงไม่สำเร็จ: {file.FilePath}");
+                    }
+                }
+
+                return Ok(new { success = true, message = "ลบไฟล์สำเร็จ" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ลบไฟล์ไม่สำเร็จ");
+                return StatusCode(500, "เกิดข้อผิดพลาดในการลบไฟล์");
             }
         }
 
