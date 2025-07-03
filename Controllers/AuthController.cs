@@ -1,12 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Services;
-using System.Threading.Tasks;
 using Dapper;
-using System;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.AspNetCore.Http;
 
 namespace JobOnlineAPI.Controllers
 {
