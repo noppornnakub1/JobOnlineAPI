@@ -372,7 +372,7 @@ namespace JobOnlineAPI.Controllers
                         FileMetadatas = fileMetadatas,
                         StorageLocation = _currentStorageConfig.UseNetworkShare ? $"\\\\{new Uri(_currentStorageConfig.BasePath).Host}" : System.Net.Dns.GetHostName(),
                         BasePath = _currentStorageConfig.BasePath.Replace('\\', '/'),
-                        UseNetworkShare = _currentStorageConfig.UseNetworkShare,
+                        _currentStorageConfig.UseNetworkShare,
                         Message = "Application and files submitted successfully."
                     });
                 }
@@ -1483,23 +1483,23 @@ namespace JobOnlineAPI.Controllers
                     commandType: CommandType.StoredProcedure
                 )).ToList();
 
-                foreach (var file in deletedFiles)
+                foreach (var (FileID, FilePath) in deletedFiles)
                 {
                     try
                     {
-                        if (System.IO.File.Exists(file.FilePath))
+                        if (System.IO.File.Exists(FilePath))
                         {
-                            System.IO.File.Delete(file.FilePath);
-                            _logger.LogInformation($"ลบไฟล์จริงสำเร็จ: {file.FilePath}");
+                            System.IO.File.Delete(FilePath);
+                            _logger.LogInformation("ลบไฟล์จริงสำเร็จ");
                         }
                         else
                         {
-                            _logger.LogWarning($"ไม่พบไฟล์จริง: {file.FilePath}");
+                            _logger.LogWarning("ไม่พบไฟล์จริง");
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"ลบไฟล์จริงไม่สำเร็จ: {file.FilePath}");
+                        _logger.LogError(ex, "ลบไฟล์จริงไม่สำเร็จ");
                     }
                 }
 
