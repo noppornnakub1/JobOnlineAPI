@@ -8,13 +8,13 @@ using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
 using JobOnlineAPI.Models;
-using Microsoft.Extensions.Options;
+using static System.Net.WebRequestMethods;
 
 namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ApplicantNewController : ControllerBase
+    public class ApplicantNewsController : ControllerBase
     {
         private readonly DapperContext _context;
         private readonly IEmailService _emailService;
@@ -25,7 +25,6 @@ namespace JobOnlineAPI.Controllers
         private readonly bool _useNetworkShare;
         private readonly string _applicationFormUri;
         private readonly FileStorageConfig _fileStorageConfig;
-        private readonly StorageConfig _currentStorageConfig;
         private const string JobTitleKey = "JobTitle";
         private const string JobIdKey = "JobID";
         private const string ApplicantIdKey = "ApplicantID";
@@ -76,24 +75,16 @@ namespace JobOnlineAPI.Controllers
             public string? lpProvider;
         }
 
-        private class StorageConfig
-        {
-            public required string BasePath { get; set; }
-            public bool UseNetworkShare { get; set; }
-            public string? Username { get; set; }
-            public string? Password { get; set; }
-        }
-
-        public ApplicantNewController(
+        public ApplicantNewsController(
             DapperContext context,
             IEmailService emailService,
             ILogger<ApplicantNewController> logger,
-            IOptions<FileStorageConfig> config)
+            FileStorageConfig config)
         {
             _context = context;
             _emailService = emailService;
             _logger = logger;
-            _fileStorageConfig = config.Value ?? throw new ArgumentNullException(nameof(config));
+            _fileStorageConfig = config ?? throw new ArgumentNullException(nameof(config));
 
             _fileStorageConfig.EnvironmentName ??= "Development";
             string hostname = System.Net.Dns.GetHostName();
@@ -103,134 +94,68 @@ namespace JobOnlineAPI.Controllers
 
             if (isProduction)
             {
-                _basePath = _fileStorageConfig.ProductionPath;
+                if (string.IsNullOrEmpty(_fileStorageConfig.BasePath))
+                    throw new InvalidOperationException("Production file storage path is not configured.");
+                _basePath = _fileStorageConfig.BasePath;
                 _username = null;
                 _password = null;
                 _useNetworkShare = false;
             }
             else
             {
-                _basePath = _fileStorageConfig.NetworkPath;
+                if (string.IsNullOrEmpty(_fileStorageConfig.BasePath))
+                    throw new InvalidOperationException("File storage path is not configured.");
+                _basePath = _fileStorageConfig.BasePath;
                 _username = _fileStorageConfig.NetworkUsername;
                 _password = _fileStorageConfig.NetworkPassword;
                 _useNetworkShare = !string.IsNullOrEmpty(_basePath) && _username != null && _password != null;
             }
 
-            if (string.IsNullOrEmpty(_fileStorageConfig.ApplicationFormUri))
-            {
-                _logger.LogError("ApplicationFormUri is not configured in FileStorageConfig.");
-                throw new InvalidOperationException("Application form URI is not configured.");
-            }
-            _applicationFormUri = _fileStorageConfig.ApplicationFormUri;
-            _logger.LogInformation("ApplicationFormUri set to: {_applicationFormUri}", _applicationFormUri);
-
-            _currentStorageConfig = new StorageConfig
-            {
-                BasePath = _basePath,
-                UseNetworkShare = _useNetworkShare,
-                Username = _username,
-                Password = _password
-            };
-
-            _logger.LogInformation("Initial FileStorageConfig - BasePath: {_basePath}, UseNetworkShare: {_useNetworkShare}, Username: {_username}", _basePath, _useNetworkShare, _username);
+            _applicationFormUri = _fileStorageConfig.ApplicationFormUri
+                ?? throw new InvalidOperationException("Application form URI is not configured.");
 
             if (!_useNetworkShare && !Directory.Exists(_basePath))
             {
-                try
-                {
-                    Directory.CreateDirectory(_basePath);
-                    _logger.LogInformation("Created local directory: {BasePath}", _basePath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to create local directory: {BasePath}", _basePath);
-                    throw;
-                }
-            }
-        }
-
-        private void FallbackToLocalPath()
-        {
-            _currentStorageConfig.BasePath = _fileStorageConfig.ProductionPath;
-            _currentStorageConfig.UseNetworkShare = false;
-            _currentStorageConfig.Username = null;
-            _currentStorageConfig.Password = null;
-            _logger.LogInformation("Fell back to local path: {_currentStorageConfig.BasePath}", _currentStorageConfig.BasePath);
-            if (!Directory.Exists(_currentStorageConfig.BasePath))
-            {
-                try
-                {
-                    Directory.CreateDirectory(_currentStorageConfig.BasePath);
-                    _logger.LogInformation("Created fallback directory: {_currentStorageConfig.BasePath}", _currentStorageConfig.BasePath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to create fallback directory: {_currentStorageConfig.BasePath}", _currentStorageConfig.BasePath);
-                    throw;
-                }
+                Directory.CreateDirectory(_basePath);
+                _logger.LogInformation("Created local directory: {BasePath}", _basePath);
             }
         }
 
         private async Task<bool> ConnectToNetworkShareAsync()
         {
-            if (!_currentStorageConfig.UseNetworkShare)
+            if (!_useNetworkShare)
                 return CheckLocalStorage();
 
             const int maxRetries = 3;
             const int retryDelayMs = 2000;
 
-            string serverName = $"\\\\{new Uri(_currentStorageConfig.BasePath).Host}";
+            string serverName = $"\\\\{new Uri(_basePath).Host}";
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
                 try
                 {
-                    _logger.LogInformation("Attempt {Attempt}/{MaxRetries}: Connecting to {BasePath}", attempt, maxRetries, _currentStorageConfig.BasePath);
+                    _logger.LogInformation("Attempt {Attempt}/{MaxRetries}: Connecting to {BasePath}", attempt, maxRetries, _basePath);
                     DisconnectExistingConnections(serverName);
-
                     bool connected = AttemptNetworkConnection();
                     if (!connected)
-                    {
-                        _logger.LogWarning("Connection attempt failed, retrying...");
                         continue;
-                    }
-
-                    if (!Directory.Exists(_currentStorageConfig.BasePath))
-                    {
-                        _logger.LogInformation("Directory not found, attempting to create: {_currentStorageConfig.BasePath}", _currentStorageConfig.BasePath);
-                        Directory.CreateDirectory(_currentStorageConfig.BasePath);
-                        _logger.LogInformation("Created directory: {_currentStorageConfig.BasePath}", _currentStorageConfig.BasePath);
-                    }
 
                     ValidateNetworkShare();
-                    _logger.LogInformation("Successfully connected to network share: {BasePath}", _currentStorageConfig.BasePath);
+                    _logger.LogInformation("Successfully connected to network share: {BasePath}", _basePath);
                     return true;
                 }
                 catch (System.ComponentModel.Win32Exception win32Ex) when (win32Ex.NativeErrorCode == 1219 && attempt < maxRetries)
                 {
-                    _logger.LogWarning(win32Ex, "Multiple connections detected, retrying...");
                     await Task.Delay(retryDelayMs);
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    _logger.LogError(ex, "Unauthorized access to network share: {_currentStorageConfig.BasePath}. Falling back to local path.", _currentStorageConfig.BasePath);
-                    FallbackToLocalPath();
-                    return false;
-                }
-                catch (DirectoryNotFoundException ex)
-                {
-                    _logger.LogError(ex, "Network share not found: {_currentStorageConfig.BasePath}. Falling back to local path.", _currentStorageConfig.BasePath);
-                    FallbackToLocalPath();
-                    return false;
                 }
                 catch (Exception ex)
                 {
                     if (attempt == maxRetries)
                     {
-                        _logger.LogError(ex, "Failed to connect to {BasePath} after {MaxRetries} attempts. Falling back to local path.", _currentStorageConfig.BasePath, maxRetries);
-                        FallbackToLocalPath();
-                        return false;
+                        _logger.LogError(ex, "Failed to connect to {BasePath} after {MaxRetries} attempts", _basePath, maxRetries);
+                        throw;
                     }
-                    _logger.LogWarning(ex, "Retrying after delay for {BasePath}", _currentStorageConfig.BasePath);
+                    _logger.LogWarning(ex, "Retrying after delay for {BasePath}", _basePath);
                     await Task.Delay(retryDelayMs);
                 }
             }
@@ -240,18 +165,18 @@ namespace JobOnlineAPI.Controllers
 
         private bool CheckLocalStorage()
         {
-            if (Directory.Exists(_currentStorageConfig.BasePath))
+            if (Directory.Exists(_basePath))
             {
-                _logger.LogInformation("Using local storage at {BasePath}", _currentStorageConfig.BasePath);
+                _logger.LogInformation("Using local storage at {BasePath}", _basePath);
                 return true;
             }
-            _logger.LogError("Local path {BasePath} does not exist or is not accessible.", _currentStorageConfig.BasePath);
-            throw new DirectoryNotFoundException($"Local path {_currentStorageConfig.BasePath} is not accessible.");
+            _logger.LogError("Local path {BasePath} does not exist or is not accessible.", _basePath);
+            throw new DirectoryNotFoundException($"Local path {_basePath} is not accessible.");
         }
 
         private void DisconnectExistingConnections(string serverName)
         {
-            DisconnectPath(_currentStorageConfig.BasePath);
+            DisconnectPath(_basePath);
             DisconnectPath(serverName);
         }
 
@@ -274,21 +199,18 @@ namespace JobOnlineAPI.Controllers
             NetResource netResource = new()
             {
                 dwType = 1,
-                lpRemoteName = _currentStorageConfig.BasePath,
+                lpRemoteName = _basePath,
                 lpLocalName = null,
                 lpProvider = null
             };
 
-            _logger.LogInformation("Attempting connection to {BasePath} with username {Username}", _currentStorageConfig.BasePath, _currentStorageConfig.Username);
-            int result = WNetAddConnection2(ref netResource, _currentStorageConfig.Password, _currentStorageConfig.Username, 0);
+            _logger.LogInformation("Connecting to {BasePath} with username {Username}", _basePath, _username);
+            int result = WNetAddConnection2(ref netResource, _password, _username, 0);
             if (result == 0)
-            {
-                _logger.LogInformation("Successfully connected to {BasePath}", _currentStorageConfig.BasePath);
                 return true;
-            }
 
             var errorMessage = new System.ComponentModel.Win32Exception(result).Message;
-            _logger.LogError("Failed to connect to {BasePath}: {ErrorMessage} (Error Code: {Result})", _currentStorageConfig.BasePath, errorMessage, result);
+            _logger.LogError("Failed to connect to {BasePath}: {ErrorMessage} (Error Code: {Result})", _basePath, errorMessage, result);
             if (result == 1219)
                 return false;
 
@@ -297,32 +219,32 @@ namespace JobOnlineAPI.Controllers
 
         private void ValidateNetworkShare()
         {
-            if (!Directory.Exists(_currentStorageConfig.BasePath))
+            if (!Directory.Exists(_basePath))
             {
-                _logger.LogError("Network share {BasePath} does not exist or is not accessible.", _currentStorageConfig.BasePath);
-                throw new DirectoryNotFoundException($"Network share {_currentStorageConfig.BasePath} is not accessible.");
+                _logger.LogError("Network share {BasePath} does not exist or is not accessible.", _basePath);
+                throw new DirectoryNotFoundException($"Network share {_basePath} is not accessible.");
             }
         }
 
         private void DisconnectFromNetworkShare()
         {
-            if (!_currentStorageConfig.UseNetworkShare)
+            if (!_useNetworkShare)
                 return;
 
             try
             {
-                string serverName = $"\\\\{new Uri(_currentStorageConfig.BasePath).Host}";
-                _logger.LogInformation("Disconnecting from network share {BasePath} and server {ServerName}", _currentStorageConfig.BasePath, serverName);
+                string serverName = $"\\\\{new Uri(_basePath).Host}";
+                _logger.LogInformation("Disconnecting from network share {BasePath} and server {ServerName}", _basePath, serverName);
 
-                int disconnectResult = WNetCancelConnection2(_currentStorageConfig.BasePath, 0, true);
+                int disconnectResult = WNetCancelConnection2(_basePath, 0, true);
                 if (disconnectResult != 0 && disconnectResult != 1219)
                 {
                     var errorMessage = new System.ComponentModel.Win32Exception(disconnectResult).Message;
-                    _logger.LogWarning("Failed to disconnect from {BasePath}: {ErrorMessage} (Error Code: {DisconnectResult})", _currentStorageConfig.BasePath, errorMessage, disconnectResult);
+                    _logger.LogWarning("Failed to disconnect from {BasePath}: {ErrorMessage} (Error Code: {DisconnectResult})", _basePath, errorMessage, disconnectResult);
                 }
                 else
                 {
-                    _logger.LogInformation("Successfully disconnected or no existing connection to {BasePath} (Result: {DisconnectResult})", _currentStorageConfig.BasePath, disconnectResult);
+                    _logger.LogInformation("Successfully disconnected or no existing connection to {BasePath} (Result: {DisconnectResult})", _basePath, disconnectResult);
                 }
 
                 disconnectResult = WNetCancelConnection2(serverName, 0, true);
@@ -338,7 +260,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error disconnecting from network share {BasePath}: {Message}, StackTrace: {StackTrace}", _currentStorageConfig.BasePath, ex.Message, ex.StackTrace);
+                _logger.LogError(ex, "Error disconnecting from network share {BasePath}: {Message}, StackTrace: {StackTrace}", _basePath, ex.Message, ex.StackTrace);
             }
         }
 
@@ -358,23 +280,27 @@ namespace JobOnlineAPI.Controllers
                 int jobId = jobIdObj is JsonElement j && j.ValueKind == JsonValueKind.Number
                     ? j.GetInt32()
                     : Convert.ToInt32(jobIdObj);
-
+                    
                 await ConnectToNetworkShareAsync();
                 try
                 {
-                    var fileMetadatas = await ProcessFilesAsync(files);
-                    var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
-                    MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
-                    await SendEmailsAsync(req, dbResult);
-                    return Ok(new
+                    List<Dictionary<string, object>> fileMetadatas = [];
+
+                    if (files != null && files.Count > 0)
                     {
-                        ApplicantID = dbResult.ApplicantId,
-                        FileMetadatas = fileMetadatas,
-                        StorageLocation = _currentStorageConfig.UseNetworkShare ? $"\\\\{new Uri(_currentStorageConfig.BasePath).Host}" : System.Net.Dns.GetHostName(),
-                        BasePath = _currentStorageConfig.BasePath.Replace('\\', '/'),
-                        UseNetworkShare = _currentStorageConfig.UseNetworkShare,
-                        Message = "Application and files submitted successfully."
-                    });
+                        fileMetadatas = await ProcessFilesAsync(files);
+                    }
+
+                    var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
+
+                    if (files != null && files.Count > 0)
+                    {
+                        MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
+                    }
+
+                    await SendEmailsAsync(req, dbResult);
+
+                    return Ok(new { ApplicantID = dbResult.ApplicantId, Message = "Application and files submitted successfully." });
                 }
                 finally
                 {
@@ -423,20 +349,10 @@ namespace JobOnlineAPI.Controllers
                     throw new InvalidOperationException($"Invalid file type for {file.FileName}. Only PNG, JPG, PDF, DOC, and DOCX are allowed.");
 
                 var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-                var filePath = Path.Combine(_currentStorageConfig.BasePath, fileName);
+                var filePath = Path.Combine(_basePath, fileName);
                 var directoryPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException($"Invalid directory path for: {filePath}");
 
-                try
-                {
-                    Directory.CreateDirectory(directoryPath);
-                    _logger.LogInformation("Created directory: {DirectoryPath}", directoryPath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to create directory: {DirectoryPath}", directoryPath);
-                    throw;
-                }
-
+                Directory.CreateDirectory(directoryPath);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await file.CopyToAsync(stream);
@@ -476,6 +392,10 @@ namespace JobOnlineAPI.Controllers
             param.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
             param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
+
+            // await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
+            // await conn.ExecuteAsync("InsertOrUpdateApplicantDataV8", param, commandType: CommandType.StoredProcedure);
+            // await conn.ExecuteAsync("InsertOrUpdateApplicantDataV9", param, commandType: CommandType.StoredProcedure);
             await conn.ExecuteAsync("InsertOrUpdateApplicantDataV10", param, commandType: CommandType.StoredProcedure);
 
             return (
@@ -493,33 +413,18 @@ namespace JobOnlineAPI.Controllers
             if (fileMetadatas.Count == 0 || applicantId <= 0)
                 return;
 
-            var applicantPath = Path.Combine(_currentStorageConfig.BasePath, $"applicant_{applicantId}");
+            var applicantPath = Path.Combine(_basePath, $"applicant_{applicantId}");
             if (!Directory.Exists(applicantPath))
             {
-                try
-                {
-                    Directory.CreateDirectory(applicantPath);
-                    _logger.LogInformation("Created applicant directory: {ApplicantPath}", applicantPath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to create applicant directory: {ApplicantPath}", applicantPath);
-                    throw;
-                }
+                Directory.CreateDirectory(applicantPath);
+                _logger.LogInformation("Created applicant directory: {ApplicantPath}", applicantPath);
             }
             else
             {
                 foreach (var oldFile in Directory.GetFiles(applicantPath))
                 {
-                    try
-                    {
-                        System.IO.File.Delete(oldFile);
-                        _logger.LogInformation("Deleted old file: {OldFile}", oldFile);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to delete old file: {OldFile}", oldFile);
-                    }
+                    System.IO.File.Delete(oldFile);
+                    _logger.LogInformation("Deleted old file: {OldFile}", oldFile);
                 }
             }
 
@@ -536,17 +441,8 @@ namespace JobOnlineAPI.Controllers
                 var newFilePath = Path.Combine(applicantPath, fileName);
                 if (System.IO.File.Exists(oldFilePath))
                 {
-                    try
-                    {
-                        System.IO.File.Move(oldFilePath, newFilePath, overwrite: true);
-                        _logger.LogInformation("Moved file from {OldFilePath} to {NewFilePath}", oldFilePath, newFilePath);
-                        metadata["FilePath"] = newFilePath.Replace('\\', '/');
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to move file from {OldFilePath} to {NewFilePath}", oldFilePath, newFilePath);
-                        throw;
-                    }
+                    System.IO.File.Move(oldFilePath, newFilePath, overwrite: true);
+                    _logger.LogInformation("Moved file from {OldFilePath} to {NewFilePath}", oldFilePath, newFilePath);
                 }
                 else
                 {
@@ -608,6 +504,7 @@ namespace JobOnlineAPI.Controllers
                     await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true);
                 }
             }
+
         }
 
         private static string GetFullName(IDictionary<string, object?> req, string firstNameKey, string lastNameKey)
@@ -853,14 +750,13 @@ namespace JobOnlineAPI.Controllers
                 else if (typeMail == "Confirmed")
                 {
                     int emailSuccessCount = await SendManagerEmails(requestData);
-                }
+                }  
                 else if (typeMail == "notiMail")
                 {
                     int emailSuccessCount = await SendMailNoti(requestData);
-                }
+                } 
 
-                if (typeMail != "notiMail")
-                {
+                if (typeMail != "notiMail") {
                     await UpdateStatusInDatabaseV2(requestData);
                 }
                 return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
@@ -1083,9 +979,9 @@ namespace JobOnlineAPI.Controllers
                     string statusText = "";
                     if (candidateDict.TryGetValue("Status", out var statusObj))
                     {
-                        if (statusObj?.ToString() == "Success") statusText = "สำเร็จ";
-                        if (statusObj?.ToString() == "Unsuccess") statusText = "ต่อรองไม่สำเร็จ";
-                        if (statusObj?.ToString() == "Cancel") statusText = "ยกเลิก";
+                        if(statusObj?.ToString() == "Success") statusText = "สำเร็จ";
+                        if(statusObj?.ToString() == "Unsuccess") statusText = "ต่อรองไม่สำเร็จ";
+                        if(statusObj?.ToString() == "Cancel") statusText = "ยกเลิก";
                     }
 
                     return $"ลำดับที่ {index + 1}: {title} {firstNameThai} {lastNameThai} สถานะ {statusText}".Trim();
@@ -1093,6 +989,7 @@ namespace JobOnlineAPI.Controllers
                 .ToList() ?? [];
 
             string candidateNamesString = string.Join("<br>", candidateNames);
+
 
             string hrBody = $@"
                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
@@ -1255,7 +1152,7 @@ namespace JobOnlineAPI.Controllers
                     <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                 </div>";
 
-
+            
             int successCount = 0;
             try
             {
