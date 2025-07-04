@@ -1,0 +1,101 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background-color: #1a73e8;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+            .header h1 {
+                margin: 0;
+                font-size: 24px;
+            }
+
+        .content {
+            padding: 20px;
+            color: #333;
+        }
+
+            .content p {
+                margin: 0 0 15px;
+                line-height: 1.6;
+            }
+
+        .otp-box {
+            background-color: #f0f0f0;
+            padding: 10px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .copy-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #1a73e8;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 10px;
+            color: #777;
+            font-size: 12px;
+            background-color: #f8f9fa;
+        }
+
+            .footer a {
+                color: #1a73e8;
+                text-decoration: none;
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ONEE Jobs</h1>
+        </div>
+        <div class="content">
+            <p>เรียน {{username}},</p>
+            <p>รหัส OTP ของคุณสำหรับ {{actionDescription}} คือ:</p>
+            <p style="text-align: center;"><span class="otp-box">{{otp}}</span></p>
+            <p style="text-align: center;">
+                <a href="{{copyUrl}}" class="copy-button" target="_blank" style="color:#ffffff;">คัดลอก OTP</a>
+                <br><small>(หรือคัดลอกด้วยตนเอง: คลิกขวา > คัดลอก)</small>
+            </p>
+            <p>รหัสนี้มีอายุการใช้งาน 10 นาที กรุณาใช้ภายในเวลาที่กำหนด หากคุณไม่ได้ร้องขอการดำเนินการนี้ กรุณาติดต่อทีมสนับสนุนทันที</p>
+        </div>
+        <div class="footer">
+            <p>© 2025 ONEE Jobs | <a href="mailto:support@oneejobs.com">support@oneejobs.com</a></p>
+            <p>ข้อความนี้เป็นการแจ้งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
+        </div>
+    </div>
+</body>
+</html>
