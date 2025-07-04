@@ -23,7 +23,7 @@ namespace JobOnlineAPI.Controllers
         private readonly string _templatePathOTP = Path.Combine("Templates", "Email", "OTP.html");
         private readonly string _templatePathREGIS = Path.Combine("Templates", "Email", "Registration.html");
         private readonly string _templatePathResetPassword = Path.Combine("Templates", "Email", "ResetPassword.html");
-        //private readonly string _templatePathOTP = Path.Combine("Templates", "Email", "RequestOtp.html");
+        private readonly string _templatePathCopyOTP = Path.Combine("Templates", "Email", "CopyOTP.html");
         private readonly TimeSpan _tokenExpiration = TimeSpan.FromMinutes(10); // โทเคนหมดอายุใน 10 นาที
 
         // เก็บโทเคนชั่วคราว (ควรใช้ฐานข้อมูลในโปรดักชัน)
@@ -137,65 +137,11 @@ namespace JobOnlineAPI.Controllers
                 return Unauthorized("โทเคนไม่ถูกต้องหรือหมดอายุ");
             }
 
-            return Content($@"
-                <!DOCTYPE html>
-                <html lang='th'>
-                <head>
-                    <meta charset='UTF-8'>
-                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                    <title>คัดลอก OTP</title>
-                    <script src=""https://cdn.tailwindcss.com""></script>
-                </head>
-                <body class=""bg-gray-100 flex items-center justify-center min-h-screen"">
-                    <div id=""successCard"" class=""bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center transform transition-all duration-300 scale-100"">
-                        <div class=""mb-6"">
-                            <svg class=""w-16 h-16 mx-auto text-green-500"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24"" xmlns=""http://www.w3.org/2000/svg"">
-                                <path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M5 13l4 4L19 7""></path>
-                            </svg>
-                        </div>
-                        <h2 class=""text-2xl font-bold text-gray-800 mb-4"">คัดลอก OTP สำเร็จ!</h2>
-                        <p class=""text-gray-600 mb-6"">OTP <span class=""font-mono font-semibold"">{otp}</span> ถูกคัดลอกไปยังคลิปบอร์ดแล้ว</p>
-                        <button id=""okButton"" class=""bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"">
-                            ตกลง
-                        </button>
-                    </div>
-                    <div id=""errorCard"" class=""hidden bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center transform transition-all duration-300 scale-100"">
-                        <div class=""mb-6"">
-                            <svg class=""w-16 h-16 mx-auto text-red-500"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24"" xmlns=""http://www.w3.org/2000/svg"">
-                                <path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M6 18L18 6M6 6l12 12""></path>
-                            </svg>
-                        </div>
-                        <h2 class=""text-2xl font-bold text-gray-800 mb-4"">ไม่สามารถคัดลอก OTP ได้</h2>
-                        <p class=""text-gray-600 mb-6"">กรุณาคัดลอก OTP ด้วยตนเอง: <span class=""font-mono font-semibold"">{{otp}}</span></p>
-                        <button id=""errorOkButton"" class=""bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"">
-                            ตกลง
-                        </button>
-                    </div>
-                    <script>
-                        function copyAndClose() {{
-                            navigator.clipboard.writeText('{otp}').then(() => {{
-                                document.getElementById('successCard').classList.remove('scale-0');
-                                document.getElementById('successCard').classList.add('scale-100');
-                            }}).catch(err => {{
-                                document.getElementById('successCard').classList.add('hidden');
-                                document.getElementById('errorCard').classList.remove('hidden');
-                                document.getElementById('errorCard').classList.remove('scale-0');
-                                document.getElementById('errorCard').classList.add('scale-100');
-                            }});
-                        }}
+            // โหลดและเติมข้อมูลในเทมเพลต
+            string template = System.IO.File.ReadAllText(_templatePathCopyOTP);
+            string body = template;
 
-                        document.getElementById('okButton').addEventListener('click', () => {{
-                            window.close();
-                        }});
-
-                        document.getElementById('errorOkButton').addEventListener('click', () => {{
-                            window.close();
-                        }});
-
-                        window.onload = copyAndClose;
-                    </script>
-                </body>
-                </html>", "text/html");
+            return Content(body, "text/html");
         }
 
         /// <summary>
