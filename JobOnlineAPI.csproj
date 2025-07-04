@@ -27,6 +27,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="Templates\Email\CopyOTP.html" />
+	  <None Remove="Templates\Email\OTP.html" />
+	  <None Remove="Templates\Email\Registration.html" />
+	  <None Remove="Templates\Email\RequestOtp.html" />
+	  <None Remove="Templates\Email\ResetPassword.html" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <Content Include="public\css\ITRequestForm.css" />
 	  <Content Include="public\fonts\NotoSansThai-Black.ttf" />
 	  <Content Include="public\fonts\NotoSansThai-Bold.ttf" />
@@ -65,6 +73,21 @@
 	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-SemiBold.ttf" />
 	  <Content Include="public\fonts\NotoSansThai_SemiCondensed-Thin.ttf" />
 	  <Content Include="public\images\logo.png" />
+	  <Content Include="Templates\Email\CopyOTP.html">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Templates\Email\OTP.html">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Templates\Email\Registration.html">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Templates\Email\RequestOtp.html">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Templates\Email\ResetPassword.html">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 
 	<ItemGroup>
