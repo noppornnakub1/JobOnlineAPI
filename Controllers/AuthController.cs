@@ -2,11 +2,8 @@
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Services;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using static System.Net.WebRequestMethods;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -100,9 +97,7 @@ namespace JobOnlineAPI.Controllers
                 // โหลดและเติมข้อมูลในเทมเพลต
                 string template = System.IO.File.ReadAllText(_templatePathOTP);
                 string body = template
-                    //.Replace("{{username}}", username)
                     .Replace("{{otp}}", otp)
-                    //.Replace("{{actionDescription}}", actionDescription)
                     .Replace("{{copyUrl}}", copyUrl);
 
                 await _emailService.SendEmailAsync(request.Email, subject, body, true);
@@ -307,41 +302,6 @@ namespace JobOnlineAPI.Controllers
                 _logger.LogInformation("Register: สมัครสมาชิกสำเร็จสำหรับ Email: {Email}", request.Email);
 
                 string subject = "🎉 ยินดีต้อนรับสู่ ONEE Jobs";
-                //string body = $@"
-                //    <!DOCTYPE html>
-                //    <html lang='th'>
-                //    <head>
-                //        <meta charset='UTF-8'>
-                //        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                //        <style>
-                //            body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
-                //            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
-                //            .header {{ background-color: #1a73e8; color: white; text-align: center; padding: 20px; }}
-                //            .header h1 {{ margin: 0; font-size: 24px; }}
-                //            .content {{ padding: 20px; color: #333; }}
-                //            .content p {{ margin: 0 0 15px; line-height: 1.6; }}
-                //            .footer {{ text-align: center; padding: 10px; color: #777; font-size: 12px; background-color: #f8f9fa; }}
-                //            .footer a {{ color: #1a73e8; text-decoration: none; }}
-                //        </style>
-                //    </head>
-                //    <body>
-                //        <div class='container'>
-                //            <div class='header'>
-                //                <h1>ONEE Jobs</h1>
-                //            </div>
-                //            <div class='content'>
-                //                <p>เรียน คุณ {request.Email.Split('@')[0]},</p>
-                //                <p>ยินดีต้อนรับสู่ ONEE Jobs! การสมัครสมาชิกของคุณสำเร็จแล้ว</p>
-                //                <p>คุณสามารถเริ่มต้นใช้งานระบบของเราได้ทันที กรุณาล็อกอินเพื่อสำรวจโอกาสในการทำงาน</p>
-                //                <p>หากมีคำถามเพิ่มเติม อย่าลังเลที่จะติดต่อเรา!</p>
-                //            </div>
-                //            <div class='footer'>
-                //                <p>© 2025 ONEE Jobs | <a href='mailto:support@oneejobs.com'>support@oneejobs.com</a></p>
-                //                <p>ข้อความนี้เป็นการแจ้งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
-                //            </div>
-                //        </div>
-                //    </body>
-                //    </html>";
 
                 // โหลดและเติมข้อมูลในเทมเพลต
                 string template = System.IO.File.ReadAllText(_templatePathREGIS);
