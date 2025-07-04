@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #ffffff;
+        }
+
+        .container {
+            text-align: center;
+            border-radius: 25px;
+            border: 1px solid #0000003d;
+            width: 360px;
+            padding-bottom: 20px;
+        }
+
+        .card-header {
+            background: #0b5ed7;
+            height: 72px;
+            margin-bottom: 20px;
+            background-color: #0d6efd;
+            border-radius: 25px 25px 0 0;
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 25px;
+            color: #ffffff;
+            letter-spacing: 1px;
+            padding: 20px;
+        }
+
+        .verification-code {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: 0.4px;
+        }
+
+        p {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.24px;
+            margin-bottom: 25px;
+        }
+
+        .copy-button {
+            background-color: #0d6efd;
+            color: #ffffff;
+            border: none;
+            border-radius: 2px;
+            padding: 5px 15px;
+            font-size: 16px;
+            font-weight: 300;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .copy-button:hover {
+            background-color: #0b5ed7;
+        }
+
+        .copy-button:focus {
+            outline: 2px solid #4a90e2;
+        }
+
+        .otp-text {
+            margin: auto;
+            letter-spacing: 8px;
+            font-size: 40px;
+            font-weight: 600;
+            padding: 10px;
+            background-color: #d9d9d9;
+            border-radius: 5px;
+        }
+    </style>
+
+</head>
+<body>
+    <div class='container'>
+        <div class="card-header">
+            <div class="card-title">ONEE JOBS</div>
+        </div>
+        <div class='verification-code'>
+            <div class="otp-text">{{otp}}</div>
+        </div>
+        <h1>Verification Code</h1>
+        <p>รหัสนี้ใช้ได้ภายใน 10 นาที กรุณานำไปใช้เพื่อยืนยันตัวตน</p>
+        <a href="{{copyUrl}}" class="copy-button" target="_blank" style="color:#ffffff;">OTP</a>
+    </div>
+</body>
+</html>

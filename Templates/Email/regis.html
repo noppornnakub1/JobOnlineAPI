@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Registration Success</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #ffffff;
+        }
+
+        .container {
+            text-align: center;
+            border-radius: 25px;
+            border: 1px solid #0000003d;
+            width: 360px;
+            padding-bottom: 20px;
+            background-color: #fff;
+        }
+
+        .card-header {
+            background-color: #0d6efd;
+            height: 150px;
+            margin-bottom: 20px;
+            border-radius: 25px 25px 0 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .circle-icon {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: #0d6efd;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            margin: auto;
+        }
+
+        .checkmark {
+            margin-left: 20px;
+            margin-top: 6px;
+            color: #0b5ed7;
+        }
+
+        h1 {
+            font-size: 25px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: 0.4px;
+            padding: 10px;
+        }
+
+        p {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.24px;
+            margin-bottom: 15px;
+        }
+
+        .description {
+            font-size: 10px;
+            font-weight: 400;
+            color: black;
+            margin-bottom: 25px;
+        }
+
+        .copy-button {
+            background-color: #0d6efd;
+            color: #ffffff;
+            border: none;
+            border-radius: 2px;
+            padding: 5px 15px;
+            font-size: 16px;
+            font-weight: 300;
+            cursor: pointer;
+        }
+
+            .copy-button:hover {
+                background-color: #0b5ed7;
+            }
+
+            .copy-button:focus {
+                outline: 2px solid #4a90e2;
+            }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class="card-header">
+            <div class="circle-icon"><span class="checkmark">&#10004;</span></div>
+        </div>
+        <h1>Thanks for registration</h1>
+        <p>การสมัครสมาชิกของคุณสำเร็จแล้ว</p>
+        <p class="description">คุณสามารถ Login เข้าสู่ระบบด้วย email ที่ได้ทำการลงทะเบียนไว้</p>
+        <button class='copy-button'>เข้าสู่ระบบ</button>
+    </div>
+</body>
+</html>

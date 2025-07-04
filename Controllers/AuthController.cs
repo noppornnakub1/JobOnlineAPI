@@ -1,11 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Dapper;
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Services;
-using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System.IO;
-using System;
+using static System.Net.WebRequestMethods;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -22,7 +23,9 @@ namespace JobOnlineAPI.Controllers
         private readonly DapperContext _context = context ?? throw new ArgumentNullException(nameof(context));
         private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         private readonly ILogger<AuthController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        private readonly string _templatePath = Path.Combine("Templates", "Email", "RequestOtp.html");
+        private readonly string _templatePathOTP = Path.Combine("Templates", "Email", "OTP.html");
+        private readonly string _templatePathREGIS = Path.Combine("Templates", "Email", "regis.html");
+        //private readonly string _templatePathOTP = Path.Combine("Templates", "Email", "RequestOtp.html");
         private readonly TimeSpan _tokenExpiration = TimeSpan.FromMinutes(10); // โทเคนหมดอายุใน 10 นาที
 
         // เก็บโทเคนชั่วคราว (ควรใช้ฐานข้อมูลในโปรดักชัน)
@@ -95,11 +98,11 @@ namespace JobOnlineAPI.Controllers
                 string copyUrl = Url.Action("CopyOtp", "Auth", new { otp, token }, Request.Scheme) ?? "#";
 
                 // โหลดและเติมข้อมูลในเทมเพลต
-                string template = System.IO.File.ReadAllText(_templatePath);
+                string template = System.IO.File.ReadAllText(_templatePathOTP);
                 string body = template
-                    .Replace("{{username}}", username)
+                    //.Replace("{{username}}", username)
                     .Replace("{{otp}}", otp)
-                    .Replace("{{actionDescription}}", actionDescription)
+                    //.Replace("{{actionDescription}}", actionDescription)
                     .Replace("{{copyUrl}}", copyUrl);
 
                 await _emailService.SendEmailAsync(request.Email, subject, body, true);
@@ -109,7 +112,7 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex) when (ex is FileNotFoundException)
             {
-                _logger.LogError(ex, "RequestOTP: ไม่พบไฟล์เทมเพลต: {Path}", _templatePath);
+                _logger.LogError(ex, "RequestOTP: ไม่พบไฟล์เทมเพลต: {Path}", _templatePathOTP);
                 return StatusCode(500, new { Error = "เกิดข้อผิดพลาดในระบบ: ไฟล์เทมเพลตไม่พบ" });
             }
             catch (Exception ex)
@@ -174,7 +177,7 @@ namespace JobOnlineAPI.Controllers
                     </div>
                     <script>
                         function copyAndClose() {{
-                            navigator.clipboard.writeText('{{otp}}').then(() => {{
+                            navigator.clipboard.writeText('{otp}').then(() => {{
                                 document.getElementById('successCard').classList.remove('scale-0');
                                 document.getElementById('successCard').classList.add('scale-100');
                             }}).catch(err => {{
@@ -304,41 +307,45 @@ namespace JobOnlineAPI.Controllers
                 _logger.LogInformation("Register: สมัครสมาชิกสำเร็จสำหรับ Email: {Email}", request.Email);
 
                 string subject = "🎉 ยินดีต้อนรับสู่ ONEE Jobs";
-                string body = $@"
-                    <!DOCTYPE html>
-                    <html lang='th'>
-                    <head>
-                        <meta charset='UTF-8'>
-                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                        <style>
-                            body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
-                            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
-                            .header {{ background-color: #1a73e8; color: white; text-align: center; padding: 20px; }}
-                            .header h1 {{ margin: 0; font-size: 24px; }}
-                            .content {{ padding: 20px; color: #333; }}
-                            .content p {{ margin: 0 0 15px; line-height: 1.6; }}
-                            .footer {{ text-align: center; padding: 10px; color: #777; font-size: 12px; background-color: #f8f9fa; }}
-                            .footer a {{ color: #1a73e8; text-decoration: none; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class='container'>
-                            <div class='header'>
-                                <h1>ONEE Jobs</h1>
-                            </div>
-                            <div class='content'>
-                                <p>เรียน คุณ {request.Email.Split('@')[0]},</p>
-                                <p>ยินดีต้อนรับสู่ ONEE Jobs! การสมัครสมาชิกของคุณสำเร็จแล้ว</p>
-                                <p>คุณสามารถเริ่มต้นใช้งานระบบของเราได้ทันที กรุณาล็อกอินเพื่อสำรวจโอกาสในการทำงาน</p>
-                                <p>หากมีคำถามเพิ่มเติม อย่าลังเลที่จะติดต่อเรา!</p>
-                            </div>
-                            <div class='footer'>
-                                <p>© 2025 ONEE Jobs | <a href='mailto:support@oneejobs.com'>support@oneejobs.com</a></p>
-                                <p>ข้อความนี้เป็นการแจ้งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
-                            </div>
-                        </div>
-                    </body>
-                    </html>";
+                //string body = $@"
+                //    <!DOCTYPE html>
+                //    <html lang='th'>
+                //    <head>
+                //        <meta charset='UTF-8'>
+                //        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                //        <style>
+                //            body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+                //            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
+                //            .header {{ background-color: #1a73e8; color: white; text-align: center; padding: 20px; }}
+                //            .header h1 {{ margin: 0; font-size: 24px; }}
+                //            .content {{ padding: 20px; color: #333; }}
+                //            .content p {{ margin: 0 0 15px; line-height: 1.6; }}
+                //            .footer {{ text-align: center; padding: 10px; color: #777; font-size: 12px; background-color: #f8f9fa; }}
+                //            .footer a {{ color: #1a73e8; text-decoration: none; }}
+                //        </style>
+                //    </head>
+                //    <body>
+                //        <div class='container'>
+                //            <div class='header'>
+                //                <h1>ONEE Jobs</h1>
+                //            </div>
+                //            <div class='content'>
+                //                <p>เรียน คุณ {request.Email.Split('@')[0]},</p>
+                //                <p>ยินดีต้อนรับสู่ ONEE Jobs! การสมัครสมาชิกของคุณสำเร็จแล้ว</p>
+                //                <p>คุณสามารถเริ่มต้นใช้งานระบบของเราได้ทันที กรุณาล็อกอินเพื่อสำรวจโอกาสในการทำงาน</p>
+                //                <p>หากมีคำถามเพิ่มเติม อย่าลังเลที่จะติดต่อเรา!</p>
+                //            </div>
+                //            <div class='footer'>
+                //                <p>© 2025 ONEE Jobs | <a href='mailto:support@oneejobs.com'>support@oneejobs.com</a></p>
+                //                <p>ข้อความนี้เป็นการแจ้งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
+                //            </div>
+                //        </div>
+                //    </body>
+                //    </html>";
+
+                // โหลดและเติมข้อมูลในเทมเพลต
+                string template = System.IO.File.ReadAllText(_templatePathREGIS);
+                string body = template;
 
                 await _emailService.SendEmailAsync(request.Email, subject, body, true);
 
