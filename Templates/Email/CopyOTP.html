@@ -37,7 +37,7 @@
     </div>
     <script>
         function copyAndClose() {
-            navigator.clipboard.writeText('{otp}').then(() => {
+            navigator.clipboard.writeText('{{otp}}').then(() => {
                 document.getElementById('successCard').classList.remove('scale-0');
                 document.getElementById('successCard').classList.add('scale-100');
             }).catch(err => {
