@@ -139,7 +139,8 @@ namespace JobOnlineAPI.Controllers
 
             // โหลดและเติมข้อมูลในเทมเพลต
             string template = System.IO.File.ReadAllText(_templatePathCopyOTP);
-            string body = template;
+            string body = template
+                .Replace("{{otp}}", otp);
 
             return Content(body, "text/html");
         }
