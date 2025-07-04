@@ -21,7 +21,8 @@ namespace JobOnlineAPI.Controllers
         private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         private readonly ILogger<AuthController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private readonly string _templatePathOTP = Path.Combine("Templates", "Email", "OTP.html");
-        private readonly string _templatePathREGIS = Path.Combine("Templates", "Email", "regis.html");
+        private readonly string _templatePathREGIS = Path.Combine("Templates", "Email", "Registration.html");
+        private readonly string _templatePathResetPassword = Path.Combine("Templates", "Email", "ResetPassword.html");
         //private readonly string _templatePathOTP = Path.Combine("Templates", "Email", "RequestOtp.html");
         private readonly TimeSpan _tokenExpiration = TimeSpan.FromMinutes(10); // โทเคนหมดอายุใน 10 นาที
 
@@ -370,40 +371,12 @@ namespace JobOnlineAPI.Controllers
                 _logger.LogInformation("ResetPassword: รีเซ็ตรหัสผ่านสำเร็จสำหรับ Email: {Email}", request.Email);
 
                 string subject = "🔑 ONEE Jobs: รีเซ็ตรหัสผ่านสำเร็จ";
-                string body = $@"
-                    <!DOCTYPE html>
-                    <html lang='th'>
-                    <head>
-                        <meta charset='UTF-8'>
-                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                        <style>
-                            body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
-                            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
-                            .header {{ background-color: #1a73e8; color: white; text-align: center; padding: 20px; }}
-                            .header h1 {{ margin: 0; font-size: 24px; }}
-                            .content {{ padding: 20px; color: #333; }}
-                            .content p {{ margin: 0 0 15px; line-height: 1.6; }}
-                            .footer {{ text-align: center; padding: 10px; color: #777; font-size: 12px; background-color: #f8f9fa; }}
-                            .footer a {{ color: #1a73e8; text-decoration: none; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class='container'>
-                            <div class='header'>
-                                <h1>ONEE Jobs</h1>
-                            </div>
-                            <div class='content'>
-                                <p>เรียน คุณ {request.Email.Split('@')[0]},</p>
-                                <p>การรีเซ็ตรหัสผ่านสำหรับบัญชีอีเมล {request.Email} ของคุณสำเร็จแล้ว</p>
-                                <p>กรุณาใช้รหัสผ่านใหม่เพื่อเข้าสู่ระบบทันที หากคุณไม่ได้ร้องขอการเปลี่ยนแปลงนี้ กรุณาติดต่อทีมสนับสนุนทันที</p>
-                            </div>
-                            <div class='footer'>
-                                <p>© 2025 ONEE Jobs | <a href='mailto:support@oneejobs.com'>support@oneejobs.com</a></p>
-                                <p>ข้อความนี้เป็นการแจ้งอัตโนมัติ กรุณาอย่าตอบกลับ</p>
-                            </div>
-                        </div>
-                    </body>
-                    </html>";
+
+                // โหลดและเติมข้อมูลในเทมเพลต
+                string template = System.IO.File.ReadAllText(_templatePathResetPassword);
+                string body = template
+                    .Replace("{{name}}", request.Email.Split('@')[0])
+                    .Replace("{{email}}", request.Email);
 
                 await _emailService.SendEmailAsync(request.Email, subject, body, true);
 
