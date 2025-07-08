@@ -8,8 +8,6 @@ using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
 using JobOnlineAPI.Models;
-using static System.Net.WebRequestMethods;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
 namespace JobOnlineAPI.Controllers
@@ -796,7 +794,6 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpGet("GetCandidateData")]
-        //[TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetApplicantData([FromQuery] int? id, int? userId)
         {
