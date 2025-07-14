@@ -83,6 +83,17 @@ namespace JobOnlineAPI.Controllers
             return Ok(job);
         }
 
+        // [HttpGet("AllJobs")]
+        // public async Task<ActionResult<Job>> GetAllobs([FromQuery] int? id)
+        // {
+        //     var job = await _jobRepository.GetJobsAsync(id);
+        //     if (job == null)
+        //     {
+        //         return NotFound("ไม่พบข้อมูลตำแหน่งงาน");
+        //     }
+        //     return Ok(job);
+        // }
+
         [HttpPost]
         public async Task<ActionResult<Job>> AddJob(Job job)
         {

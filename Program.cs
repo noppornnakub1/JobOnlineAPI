@@ -14,10 +14,11 @@ using Microsoft.Extensions.FileProviders;
 using JobOnlineAPI.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
 
 var options = new WebApplicationOptions
 {
-    WebRootPath = "public", // µÑé§¤èÒ WebRootPath à»ç¹ 'public'
+    WebRootPath = "public", // ï¿½ï¿½é§¤ï¿½ï¿½ WebRootPath ï¿½ï¿½ 'public'
     ContentRootPath = Directory.GetCurrentDirectory()
 };
 var builder = WebApplication.CreateBuilder(options);
@@ -80,6 +81,7 @@ builder.Services.AddCors(options =>
     });
 });
 
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<DapperContextHrms>();

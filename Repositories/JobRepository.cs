@@ -15,17 +15,23 @@ namespace JobOnlineAPI.Repositories
         public async Task<IEnumerable<Job>> GetAllJobsAsync()
         {
             using var db = new SqlConnection(_connectionString);
-            string sql = "sp_GetAllJobs";
+            string sql = "sp_GetAllJobsV2";
             return await db.QueryAsync<Job>(sql, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<Job> GetJobByIdAsync(int id)
         {
             using var db = new SqlConnection(_connectionString);
-            string sql = "SELECT * FROM Jobs WHERE JobID = @Id";
-            var job = await db.QueryFirstOrDefaultAsync<Job>(sql, new { Id = id });
+            var parameters = new DynamicParameters();
+            parameters.Add("JobID", id);
+            var job = await db.QueryFirstOrDefaultAsync<Job>(
+                "sp_GetAllJobsV2",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
             return job ?? throw new InvalidOperationException($"No job found with ID {id}");
         }
+        
 
         public async Task<int> AddJobAsync(Job job)
         {
