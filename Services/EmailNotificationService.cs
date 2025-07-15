@@ -1,4 +1,6 @@
-﻿using Dapper;
+﻿using System.Data;
+using System.Text.Json;
+using Dapper;
 using JobOnlineAPI.DAL;
 using JobOnlineAPI.Models;
 
@@ -10,6 +12,7 @@ namespace JobOnlineAPI.Services
         Task<int> SendManagerEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendHrEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendNotificationEmailsAsync(ApplicantRequestData requestData);
+        Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult, string applicationFormUri);
     }
 
     public class EmailNotificationService(
@@ -32,6 +35,85 @@ namespace JobOnlineAPI.Services
                 parameters);
             return staffList.Select(staff => staff.Email?.Trim() ?? string.Empty)
                            .Where(email => !string.IsNullOrWhiteSpace(email));
+        }
+
+        public async Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult, string applicationFormUri)
+        {
+            var fullNameThai = GetFullName(req);
+            var jobTitle = req.TryGetValue("JobTitle", out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
+            var typeMail = req.TryGetValue("TypeMail", out var typeMailObj) && typeMailObj != null
+                ? typeMailObj is JsonElement t && t.ValueKind == JsonValueKind.String ? t.GetString() : typeMailObj.ToString()
+                : null;
+
+            int successCount = 0;
+
+            using var connection = _context.CreateConnection();
+            var results = await connection.QueryAsync<StaffEmail>(
+                "sp_GetDateSendEmailV3",
+                new { JobID = dbResult.ApplicantId },
+                commandType: CommandType.StoredProcedure);
+
+            var firstHr = results.FirstOrDefault(x => x.Role == 2);
+
+            if (!string.IsNullOrWhiteSpace(typeMail) && typeMail == "Applicant")
+            {
+                string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle);
+                foreach (var staff in results)
+                {
+                    var emailStaff = staff.Email?.Trim();
+                    if (string.IsNullOrWhiteSpace(emailStaff))
+                        continue;
+
+                    try
+                    {
+                        await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update information", managerBody, true);
+                        successCount++;
+                        _logger.LogInformation("Successfully sent email to {Email}", emailStaff);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send email to {Email}: {Message}", emailStaff, ex.Message);
+                    }
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(dbResult.ApplicantEmail))
+                {
+                    string applicantBody = GenerateEmailBody(true, dbResult.CompanyName, fullNameThai, jobTitle, firstHr, dbResult.ApplicantId, applicationFormUri);
+                    try
+                    {
+                        await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true);
+                        successCount++;
+                        _logger.LogInformation("Successfully sent email to {Email}", dbResult.ApplicantEmail);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send email to {Email}: {Message}", dbResult.ApplicantEmail, ex.Message);
+                    }
+                }
+
+                foreach (var staff in results)
+                {
+                    var emailStaff = staff.Email?.Trim();
+                    if (string.IsNullOrWhiteSpace(emailStaff))
+                        continue;
+
+                    string managerBody = GenerateEmailBody(false, emailStaff, fullNameThai, jobTitle, null, dbResult.ApplicantId, applicationFormUri);
+                    try
+                    {
+                        await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true);
+                        successCount++;
+                        _logger.LogInformation("Successfully sent email to {Email}", emailStaff);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send email to {Email}: {Message}", emailStaff, ex.Message);
+                    }
+                }
+            }
+
+            return successCount;
         }
 
         public async Task<int> SendHireToHrEmailsAsync(ApplicantRequestData requestData)
@@ -240,6 +322,72 @@ namespace JobOnlineAPI.Services
                 }
             }
             return successCount;
+        }
+
+        private static string GenerateManagerEmailBody(string fullNameThai, string jobTitle)
+        {
+            return $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ทุกท่าน</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>ผู้สมัคร คุณ {fullNameThai} ตำแหน่ง {jobTitle}</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>ได้ทำการกรอกข้อมูลในการสมัครงานเพิ่มเติมรอบ ที่ 2 หลังจากที่ได้รับคัดเลือกให้เข้าเป็นพนักงาน เรียบร้อยแล้ว ขั้นตอนถัดไป แผนก HR จะต้องทำการเข้าสู่ระบบและไปที่เมนูการว่าจ้าง เพื่อไปทำการตรวจและยืนยันข้อมูลของผู้สมัคร</p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
+        }
+
+        private static string GenerateEmailBody(bool isApplicant, string recipient, string fullNameThai, string jobTitle, StaffEmail? hr, int applicantId, string applicationFormUri)
+        {
+            if (isApplicant)
+            {
+                string companyName = recipient;
+                string hrEmail = hr?.Email ?? "-";
+                string hrTel = hr?.TELOFF ?? "-";
+                string hrName = hr?.NAMETHAI ?? "-";
+                return $@"
+                    <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                        <p style='margin: 0; font-weight: bold;'>{companyName}: ได้รับใบสมัครงานของคุณแล้ว</p>
+                        <p style='margin: 0;'>เรียน คุณ {fullNameThai}</p>
+                        <p>
+                            ขอบคุณสำหรับความสนใจในตำแหน่ง <strong>{jobTitle}</strong> ที่บริษัท <strong>{companyName}</strong> ของเรา<br>
+                            เราได้รับใบสมัครของท่านเรียบร้อยแล้ว ทีมงานฝ่ายทรัพยากรบุคคลของเราจะพิจารณาใบสมัครของท่าน และจะติดต่อกลับภายใน 7-14 วันทำการ หากคุณสมบัติของท่านตรงตามที่เรากำลังมองหา<br><br>
+                            หากมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม สามารถติดต่อเราได้ที่อีเมล 
+                            <span style='color: blue;'>{hrEmail}</span> หรือโทร 
+                            <span style='color: blue;'>{hrTel}</span><br>
+                            ขอบคุณอีกครั้งสำหรับความสนใจร่วมงานกับเรา
+                        </p>
+                        <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
+                        <p style='margin: 0;'>{hrName}</p>
+                        <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                        <p style='margin: 0;'>{companyName}</p>
+                        <br>
+                        <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    </div>";
+            }
+
+            return $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                    <p style='margin: 0;'>เรียนทุกท่าน</p>
+                    <p style='margin: 0;'>เรื่อง: แจ้งข้อมูลผู้สมัครตำแหน่ง <strong>{jobTitle}</strong></p>
+                    <p style='margin: 0;'>ทางฝ่ายรับสมัครงานขอแจ้งให้ทราบว่า คุณ <strong>{fullNameThai}</strong> ได้ทำการสมัครงานเข้ามาในตำแหน่ง <strong>{jobTitle}</strong></p>
+                    <p style='margin: 0;'>กรุณาคลิก Link:
+                        <a target='_blank' href='{applicationFormUri}?id={applicantId}'
+                            style='color: #007bff; text-decoration: underline;'>
+                            {applicationFormUri}
+                        </a>
+                        เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
+                    </p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
+        }
+
+        private static string GetFullName(IDictionary<string, object?> req)
+        {
+            req.TryGetValue("FirstNameThai", out var firstNameObj);
+            req.TryGetValue("LastNameThai", out var lastNameObj);
+            return $"{firstNameObj?.ToString() ?? ""} {lastNameObj?.ToString() ?? ""}".Trim();
         }
     }
 }
