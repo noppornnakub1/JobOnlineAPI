@@ -5,6 +5,8 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using JobOnlineAPI.Services;
 using Rotativa.AspNetCore;
+using System.Dynamic;
+using JobOnlineAPI.Filters;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -61,6 +63,8 @@ namespace JobOnlineAPI.Controllers
                 bool isArray = request.RootElement.ValueKind == JsonValueKind.Array;
 
                 // Convert uploaded files to base64 for signatures
+                var ITRequesterOld = formCollection["requesterSignatureFile"];
+                var ITOfficerOld = formCollection["itOfficerSignatureFile"];
                 var signatures = new Dictionary<string, string?>
                 {
                     ["RequesterSignature"] = await ConvertFileToBase64(formCollection.Files["requesterSignatureFile"]),
@@ -166,6 +170,12 @@ namespace JobOnlineAPI.Controllers
                         requestDataList.Add(requestData);
                     }
                 }
+                var requesterName = Request.Form["RequesterName"].ToString();
+                var approverName = Request.Form["ApproverName"].ToString();
+                var uatUserName = Request.Form["UATUserName"].ToString();
+                var itOfficerName = Request.Form["ITOfficerName"].ToString();
+                var otherApproverName = Request.Form["OtherApproverName"].ToString();
+                var otherUatUserName = Request.Form["OtherUATUserName"].ToString();
 
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
@@ -182,9 +192,15 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("SignatureID", parsedSignatureId, DbType.Int32);
                 parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-
+                parameters.Add("RequesterCode", requesterName);
+                parameters.Add("ApproverName", approverName);
+                parameters.Add("UATUserName", uatUserName);
+                parameters.Add("ITOfficerName", itOfficerName);
+                parameters.Add("OtherApproverName", otherApproverName);
+                parameters.Add("OtherUATUserName", otherUatUserName);
+                // usp_DynamicInsertUpdateT_EMP_IT_REQ
                 var result = await connection.QueryAsync(
-                    "usp_DynamicInsertUpdateT_EMP_IT_REQ",
+                    "usp_DynamicInsertUpdateT_EMP_IT_REQV2",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -513,5 +529,30 @@ namespace JobOnlineAPI.Controllers
             var base64String = $"data:{file.ContentType};base64,{Convert.ToBase64String(memoryStream.ToArray())}";
             return base64String;
         }
+        [HttpGet("dataUserAdmin")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
+        public async Task<IActionResult> GetDataUserAdmin([FromQuery] int? role, [FromQuery] string? department)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_dbConnection.ConnectionString);
+                var parameters = new DynamicParameters();
+                parameters.Add("@Role", role);
+                parameters.Add("@Department", department);
+
+                var result = await connection.QueryAsync(new CommandDefinition(
+                    "sp_GetDateSendEmail",
+                    parameters,
+                    commandType: CommandType.StoredProcedure));
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetDataUserAdmin");
+                return StatusCode(500, new { Error = "Internal server error", Details = ex.Message });
+            }
+        }
+
     }
 }
