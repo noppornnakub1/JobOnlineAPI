@@ -371,7 +371,7 @@ namespace JobOnlineAPI.Controllers
             int applicantId = applicantIdElement.GetInt32();
             string status = statusElement.GetString()!;
 
-            List<ExpandoObject> candidates = ExtractCandidates(data);
+            List<CandidateDto> candidates = ExtractCandidates(data);
 
             string? emailSend = data.TryGetValue("EmailSend", out object? emailSendObj) &&
                                emailSendObj is JsonElement emailSendElement &&
@@ -384,10 +384,10 @@ namespace JobOnlineAPI.Controllers
             string requesterPost = data.TryGetValue("POST", out object? postObj) ? postObj?.ToString() ?? "-" : "-";
             string tel = data.TryGetValue("Mobile", out object? telObj) ? telObj?.ToString() ?? "-" : "-";
             string telOff = data.TryGetValue("TELOFF", out object? telOffObj) ? telOffObj?.ToString() ?? "-" : "-";
-            string TypeMail = data.TryGetValue("TypeMail", out object? TypeMailObj) ? TypeMailObj?.ToString() ?? "-" : "-";
-            string Department = data.TryGetValue("Department", out object? DepartmentObj) ? DepartmentObj?.ToString() ?? "-" : "-";
-            string NameCon = data.TryGetValue("NameCon", out object? NameConObj) ? NameConObj?.ToString() ?? "-" : "-";
-            string? Remark = data.TryGetValue("Remark", out object? remarkObj) &&
+            string typeMail = data.TryGetValue("TypeMail", out object? typeMailObj) ? typeMailObj?.ToString() ?? "-" : "-";
+            string department = data.TryGetValue("Department", out object? departmentObj) ? departmentObj?.ToString() ?? "-" : "-";
+            string nameCon = data.TryGetValue("NameCon", out object? nameConObj) ? nameConObj?.ToString() ?? "-" : "-";
+            string? remark = data.TryGetValue("Remark", out object? remarkObj) &&
                             remarkObj is JsonElement remarkElement &&
                             remarkElement.ValueKind == JsonValueKind.String
                 ? remarkElement.GetString()
@@ -407,16 +407,16 @@ namespace JobOnlineAPI.Controllers
                 requesterMail,
                 requesterName,
                 requesterPost,
-                Department,
+                department,
                 tel,
                 telOff,
-                Remark,
+                remark,
                 jobTitle,
-                TypeMail,
-                NameCon);
+                typeMail,
+                nameCon);
         }
 
-        private List<ExpandoObject> ExtractCandidates(IDictionary<string, object?> data)
+        private List<CandidateDto> ExtractCandidates(IDictionary<string, object?> data)
         {
             if (!data.TryGetValue("Candidates", out object? candidatesObj) || candidatesObj == null)
                 return [];
@@ -427,7 +427,7 @@ namespace JobOnlineAPI.Controllers
 
             try
             {
-                return JsonSerializer.Deserialize<List<ExpandoObject>>(candidatesJson) ?? [];
+                return JsonSerializer.Deserialize<List<CandidateDto>>(candidatesJson) ?? [];
             }
             catch (JsonException ex)
             {

@@ -1,11 +1,10 @@
-﻿using System.Dynamic;
-
+﻿// Models/ApplicantRequestData.cs
 namespace JobOnlineAPI.Models
 {
     public sealed record ApplicantRequestData(
         int ApplicantId,
         string Status,
-        List<ExpandoObject> Candidates,
+        List<CandidateDto> Candidates,
         string? EmailSend,
         string RequesterMail,
         string RequesterName,
