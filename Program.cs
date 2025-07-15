@@ -12,13 +12,11 @@ using Microsoft.Extensions.Options;
 using Rotativa.AspNetCore;
 using Microsoft.Extensions.FileProviders;
 using JobOnlineAPI.Filters;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 
 var options = new WebApplicationOptions
 {
-    WebRootPath = "public", // ��駤�� WebRootPath �� 'public'
+    WebRootPath = "public",
     ContentRootPath = Directory.GetCurrentDirectory()
 };
 var builder = WebApplication.CreateBuilder(options);
@@ -33,36 +31,49 @@ using var loggerFactory = LoggerFactory.Create(logging =>
 });
 var logger = loggerFactory.CreateLogger<Program>();
 
-// Log configuration sources
 logger.LogInformation("Configuration sources:");
 foreach (var source in builder.Configuration.Sources)
 {
     logger.LogInformation(" - {Source}", source.GetType().Name);
 }
 
-// Clear default sources and add in specific order
 builder.Configuration.Sources.Clear();
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-// Log connection string and FileStorage path
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-logger.LogInformation("DefaultConnection: {ConnectionString}", connectionString ?? "null");
-logger.LogInformation("WebRootPath: {WebRootPath}", builder.Environment.WebRootPath);
-var fileStorageConfig = builder.Configuration.GetSection("FileStorage").Get<FileStorageConfig>();
-logger.LogInformation("FileStorage BasePath: {BasePath}", fileStorageConfig?.BasePath ?? "null");
-if (fileStorageConfig?.BasePath != null)
+if (string.IsNullOrEmpty(connectionString))
 {
-    var fullPath = Path.Combine(builder.Environment.ContentRootPath, fileStorageConfig.BasePath);
-    logger.LogInformation("Resolved FileStorage FullPath: {FullPath}", fullPath);
-    if (!Directory.Exists(fullPath))
-    {
-        Directory.CreateDirectory(fullPath);
-        logger.LogInformation("Created FileStorage directory: {Path}", fullPath);
-    }
+    logger.LogError("DefaultConnection string is missing or empty.");
+    throw new InvalidOperationException("DefaultConnection string is missing or empty.");
 }
+logger.LogInformation("DefaultConnection: {ConnectionString}", connectionString);
+
+var fileStorageConfig = builder.Configuration.GetSection("FileStorage").Get<FileStorageConfig>();
+if (fileStorageConfig == null || string.IsNullOrEmpty(fileStorageConfig.BasePath))
+{
+    logger.LogError("FileStorage configuration is missing or BasePath is not set.");
+    throw new InvalidOperationException("FileStorage configuration is missing or BasePath is not set.");
+}
+logger.LogInformation("FileStorage BasePath: {BasePath}", fileStorageConfig.BasePath);
+
+var fullPath = Path.Combine(builder.Environment.ContentRootPath, fileStorageConfig.BasePath);
+logger.LogInformation("Resolved FileStorage FullPath: {FullPath}", fullPath);
+if (!Directory.Exists(fullPath))
+{
+    Directory.CreateDirectory(fullPath);
+    logger.LogInformation("Created FileStorage directory: {Path}", fullPath);
+}
+
+var emailSettings = builder.Configuration.GetSection("EmailSettings").Get<EmailSettings>();
+if (emailSettings == null || string.IsNullOrEmpty(emailSettings.SmtpServer))
+{
+    logger.LogError("EmailSettings configuration is missing or SmtpServer is not set.");
+    throw new InvalidOperationException("EmailSettings configuration is missing or SmtpServer is not set.");
+}
+logger.LogInformation("EmailSettings SmtpServer: {SmtpServer}", emailSettings.SmtpServer);
 
 builder.Services.AddLogging(logging =>
 {
@@ -99,16 +110,17 @@ builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<ILdapService, LdapService>();
 builder.Services.AddScoped<IConsentService, ConsentService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<INetworkShareService, NetworkShareService>();
 builder.Services.AddScoped<FileProcessingService>();
 builder.Services.Configure<FileStorageConfig>(
     builder.Configuration.GetSection("FileStorage"));
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
 
 builder.Services.AddSingleton(resolver =>
     resolver.GetRequiredService<IOptions<FileStorageConfig>>().Value);
-
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 builder.Services.AddScoped<IDbConnection>(sp =>
 {

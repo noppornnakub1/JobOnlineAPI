@@ -15,23 +15,7 @@ namespace JobOnlineAPI.Controllers
     [Route("api/[controller]")]
     public class ApplicantNewController : ControllerBase
     {
-        private readonly DapperContext _context; private readonly IEmailService _emailService; private readonly FileProcessingService _fileProcessingService; private readonly INetworkShareService _networkShareService; private readonly ILogger _logger; private readonly string _applicationFormUri; private const string JobTitleKey = "JobTitle"; private const string JobIdKey = "JobID"; private const string ApplicantIdKey = "ApplicantID"; private const string UserIdKey = "UserId";
-
-        private sealed record ApplicantRequestData(
-            int ApplicantId,
-            string Status,
-            List<ExpandoObject> Candidates,
-            string? EmailSend,
-            string RequesterMail,
-            string RequesterName,
-            string RequesterPost,
-            string Department,
-            string Tel,
-            string TelOff,
-            string? Remark,
-            string JobTitle,
-            string TypeMail,
-            string NameCon);
+        private readonly DapperContext _context; private readonly IEmailService _emailService; private readonly FileProcessingService _fileProcessingService; private readonly INetworkShareService _networkShareService; private readonly ILogger _logger; private readonly IEmailNotificationService _emailNotificationService; private readonly string _applicationFormUri; private const string JobTitleKey = "JobTitle"; private const string JobIdKey = "JobID"; private const string ApplicantIdKey = "ApplicantID"; private const string UserIdKey = "UserId";
 
         private sealed record JobApprovalData(
             int JobId,
@@ -44,6 +28,7 @@ namespace JobOnlineAPI.Controllers
             FileProcessingService fileProcessingService,
             INetworkShareService networkShareService,
             ILogger<ApplicantNewController> logger,
+            IEmailNotificationService emailNotificationService,
             IOptions<FileStorageConfig> config)
         {
             _context = context;
@@ -51,10 +36,9 @@ namespace JobOnlineAPI.Controllers
             _fileProcessingService = fileProcessingService;
             _networkShareService = networkShareService;
             _logger = logger;
-
+            _emailNotificationService = emailNotificationService;
             var fileStorageConfig = config.Value ?? throw new ArgumentNullException(nameof(config));
             _applicationFormUri = fileStorageConfig.ApplicationFormUri ?? throw new InvalidOperationException("Application form URI is not configured.");
-            _logger.LogInformation("ApplicationFormUri set to: {_applicationFormUri}", _applicationFormUri);
         }
 
         [HttpPost("submit-application-with-filesV2")]
@@ -403,9 +387,6 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpPut("updateApplicantStatus")]
-        [TypeFilter(typeof(JwtAuthorizeAttribute))]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateApplicantStatus([FromBody] ExpandoObject? request)
         {
             try
@@ -420,6 +401,7 @@ namespace JobOnlineAPI.Controllers
                 var validationResult = ValidateInput(data);
                 if (validationResult != null)
                     return validationResult;
+
                 var requestData = ExtractRequestData(data);
                 if (requestData == null)
                     return BadRequest("Invalid ApplicantID or Status format.");
@@ -428,27 +410,27 @@ namespace JobOnlineAPI.Controllers
 
                 if (typeMail == "Hire")
                 {
-                    int emailSuccessCount = await SendHireToHrEmails(requestData);
+                    await _emailNotificationService.SendHireToHrEmailsAsync(requestData);
                 }
                 else if (typeMail == "Selected")
                 {
-                    int emailSuccessCount = await SendHrEmails(requestData);
+                    await _emailNotificationService.SendHrEmailsAsync(requestData);
                 }
                 else if (typeMail == "Confirmed")
                 {
-                    int emailSuccessCount = await SendManagerEmails(requestData);
+                    await _emailNotificationService.SendManagerEmailsAsync(requestData);
                 }
                 else if (typeMail == "notiMail")
                 {
-                    int emailSuccessCount = await SendMailNoti(requestData);
+                    await _emailNotificationService.SendNotificationEmailsAsync(requestData);
                 }
 
                 if (typeMail != "notiMail")
                 {
                     await UpdateStatusInDatabaseV2(requestData);
                 }
-                return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
 
+                return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
             }
             catch (Exception ex)
             {
