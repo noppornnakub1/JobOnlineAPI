@@ -170,12 +170,17 @@ namespace JobOnlineAPI.Controllers
                         requestDataList.Add(requestData);
                     }
                 }
-                var requesterName = Request.Form["RequesterName"].ToString();
-                var approverName = Request.Form["ApproverName"].ToString();
-                var uatUserName = Request.Form["UATUserName"].ToString();
-                var itOfficerName = Request.Form["ITOfficerName"].ToString();
-                var otherApproverName = Request.Form["OtherApproverName"].ToString();
-                var otherUatUserName = Request.Form["OtherUATUserName"].ToString();
+                var requesterName = Request.Form["RequesterName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+                var approverName = Request.Form["ApproverName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+                var uatUserName = Request.Form["UATUserName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+                var itOfficerName = Request.Form["ITOfficerName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+                var otherApproverName = Request.Form["OtherApproverName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+                var otherUatUserName = Request.Form["OtherUATUserName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+
+                var IT_ACK_DATE = Request.Form["IT_ACK_DATE"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+                var IT_PIC = Request.Form["IT_PIC"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+                var IT_COMMENT = Request.Form["IT_COMMENT"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
+
 
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
@@ -183,6 +188,9 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("JsonData", serializedJsonData);
                 parameters.Add("CreatedBy", createdBy);
                 parameters.Add("ReqNo", jsonReqNo);
+                parameters.Add("IT_ACK_DATE", IT_ACK_DATE);
+                parameters.Add("IT_PIC", IT_PIC);
+                parameters.Add("IT_COMMENT", IT_COMMENT);
                 parameters.Add("RequesterSignature", signatures["RequesterSignature"]);
                 parameters.Add("ApproverSignature", signatures["ApproverSignature"]);
                 parameters.Add("UATUserSignature", signatures["UATUserSignature"]);
@@ -190,14 +198,15 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("OtherApproverSignature", signatures["OtherApproverSignature"]);
                 parameters.Add("OtherUATUserSignature", signatures["OtherUATUserSignature"]);
                 parameters.Add("SignatureID", parsedSignatureId, DbType.Int32);
-                parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
-                parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
                 parameters.Add("RequesterCode", requesterName);
                 parameters.Add("ApproverName", approverName);
                 parameters.Add("UATUserName", uatUserName);
                 parameters.Add("ITOfficerName", itOfficerName);
                 parameters.Add("OtherApproverName", otherApproverName);
                 parameters.Add("OtherUATUserName", otherUatUserName);
+                parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+
                 // usp_DynamicInsertUpdateT_EMP_IT_REQ
                 var result = await connection.QueryAsync(
                     "usp_DynamicInsertUpdateT_EMP_IT_REQV2",
@@ -277,9 +286,9 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
                 parameters.Add("ApplicantID", applicantId);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-
+                // usp_GetT_EMP_IT_REQ_ByReqNoV2
                 using var multi = await connection.QueryMultipleAsync(
-                    "usp_GetT_EMP_IT_REQ_ByReqNoV2",
+                    "usp_GetT_EMP_IT_REQ_ByReqNoV3",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
