@@ -177,6 +177,7 @@ namespace JobOnlineAPI.Controllers
                 var otherApproverName = Request.Form["OtherApproverName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
                 var otherUatUserName = Request.Form["OtherUATUserName"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
 
+
                 var IT_ACK_DATE = Request.Form["IT_ACK_DATE"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
                 var IT_PIC = Request.Form["IT_PIC"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
                 var IT_COMMENT = Request.Form["IT_COMMENT"].ToString().Split(',').FirstOrDefault()?.Trim() ?? "";
@@ -191,6 +192,7 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("IT_ACK_DATE", IT_ACK_DATE);
                 parameters.Add("IT_PIC", IT_PIC);
                 parameters.Add("IT_COMMENT", IT_COMMENT);
+                
                 parameters.Add("RequesterSignature", signatures["RequesterSignature"]);
                 parameters.Add("ApproverSignature", signatures["ApproverSignature"]);
                 parameters.Add("UATUserSignature", signatures["UATUserSignature"]);
@@ -540,17 +542,16 @@ namespace JobOnlineAPI.Controllers
         }
         [HttpGet("dataUserAdmin")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
-        public async Task<IActionResult> GetDataUserAdmin([FromQuery] int? role, [FromQuery] string? department)
+        public async Task<IActionResult> GetDataUserAdmin([FromQuery] int? ApplicantID)
         {
             try
             {
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
-                parameters.Add("@Role", role);
-                parameters.Add("@Department", department);
+                parameters.Add("@ApplicantID", ApplicantID);
 
                 var result = await connection.QueryAsync(new CommandDefinition(
-                    "sp_GetDateSendEmail",
+                    "sp_listNameSignatures",
                     parameters,
                     commandType: CommandType.StoredProcedure));
 
