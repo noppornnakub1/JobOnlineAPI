@@ -233,12 +233,18 @@ namespace JobOnlineAPI.Services
                 .Select(candidate => candidate.Email ?? "")
                 .ToList() ?? [];
 
+            // var candidateApplicantIDs = requestData.Candidates?
+            //     .Select(candidate => candidate.ApplicantID ?? "")
+            //     .ToList() ?? [];
             var candidateApplicantIDs = requestData.Candidates?
-                .Select(candidate => candidate.ApplicantID ?? "")
-                .ToList() ?? [];
+            .Select(candidate => candidate.ApplicantID)
+            .ToList() ?? new List<int>();
 
             string candidateName = candidateNames.FirstOrDefault() ?? "ผู้สมัคร";
-            string candidateApplicantID = candidateApplicantIDs.FirstOrDefault() ?? "0";
+            // string candidateApplicantID = candidateApplicantIDs.FirstOrDefault() ?? "0";
+            string candidateApplicantID = candidateApplicantIDs.Any()
+            ? candidateApplicantIDs.First().ToString()
+            : "0";
 
             using var connection = _context.CreateConnection();
             var url = new DynamicParameters();

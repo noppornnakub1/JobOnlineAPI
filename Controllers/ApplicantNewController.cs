@@ -368,7 +368,7 @@ namespace JobOnlineAPI.Controllers
                 return null;
             }
 
-            int applicantId = applicantIdElement.GetInt32();
+            int ApplicantID = applicantIdElement.GetInt32();
             string status = statusElement.GetString()!;
 
             List<CandidateDto> candidates = ExtractCandidates(data);
@@ -399,21 +399,39 @@ namespace JobOnlineAPI.Controllers
                 ? jobTitleElement.GetString() ?? "-"
                 : "-";
 
-            return new ApplicantRequestData(
-                applicantId,
-                status,
-                candidates,
-                emailSend,
-                requesterMail,
-                requesterName,
-                requesterPost,
-                department,
-                tel,
-                telOff,
-                remark,
-                jobTitle,
-                typeMail,
-                nameCon);
+            // return new ApplicantRequestData(
+            //     ApplicantID,
+            //     status,
+            //     candidates,
+            //     emailSend,
+            //     requesterMail,
+            //     requesterName,
+            //     requesterPost,
+            //     department,
+            //     tel,
+            //     telOff,
+            //     remark,
+            //     jobTitle,
+            //     typeMail,
+            //     nameCon);
+            return new ApplicantRequestData
+            {
+                ApplicantID = ApplicantID,
+                Status = status,
+                Candidates = candidates,
+                EmailSend = emailSend,
+                RequesterMail = requesterMail,
+                RequesterName = requesterName,
+                RequesterPost = requesterPost,
+                Department = department,
+                Tel = tel,
+                TelOff = telOff,
+                Remark = remark,
+                JobTitle = jobTitle,
+                TypeMail = typeMail,
+                NameCon = nameCon
+            };
+
         }
 
         private List<CandidateDto> ExtractCandidates(IDictionary<string, object?> data)
@@ -454,7 +472,7 @@ namespace JobOnlineAPI.Controllers
             using var connection = _context.CreateConnection();
             var parameters = new DynamicParameters();
 
-            parameters.Add("@ApplicantID", requestData.ApplicantId);
+            parameters.Add("@ApplicantID", requestData.ApplicantID);
             parameters.Add("@Status", requestData.Status ?? "");
             if (!string.IsNullOrWhiteSpace(requestData.Remark))
             {

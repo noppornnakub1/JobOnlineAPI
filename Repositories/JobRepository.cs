@@ -192,5 +192,12 @@ namespace JobOnlineAPI.Repositories
         }
     }
 
-    internal record StaffEmail(string? CODEMPID, string? NAMETHAI, string? NAMECOSTCENT, string? Email);
+  internal class StaffEmail
+    {
+        public string? CODEMPID { get; set; }
+        public string? NAMETHAI { get; set; }
+        public string? NAMECOSTCENT { get; set; }
+        public string? Email { get; set; }
+    }
+
 }
