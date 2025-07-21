@@ -238,11 +238,11 @@ namespace JobOnlineAPI.Services
             //     .ToList() ?? [];
             var candidateApplicantIDs = requestData.Candidates?
             .Select(candidate => candidate.ApplicantID)
-            .ToList() ?? new List<int>();
+            .ToList() ?? [];
 
             string candidateName = candidateNames.FirstOrDefault() ?? "ผู้สมัคร";
             // string candidateApplicantID = candidateApplicantIDs.FirstOrDefault() ?? "0";
-            string candidateApplicantID = candidateApplicantIDs.Any()
+            string candidateApplicantID = candidateApplicantIDs.Count != 0
             ? candidateApplicantIDs.First().ToString()
             : "0";
 
