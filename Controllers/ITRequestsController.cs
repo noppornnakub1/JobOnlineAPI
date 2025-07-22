@@ -629,6 +629,7 @@ namespace JobOnlineAPI.Controllers
                 .ToList();
             var firstRecord = result.FirstOrDefault();
             string hrBody = string.Empty;
+            string SubjectMail = string.Empty;
             if (TypeCondition == "REQIT")
             {
                 hrBody = $@"
@@ -649,6 +650,7 @@ namespace JobOnlineAPI.Controllers
                         <br>
                         <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                     </div>";
+                SubjectMail = $@"ขอความกรุณาอนุมัติคำขอใช้งาน IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}";
             }
             if (TypeCondition == "RESIT")
             {
@@ -662,8 +664,9 @@ namespace JobOnlineAPI.Controllers
                         <br>
                         <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                     </div>";
+                SubjectMail = $@"แจ้งคำขอใช้งาน IT ได้รับอนุมัติ - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}";
             }
-           if (TypeCondition == "ITCompleted")
+            if (TypeCondition == "ITCompleted")
             {
                 hrBody = $@"
                     <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
@@ -675,9 +678,10 @@ namespace JobOnlineAPI.Controllers
                         <br>
                         <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                     </div>";
+                SubjectMail = $@"แจ้งผลการดำเนินการ IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}";
             }
 
-            return await SendEmailsAsync(emails!, "ขอความกรุณาอนุมัติคำขอใช้งาน IT - คุณ", hrBody);
+            return await SendEmailsAsync(emails!,SubjectMail, hrBody);
         }
 
     }

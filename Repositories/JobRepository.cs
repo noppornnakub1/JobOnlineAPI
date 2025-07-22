@@ -4,14 +4,17 @@ using JobOnlineAPI.Models;
 using Microsoft.Data.SqlClient;
 using JobOnlineAPI.Services;
 
+
 namespace JobOnlineAPI.Repositories
 {
-    public class JobRepository(IConfiguration configuration, IEmailService emailService) : IJobRepository
+    
+
+    public class JobRepository(IConfiguration configuration, IEmailService emailService, IEmailNotificationService emailNotificationService) : IJobRepository
     {
         private readonly string _connectionString = configuration?.GetConnectionString("DefaultConnection")
                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
         private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
-
+        private readonly IEmailNotificationService  _emailNotificationService = emailNotificationService ?? throw new ArgumentNullException(nameof(emailNotificationService));
         public async Task<IEnumerable<Job>> GetAllJobsAsync()
         {
             using var db = new SqlConnection(_connectionString);
@@ -31,7 +34,7 @@ namespace JobOnlineAPI.Repositories
             );
             return job ?? throw new InvalidOperationException($"No job found with ID {id}");
         }
-        
+
 
         public async Task<int> AddJobAsync(Job job)
         {
@@ -79,12 +82,12 @@ namespace JobOnlineAPI.Repositories
         {
             var roleSendMail = GetRoleSendMail(job.Role);
             var emailParameters = new DynamicParameters();
-            emailParameters.Add("@CreatorRole", job.Role );
+            emailParameters.Add("@CreatorRole", job.Role);
             emailParameters.Add("@CreatorDepartment", job.Department);
-            emailParameters.Add("@OpenForEmpID", 
-                string.IsNullOrWhiteSpace(job.OpenFor) 
-                    ? (object)DBNull.Value 
-                    : job.OpenFor, 
+            emailParameters.Add("@OpenForEmpID",
+                string.IsNullOrWhiteSpace(job.OpenFor)
+                    ? (object)DBNull.Value
+                    : job.OpenFor,
                 DbType.String);
 
             try
@@ -104,10 +107,10 @@ namespace JobOnlineAPI.Repositories
                     .Where(s => !string.IsNullOrWhiteSpace(s.Email))
                     .Select(async s =>
                     {
-                            string openForInfo = s.CODEMPID == job.OpenFor
-                                ? $"<li style='color: #333;'><strong>เปิดให้:</strong> {s.NAMETHAI} Requester: {s.NAMECOSTCENT}</li>"
-                                : "";
-                            var hrBody = $@"
+                        string openForInfo = s.CODEMPID == job.OpenFor
+                            ? $"<li style='color: #333;'><strong>เปิดให้:</strong> {s.NAMETHAI} Requester: {s.NAMECOSTCENT}</li>"
+                            : "";
+                        var hrBody = $@"
                                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
                                     <table style='width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
                                         <tr>
@@ -137,8 +140,8 @@ namespace JobOnlineAPI.Repositories
                                     <p style='font-size: 14px;'>กรุณา Link: <a href='https://oneejobs27.oneeclick.co:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                                 </div>";
 
-                            await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true);
-                            Interlocked.Increment(ref successCount);
+                        await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true);
+                        Interlocked.Increment(ref successCount);
                     });
 
                 await Task.WhenAll(emailTasks);
@@ -175,12 +178,13 @@ namespace JobOnlineAPI.Repositories
                 job.NumberOfPositions,
                 job.Department,
                 job.JobStatus,
+                job.ApprovalStatus,
                 PostedDate = job.PostedDate.HasValue ? (object)job.PostedDate.Value : DBNull.Value,
                 ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
                 ModifiedBy = job.ModifiedBy.HasValue ? (object)job.ModifiedBy.Value : DBNull.Value,
                 ModifiedDate = job.ModifiedDate.HasValue ? (object)job.ModifiedDate.Value : DBNull.Value
             };
-
+            // await SendJobNotificationEmailsAsync(job, db);
             return await db.ExecuteAsync(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 

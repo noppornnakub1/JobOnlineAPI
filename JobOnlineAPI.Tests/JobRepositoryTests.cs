@@ -11,6 +11,7 @@ namespace JobOnlineAPI.JobOnlineAPI.Tests
         private readonly Mock<IConfiguration> _configurationMock;
         private readonly Mock<IEmailService> _emailServiceMock;
         private readonly JobRepository _repository;
+        private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock;
 
         public JobRepositoryTests()
         {
@@ -19,7 +20,9 @@ namespace JobOnlineAPI.JobOnlineAPI.Tests
                 .Returns("Server=localhost;Database=TestDB;Trusted_Connection=True;");
 
             _emailServiceMock = new Mock<IEmailService>();
-            _repository = new JobRepository(_configurationMock.Object, _emailServiceMock.Object);
+            _emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+            _repository = new JobRepository(_configurationMock.Object, _emailServiceMock.Object, _emailNotificationServiceMock.Object);
+
         }
 
         [Fact]

@@ -13,6 +13,7 @@ namespace JobOnlineAPI.Services
         Task<int> SendHrEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendNotificationEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult, string applicationFormUri);
+         Task<int> SendEmailsJobsStatusAsync(int JobID);
     }
 
     public class EmailNotificationService(
@@ -128,8 +129,6 @@ namespace JobOnlineAPI.Services
 
             string hrBody = $@"
             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
-                <br>
                 <p style='margin: 0 0 10px 0;'>
                     เรียน ฝ่ายสารรหาบุคคลากร<br>
                     ทาง Hiring Manager แผนก {requestData.NameCon} <br> คุณ {requestData.RequesterName} เบอร์โทร: {tel} อีเมล: {requestData.RequesterMail} <br> 
@@ -139,7 +138,7 @@ namespace JobOnlineAPI.Services
                     โดยมี ลำดับรายชื่อการติดต่อดังนี้ <br> {candidateNamesString}
                 </p>
                 <br>
-                <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> โดยให้ทำการติดต่อ ผู้มัครลำดับที่ 1 ก่อน หากเจรจาไม่สสำเร็จ ให้ทำการติดต่อกับผู้มัครลำดับต่อไป <span style='color: red; font-weight: bold;'>*</span></p>
+                <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> โดยให้ทำการติดต่อ ผู้มัครลำดับที่ 1 ก่อน หากเจรจาไม่สำเร็จ ให้ทำการติดต่อกับผู้มัครลำดับต่อไป <span style='color: red; font-weight: bold;'>*</span></p>
                 <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> กรุณา Login เข้าสู่ระบบ https://oneejobs.oneeclick.co:7191/LoginAdmin และไปที่ Menu การว่าจ้าง เพื่อตอบกลับคำขอนี้ <span style='color: red; font-weight: bold;'>*</span></p>
                 <br>
                 <p style='color: red; font-weight: bold;'>**Email อัตโนมัติ โปรดอย่าตอบกลับ**</p>
@@ -362,5 +361,51 @@ namespace JobOnlineAPI.Services
             req.TryGetValue("LastNameThai", out var lastNameObj);
             return $"{firstNameObj?.ToString() ?? ""} {lastNameObj?.ToString() ?? ""}".Trim();
         }
+
+        public async Task<int> SendEmailsJobsStatusAsync(int JobID)
+        {
+            using var connection = _context.CreateConnection();
+            var parameters = new DynamicParameters();
+            parameters.Add("@JobID", JobID);
+            var result = await connection.QueryAsync<dynamic>(
+                "GetDataSendMailJobs @JobID",
+                parameters);
+            var emails = result
+                .Select(r => ((string?)r?.EMAIL)?.Trim())
+                .Where(email => !string.IsNullOrWhiteSpace(email))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var firstRecord = result.FirstOrDefault();
+            string hrBody = string.Empty;
+            string SubjectMail = string.Empty;
+            hrBody = $@"
+            <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
+                <p style='margin: 0;'>เรียนคุณ {firstRecord?.NAMETHAI} และคุณ {firstRecord?.ApproveNameThai},</p>
+
+                {(firstRecord?.ApprovalStatus == "Approved" ? $@"
+                    <p>
+                        ฝ่ายทรัพยากรบุคคลได้ดำเนินการ <strong>อนุมัติ</strong> คำขอเปิดรับสมัครงานในตำแหน่ง 
+                        <strong>{firstRecord?.JobTitle}</strong> เรียบร้อยแล้วค่ะ
+                    </p>
+                " : $@"
+                    <p>
+                        ฝ่ายทรัพยากรบุคคลได้ดำเนินการ <strong>ไม่อนุมัติ</strong> คำขอเปิดรับสมัครงานในตำแหน่ง 
+                        <strong>{firstRecord?.JobTitle}</strong> ด้วยเหตุผลดังต่อไปนี้ค่ะ:
+                    </p>
+                    <blockquote style='background-color:#fff3f3; padding: 10px; border-left: 4px solid #ff4d4f;'>
+                        <strong>{firstRecord?.Remark}</strong>
+                    </blockquote>
+                    <p>หากต้องการข้อมูลเพิ่มเติม กรุณาติดต่อฝ่ายทรัพยากรบุคคลโดยตรงค่ะ</p>
+                ")}
+
+                <p style='margin-top: 30px;'>ด้วยความเคารพ,</p>
+                <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                <br>
+                <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+            </div>";
+            SubjectMail = $@"แจ้งสถานะคำขอเปิดรับสมัครพนักงาน - ตำแหน่ง {firstRecord?.JobTitle}";
+            return await SendEmailsAsync(emails!, SubjectMail, hrBody);
+        }
+
     }
 }
