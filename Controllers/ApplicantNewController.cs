@@ -71,6 +71,7 @@ namespace JobOnlineAPI.Controllers
                 await _networkShareService.ConnectAsync();
                 try
                 {
+                    
                     var fileMetadatas = await _fileProcessingService.ProcessFilesAsync(files);
                     var dbResult = await SaveApplicationToDatabaseAsync(req, jobId, fileMetadatas);
                     _fileProcessingService.MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
@@ -326,6 +327,7 @@ namespace JobOnlineAPI.Controllers
                 {
                     await _emailNotificationService.SendNotificationEmailsAsync(requestData);
                 }
+
 
                 if (typeMail != "notiMail")
                 {
@@ -624,7 +626,7 @@ namespace JobOnlineAPI.Controllers
             var parameters = new DynamicParameters();
             parameters.Add("@JobID", JobID);
             var result = await connection.QueryAsync<dynamic>(
-                "GetDataSendMailJobs @JobID",
+                "sp_GetDataSendMailJobs @JobID",
                 parameters);
             var emails = result
                 .Select(r => ((string?)r?.EMAIL)?.Trim())

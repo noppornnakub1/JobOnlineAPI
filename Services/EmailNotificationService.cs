@@ -13,7 +13,7 @@ namespace JobOnlineAPI.Services
         Task<int> SendHrEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendNotificationEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult, string applicationFormUri);
-         Task<int> SendEmailsJobsStatusAsync(int JobID);
+        Task<int> SendEmailsJobsStatusAsync(int JobID);
     }
 
     public class EmailNotificationService(
@@ -68,6 +68,39 @@ namespace JobOnlineAPI.Services
                     try
                     {
                         await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update information", managerBody, true);
+                        successCount++;
+                        _logger.LogInformation("Successfully sent email to {Email}", emailStaff);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send email to {Email}: {Message}", emailStaff, ex.Message);
+                    }
+                }
+            } 
+            else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail == "HRConfirmed")
+            {
+                string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle);
+                foreach (var staff in results)
+                {
+                    var emailStaff = staff.Email?.Trim();
+                    if (string.IsNullOrWhiteSpace(emailStaff))
+                        continue;
+
+                    try
+                    {
+                        managerBody = $@"
+                            <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ทุกท่าน</p>
+                                <p>ขอแจ้งให้ทราบว่า ขณะนี้ได้ดำเนินการสรรหาและตกลงกับผู้สมัคร {fullNameThai} เรียบร้อยแล้วค่ะ</p>
+                                <p style='font-weight: bold; margin: 0 0 10px 0;'>ผู้สมัคร คุณ {fullNameThai} ตำแหน่ง {jobTitle}</p>
+                                <br>
+                                <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
+                                <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
+                                <br>
+                                <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                            </div>";
+                        string SubjectMail = $@"แจ้งผลการสรรหา - คุณ {fullNameThai}";
+                        await _emailService.SendEmailAsync(emailStaff, SubjectMail, managerBody, true);
                         successCount++;
                         _logger.LogInformation("Successfully sent email to {Email}", emailStaff);
                     }
@@ -368,7 +401,7 @@ namespace JobOnlineAPI.Services
             var parameters = new DynamicParameters();
             parameters.Add("@JobID", JobID);
             var result = await connection.QueryAsync<dynamic>(
-                "GetDataSendMailJobs @JobID",
+                "sp_GetDataSendMailJobs @JobID",
                 parameters);
             var emails = result
                 .Select(r => ((string?)r?.EMAIL)?.Trim())

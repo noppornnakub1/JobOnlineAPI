@@ -14,7 +14,7 @@ namespace JobOnlineAPI.Repositories
         private readonly string _connectionString = configuration?.GetConnectionString("DefaultConnection")
                 ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' is not found.");
         private readonly IEmailService _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
-        private readonly IEmailNotificationService  _emailNotificationService = emailNotificationService ?? throw new ArgumentNullException(nameof(emailNotificationService));
+        private readonly IEmailNotificationService _emailNotificationService = emailNotificationService ?? throw new ArgumentNullException(nameof(emailNotificationService));
         public async Task<IEnumerable<Job>> GetAllJobsAsync()
         {
             using var db = new SqlConnection(_connectionString);
@@ -137,7 +137,7 @@ namespace JobOnlineAPI.Repositories
                                             </td>
                                         </tr>
                                     </table>
-                                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://oneejobs27.oneeclick.co:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>https://oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
+                                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://oneejobs27.oneeclick.co:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                                 </div>";
 
                         await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true);
@@ -178,7 +178,7 @@ namespace JobOnlineAPI.Repositories
                 job.NumberOfPositions,
                 job.Department,
                 job.JobStatus,
-                job.ApprovalStatus,
+                //job.ApprovalStatus,
                 PostedDate = job.PostedDate.HasValue ? (object)job.PostedDate.Value : DBNull.Value,
                 ClosingDate = job.ClosingDate.HasValue ? (object)job.ClosingDate.Value : DBNull.Value,
                 ModifiedBy = job.ModifiedBy.HasValue ? (object)job.ModifiedBy.Value : DBNull.Value,

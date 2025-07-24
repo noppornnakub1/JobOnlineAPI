@@ -619,8 +619,9 @@ namespace JobOnlineAPI.Controllers
             var parameters = new DynamicParameters();
             parameters.Add("@ApplicantID", ApplicantID);
             parameters.Add("@TypeCondition", TypeCondition);
+            // sp_GetDateSendEMailIT
             var result = await connection.QueryAsync<dynamic>(
-                "EXEC sp_GetDateSendEmailIT @ApplicantID, @TypeCondition",
+                "EXEC sp_GetDateSendEmailITV2 @ApplicantID, @TypeCondition",
                 parameters);
             var emails = result
                 .Select(r => ((string?)r?.EMAIL)?.Trim())
@@ -638,9 +639,9 @@ namespace JobOnlineAPI.Controllers
                         <p style='margin: 0;'>เรียน คุณ {firstRecord?.EMPITNameThai},</p>
                         <p>ขอแจ้งให้ทราบว่า มีคำขอใช้งานระบบ IT สำหรับ คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai} เข้ามา <br>กรุณาพิจารณาและดำเนินการอนุมัติผ่านระบบตามความเหมาะสม</p>
                         <p style='margin: 0;'>กรุณาคลิก Link:
-                            <a target='_blank' href='https://oneejobs27.oneeclick.co:7191/LoginAdmin?ApId={ApplicantID}&ITReq=FromMailIT'
+                            <a target='_blank' href='https://oneejobs27.oneeclick.co/LoginAdmin?ApId={ApplicantID}&ITReq=FromMailIT'
                                 style='color: #007bff; text-decoration: underline;'>
-                                https://oneejobs27.oneeclick.co:7191/ITRequestForm/ITRequsetForm
+                                https://oneejobs27.oneeclick.co
                             </a>
                             เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
                         </p>     
