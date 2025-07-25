@@ -331,7 +331,27 @@ namespace JobOnlineAPI.Controllers
 
                 if (typeMail != "notiMail")
                 {
-                    await UpdateStatusInDatabaseV2(requestData);
+                    bool hasRankOfSelect = requestData.Candidates?
+                        .Any(c => c.RankOfSelect.HasValue) == true;
+                    if (hasRankOfSelect)
+                    {
+                        foreach (var candidate in requestData.Candidates!)
+                        {
+                            var singleUpdate = new ApplicantRequestData
+                            {
+                                ApplicantID = candidate.ApplicantID,
+                                Status = requestData.Status,
+                                Remark = requestData.Remark,
+                                RankOfSelect = candidate.RankOfSelect
+                            };
+
+                            await UpdateStatusInDatabaseV2(singleUpdate);
+                        }
+                    }
+                    else
+                    {
+                        await UpdateStatusInDatabaseV2(requestData);
+                    }
                 }
 
                 return Ok(new { message = "อัปเดตสถานะเรียบร้อย" });
@@ -401,6 +421,9 @@ namespace JobOnlineAPI.Controllers
                 ? jobTitleElement.GetString() ?? "-"
                 : "-";
 
+            int? rankOfSelect = data.TryGetValue("RankOfSelect", out var rankObj) && int.TryParse(rankObj?.ToString(), out int RankOfSelect)
+                ? RankOfSelect
+                : (int?)null;
             // return new ApplicantRequestData(
             //     ApplicantID,
             //     status,
@@ -431,7 +454,8 @@ namespace JobOnlineAPI.Controllers
                 Remark = remark,
                 JobTitle = jobTitle,
                 TypeMail = typeMail,
-                NameCon = nameCon
+                NameCon = nameCon,
+                RankOfSelect = rankOfSelect
             };
 
         }
@@ -476,10 +500,17 @@ namespace JobOnlineAPI.Controllers
 
             parameters.Add("@ApplicantID", requestData.ApplicantID);
             parameters.Add("@Status", requestData.Status ?? "");
+            // parameters.Add("@RankOfSelect", requestData.Status ?? "");
             if (!string.IsNullOrWhiteSpace(requestData.Remark))
             {
                 parameters.Add("@Remark", requestData.Remark);
             }
+
+            if (requestData.RankOfSelect != null)
+            {
+                parameters.Add("@RankOfSelect", requestData.RankOfSelect);
+            }
+
 
             await connection.ExecuteAsync(
                 "sp_UpdateApplicantStatusV2",

@@ -639,7 +639,7 @@ namespace JobOnlineAPI.Controllers
                         <p style='margin: 0;'>เรียน คุณ {firstRecord?.EMPITNameThai},</p>
                         <p>ขอแจ้งให้ทราบว่า มีคำขอใช้งานระบบ IT สำหรับ คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai} เข้ามา <br>กรุณาพิจารณาและดำเนินการอนุมัติผ่านระบบตามความเหมาะสม</p>
                         <p style='margin: 0;'>กรุณาคลิก Link:
-                            <a target='_blank' href='https://oneejobs27.oneeclick.co/LoginAdmin?ApId={ApplicantID}&ITReq=FromMailIT'
+                            <a target='_blank' href='https://oneejobs27.oneeclick.co:7191/LoginAdmin?ApId={ApplicantID}&ITReq=FromMailIT'
                                 style='color: #007bff; text-decoration: underline;'>
                                 https://oneejobs27.oneeclick.co
                             </a>
