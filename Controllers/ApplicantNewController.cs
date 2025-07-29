@@ -123,7 +123,8 @@ namespace JobOnlineAPI.Controllers
             param.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
             param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
-            await conn.ExecuteAsync("InsertOrUpdateApplicantDataV11", param, commandType: CommandType.StoredProcedure);
+            await conn.ExecuteAsync("InsertOrUpdateApplicantDataV12", param, commandType: CommandType.StoredProcedure);
+            //await conn.ExecuteAsync("InsertOrUpdateApplicantDataV11", param, commandType: CommandType.StoredProcedure);
 
             return (
                 param.Get<int>("ApplicantID"),
@@ -247,9 +248,9 @@ namespace JobOnlineAPI.Controllers
                 var parameters = new DynamicParameters();
                 parameters.Add("@Department", department);
                 parameters.Add("@JobID", jobId);
-
+                // sp_GetCandidateAll
                 var result = await connection.QueryAsync(
-                    "sp_GetCandidateAll",
+                    "sp_GetCandidateAllV2",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
