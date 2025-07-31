@@ -12,7 +12,7 @@ namespace JobOnlineAPI.Services
         Task<int> SendManagerEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendHrEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendNotificationEmailsAsync(ApplicantRequestData requestData);
-        Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult, string applicationFormUri);
+        Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName, int OutJobID) dbResult, string applicationFormUri);
         Task<int> SendEmailsJobsStatusAsync(int JobID);
     }
 
@@ -38,7 +38,7 @@ namespace JobOnlineAPI.Services
                            .Where(email => !string.IsNullOrWhiteSpace(email));
         }
 
-        public async Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName) dbResult, string applicationFormUri)
+        public async Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName, int OutJobID) dbResult, string applicationFormUri)
         {
             var fullNameThai = GetFullName(req);
             var jobTitle = req.TryGetValue("JobTitle", out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
@@ -51,7 +51,7 @@ namespace JobOnlineAPI.Services
             using var connection = _context.CreateConnection();
             var results = await connection.QueryAsync<StaffEmail>(
                 "sp_GetDateSendEmailV3",
-                new { JobID = dbResult.ApplicantId },
+                new { JobID = dbResult.OutJobID },
                 commandType: CommandType.StoredProcedure);
 
             var firstHr = results.FirstOrDefault(x => x.Role == 2);
@@ -77,7 +77,7 @@ namespace JobOnlineAPI.Services
                     }
                 }
             } 
-            else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail == "HRConfirmed")
+            else if (string.IsNullOrWhiteSpace(typeMail) && typeMail == "HRConfirmed")
             {
                 string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle);
                 foreach (var staff in results)

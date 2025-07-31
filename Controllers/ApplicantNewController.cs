@@ -101,7 +101,7 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        private async Task<(int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName)> SaveApplicationToDatabaseAsync(IDictionary<string, object?> req, int jobId, List<Dictionary<string, object>> fileMetadatas)
+        private async Task<(int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName, int OutJobID)> SaveApplicationToDatabaseAsync(IDictionary<string, object?> req, int jobId, List<Dictionary<string, object>> fileMetadatas)
         {
             using var conn = _context.CreateConnection();
             var param = new DynamicParameters();
@@ -123,6 +123,7 @@ namespace JobOnlineAPI.Controllers
             param.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
             param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
+            param.Add("OutJobID", dbType: DbType.Int32, direction: ParameterDirection.Output);
             await conn.ExecuteAsync("InsertOrUpdateApplicantDataV12", param, commandType: CommandType.StoredProcedure);
             //await conn.ExecuteAsync("InsertOrUpdateApplicantDataV11", param, commandType: CommandType.StoredProcedure);
 
@@ -132,7 +133,8 @@ namespace JobOnlineAPI.Controllers
                 param.Get<string>("HRManagerEmails"),
                 param.Get<string>("JobManagerEmails"),
                 param.Get<string>("JobTitle"),
-                param.Get<string>("CompanyName")
+                param.Get<string>("CompanyName"),
+                param.Get<int>("OutJobID")
             );
         }
 
@@ -159,13 +161,17 @@ namespace JobOnlineAPI.Controllers
         [HttpGet("GetDataOpenFor")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetDataOpenFor()
+        public async Task<IActionResult> GetDataOpenFor([FromQuery] string? Department = null)
         {
             try
             {
                 using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+
                 var query = "getDateOpenFor";
-                var response = await connection.QueryAsync(query);
+                parameters.Add("Department", Department);
+
+                var response = await connection.QueryAsync(query,parameters);
 
                 return Ok(response);
             }
