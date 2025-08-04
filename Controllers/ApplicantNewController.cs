@@ -349,7 +349,8 @@ namespace JobOnlineAPI.Controllers
                                 ApplicantID = candidate.ApplicantID,
                                 Status = requestData.Status,
                                 Remark = requestData.Remark,
-                                RankOfSelect = candidate.RankOfSelect
+                                RankOfSelect = candidate.RankOfSelect,
+                                JobID = requestData.JobID
                             };
 
                             await UpdateStatusInDatabaseV2(singleUpdate);
@@ -391,13 +392,14 @@ namespace JobOnlineAPI.Controllers
         private ApplicantRequestData? ExtractRequestData(IDictionary<string, object?> data)
         {
             if (data[ApplicantIdKey] is not JsonElement applicantIdElement || applicantIdElement.ValueKind != JsonValueKind.Number ||
-                data["Status"] is not JsonElement statusElement || statusElement.ValueKind != JsonValueKind.String)
+                data["Status"] is not JsonElement statusElement || statusElement.ValueKind != JsonValueKind.String || data[JobIdKey] is not JsonElement jobIdElement)
             {
                 _logger.LogWarning("ApplicantID must be an integer and Status must be a string");
                 return null;
             }
 
             int ApplicantID = applicantIdElement.GetInt32();
+            int JobID = jobIdElement.GetInt32();
             string status = statusElement.GetString()!;
 
             List<CandidateDto> candidates = ExtractCandidates(data);
@@ -462,7 +464,8 @@ namespace JobOnlineAPI.Controllers
                 JobTitle = jobTitle,
                 TypeMail = typeMail,
                 NameCon = nameCon,
-                RankOfSelect = rankOfSelect
+                RankOfSelect = rankOfSelect,
+                JobID = JobID
             };
 
         }
@@ -507,6 +510,7 @@ namespace JobOnlineAPI.Controllers
 
             parameters.Add("@ApplicantID", requestData.ApplicantID);
             parameters.Add("@Status", requestData.Status ?? "");
+            parameters.Add("@JobID", requestData.JobID);
             // parameters.Add("@RankOfSelect", requestData.Status ?? "");
             if (!string.IsNullOrWhiteSpace(requestData.Remark))
             {
@@ -518,9 +522,9 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("@RankOfSelect", requestData.RankOfSelect);
             }
 
-
+            //sp_UpdateApplicantStatusV2
             await connection.ExecuteAsync(
-                "sp_UpdateApplicantStatusV2",
+                "sp_UpdateApplicantStatusV3",
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }

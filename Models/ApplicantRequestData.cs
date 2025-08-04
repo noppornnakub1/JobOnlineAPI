@@ -33,5 +33,7 @@ namespace JobOnlineAPI.Models
         public string? TypeMail { get; set; }
         public string? NameCon { get; set; }
         public int? RankOfSelect { get; set; }
+        public int JobID { get; set; }
+
     }
 }
