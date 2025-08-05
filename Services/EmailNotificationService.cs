@@ -77,7 +77,7 @@ namespace JobOnlineAPI.Services
                     }
                 }
             } 
-            else if (string.IsNullOrWhiteSpace(typeMail) && typeMail == "HRConfirmed")
+            else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail == "HRConfirmed")
             {
                 string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle);
                 foreach (var staff in results)
@@ -195,7 +195,12 @@ namespace JobOnlineAPI.Services
                         "Cancel" => "ยกเลิก",
                         _ => ""
                     };
-                    return $"ลำดับที่ {index + 1}: {candidate.Title} {candidate.FirstNameThai} {candidate.LastNameThai} สถานะ {statusText}".Trim();
+                    
+                    string remarkText = (candidate.Status == "Unsuccess" && !string.IsNullOrWhiteSpace(candidate.Remark))
+                        ? $" <span style='color: red;'>(หมายเหตุ: {candidate.Remark})</span>"
+                        : "";
+
+                    return $"ลำดับที่ {index + 1}: {candidate.Title} {candidate.FirstNameThai} {candidate.LastNameThai} สถานะ {statusText}{remarkText}".Trim();
                 }).ToList() ?? [];
 
             string candidateNamesString = string.Join("<br>", candidateNames);

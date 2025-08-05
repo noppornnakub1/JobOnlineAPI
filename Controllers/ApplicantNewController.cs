@@ -347,10 +347,10 @@ namespace JobOnlineAPI.Controllers
                             var singleUpdate = new ApplicantRequestData
                             {
                                 ApplicantID = candidate.ApplicantID,
-                                Status = requestData.Status,
-                                Remark = requestData.Remark,
+                                Status = candidate.Status,
+                                Remark = candidate.Remark,
                                 RankOfSelect = candidate.RankOfSelect,
-                                JobID = requestData.JobID
+                                JobID = candidate.JobID
                             };
 
                             await UpdateStatusInDatabaseV2(singleUpdate);

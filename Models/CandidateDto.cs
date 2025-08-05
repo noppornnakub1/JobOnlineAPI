@@ -16,5 +16,7 @@
         public string? Status { get; set; }
         public string? Email { get; set; }
         public int? RankOfSelect { get; set; }
+        public string? Remark { get; set; }
+        public int JobID { get; set; }
     }
 }

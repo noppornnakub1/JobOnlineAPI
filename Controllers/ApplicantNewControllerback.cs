@@ -486,7 +486,7 @@ namespace JobOnlineAPI.Controllers
                     await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update infomation", managerBody, true);
                 }
             }
-            else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail != "HRConfirmed")
+            else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail != "HRConfirmed" && typeMail != "HRConfirmed")
             {
                 if (!string.IsNullOrEmpty(dbResult.ApplicantEmail))
                 {
