@@ -347,7 +347,7 @@ namespace JobOnlineAPI.Controllers
                             var singleUpdate = new ApplicantRequestData
                             {
                                 ApplicantID = candidate.ApplicantID,
-                                Status = candidate.Status,
+                                Status = typeMail == "Hire" ? requestData.Status : candidate.Status,
                                 Remark = candidate.Remark,
                                 RankOfSelect = candidate.RankOfSelect,
                                 JobID = candidate.JobID
@@ -650,7 +650,7 @@ namespace JobOnlineAPI.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(email, subject, body, true);
+                    await _emailService.SendEmailAsync(email, subject, body, true, "Jobs");
                     successCount++;
                     _logger.LogInformation("Successfully sent email to {Email}", email);
                 }

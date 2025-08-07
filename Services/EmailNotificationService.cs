@@ -67,7 +67,7 @@ namespace JobOnlineAPI.Services
 
                     try
                     {
-                        await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update information", managerBody, true);
+                        await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update information", managerBody, true, "Register");
                         successCount++;
                         _logger.LogInformation("Successfully sent email to {Email}", emailStaff);
                     }
@@ -100,7 +100,7 @@ namespace JobOnlineAPI.Services
                                 <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                             </div>";
                         string SubjectMail = $@"แจ้งผลการสรรหา - คุณ {fullNameThai}";
-                        await _emailService.SendEmailAsync(emailStaff, SubjectMail, managerBody, true);
+                        await _emailService.SendEmailAsync(emailStaff, SubjectMail, managerBody, true, "Register");
                         successCount++;
                         _logger.LogInformation("Successfully sent email to {Email}", emailStaff);
                     }
@@ -117,7 +117,7 @@ namespace JobOnlineAPI.Services
                     string applicantBody = GenerateEmailBody(true, dbResult.CompanyName, fullNameThai, jobTitle, firstHr, dbResult.ApplicantId, applicationFormUri);
                     try
                     {
-                        await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true);
+                        await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true, "Register");
                         successCount++;
                         _logger.LogInformation("Successfully sent email to {Email}", dbResult.ApplicantEmail);
                     }
@@ -136,7 +136,7 @@ namespace JobOnlineAPI.Services
                     string managerBody = GenerateEmailBody(false, emailStaff, fullNameThai, jobTitle, null, dbResult.ApplicantId, applicationFormUri);
                     try
                     {
-                        await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true);
+                        await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true, "Register");
                         successCount++;
                         _logger.LogInformation("Successfully sent email to {Email}", emailStaff);
                     }
@@ -172,7 +172,7 @@ namespace JobOnlineAPI.Services
                 </p>
                 <br>
                 <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> โดยให้ทำการติดต่อ ผู้มัครลำดับที่ 1 ก่อน หากเจรจาไม่สำเร็จ ให้ทำการติดต่อกับผู้มัครลำดับต่อไป <span style='color: red; font-weight: bold;'>*</span></p>
-                <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> กรุณา Login เข้าสู่ระบบ https://oneejobs.oneeclick.co:7191/LoginAdmin และไปที่ Menu การว่าจ้าง เพื่อตอบกลับคำขอนี้ <span style='color: red; font-weight: bold;'>*</span></p>
+                <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> กรุณา Login เข้าสู่ระบบ https://oneejobs27.oneeclick.co:7191/LoginAdmin และไปที่ Menu การว่าจ้าง เพื่อตอบกลับคำขอนี้ <span style='color: red; font-weight: bold;'>*</span></p>
                 <br>
                 <p style='color: red; font-weight: bold;'>**Email อัตโนมัติ โปรดอย่าตอบกลับ**</p>
             </div>";
@@ -195,7 +195,7 @@ namespace JobOnlineAPI.Services
                         "Cancel" => "ยกเลิก",
                         _ => ""
                     };
-                    
+
                     string remarkText = (candidate.Status == "Unsuccess" && !string.IsNullOrWhiteSpace(candidate.Remark))
                         ? $" <span style='color: red;'>(หมายเหตุ: {candidate.Remark})</span>"
                         : "";
@@ -204,10 +204,10 @@ namespace JobOnlineAPI.Services
                 }).ToList() ?? [];
 
             string candidateNamesString = string.Join("<br>", candidateNames);
-
+            // <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ {requestData.RequesterName}</p>
             string hrBody = $@"
             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ {requestData.RequesterName}</p>
+                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน Manager ฝ่าย {requestData.JobTitle} </p>
                 <p style='font-weight: bold; margin: 0 0 10px 0;'>ทางฝ่าย ฝ่ายสรรหาบุคลากร ขอแจ้งผลการเจรจากับผู้สมัครเพื่อรับเข้าทำงาน โดยมีรายละเอียดดังต่อไปนี้</p>
                 <br>
                 <p style='margin: 0 0 10px 0;'>
@@ -322,7 +322,7 @@ namespace JobOnlineAPI.Services
 
                 try
                 {
-                    await _emailService.SendEmailAsync(email, subject, body, true);
+                    await _emailService.SendEmailAsync(email, subject, body, true, "Register");
                     successCount++;
                     _logger.LogInformation("Successfully sent email to {Email}", email);
                 }

@@ -101,7 +101,7 @@ namespace JobOnlineAPI.Controllers
                     .Replace("{{otp}}", otp)
                     .Replace("{{copyUrl}}", copyUrl);
 
-                await _emailService.SendEmailAsync(request.Email, subject, body, true);
+                await _emailService.SendEmailAsync(request.Email, subject, body, true, "OTP");
 
                 _logger.LogInformation("RequestOTP: ส่ง OTP สำเร็จสำหรับ Email: {Email}, Action: {Action}", request.Email, request.Action);
                 return Ok(new { Message = "ส่ง OTP ไปยังอีเมลเรียบร้อยแล้ว" });
@@ -255,7 +255,7 @@ namespace JobOnlineAPI.Controllers
                 string template = System.IO.File.ReadAllText(_templatePathREGIS);
                 string body = template;
 
-                await _emailService.SendEmailAsync(request.Email, subject, body, true);
+                await _emailService.SendEmailAsync(request.Email, subject, body, true, "OTP");
 
                 return Ok(new { Message = "สมัครสมาชิกสำเร็จ" });
             }
@@ -325,7 +325,7 @@ namespace JobOnlineAPI.Controllers
                     .Replace("{{name}}", request.Email.Split('@')[0])
                     .Replace("{{email}}", request.Email);
 
-                await _emailService.SendEmailAsync(request.Email, subject, body, true);
+                await _emailService.SendEmailAsync(request.Email, subject, body, true, "OTP");
 
                 return Ok(new { Message = "รีเซ็ตรหัสผ่านสำเร็จ" });
             }

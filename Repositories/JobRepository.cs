@@ -27,13 +27,15 @@ namespace JobOnlineAPI.Repositories
             using var db = new SqlConnection(_connectionString);
             var parameters = new DynamicParameters();
             parameters.Add("JobID", id);
+            //sp_GetAllJobsV2
             var job = await db.QueryFirstOrDefaultAsync<Job>(
-                "sp_GetAllJobsV2",
+                "sp_GetAllJobsAdmin",
                 parameters,
                 commandType: CommandType.StoredProcedure
             );
             return job ?? throw new InvalidOperationException($"No job found with ID {id}");
         }
+        
 
 
         public async Task<int> AddJobAsync(Job job)
@@ -140,7 +142,7 @@ namespace JobOnlineAPI.Repositories
                                     <p style='font-size: 14px;'>กรุณา Link: <a href='https://oneejobs27.oneeclick.co:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                                 </div>";
 
-                        await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true);
+                        await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true, "Jobs");
                         Interlocked.Increment(ref successCount);
                     });
 

@@ -133,11 +133,11 @@ namespace JobOnlineAPI.Controllers
 
                         if (createdBy == null)
                             createdBy = createdByElement.GetString()!;
-                        else if (createdBy != createdByElement.GetString())
-                        {
-                            _logger.LogWarning("All items in the array must have the same CreatedBy value.");
-                            return BadRequest(new { Error = "All items in the array must have the same CreatedBy value." });
-                        }
+                        //else if (createdBy != createdByElement.GetString())
+                        //{
+                        //    _logger.LogWarning("All items in the array must have the same CreatedBy value.");
+                        //    return BadRequest(new { Error = "All items in the array must have the same CreatedBy value." });
+                        //}
 
                         var requestData = new Dictionary<string, object>();
                         foreach (var property in item.EnumerateObject())
@@ -520,7 +520,7 @@ namespace JobOnlineAPI.Controllers
                     {
                         if (approver != null)
                         {
-                            await _emailService.SendEmailAsync(approver, subject, approverBody, true);
+                            await _emailService.SendEmailAsync(approver, subject, approverBody, true, "IT-Request");
                         }
                     }
                 }
@@ -537,7 +537,7 @@ namespace JobOnlineAPI.Controllers
                     </div>
                     """;
 
-                    await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true);
+                    await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true, "IT-Request");
                 }
             }
             catch (Exception ex)
@@ -592,7 +592,7 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = "Internal server error", Details = ex.Message });
             }
         }
-        private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body)
+        private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body, string TypeMail)
         {
             int successCount = 0;
             foreach (var email in recipients)
@@ -602,7 +602,7 @@ namespace JobOnlineAPI.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(email, subject, body, true);
+                    await _emailService.SendEmailAsync(email, subject, body, true, "IT-Request");
                     successCount++;
                     _logger.LogInformation("Successfully sent email to {Email}", email);
                 }
@@ -682,7 +682,7 @@ namespace JobOnlineAPI.Controllers
                 SubjectMail = $@"แจ้งผลการดำเนินการ IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}";
             }
 
-            return await SendEmailsAsync(emails!,SubjectMail, hrBody);
+            return await SendEmailsAsync(emails!,SubjectMail, hrBody, "IT-Request");
         }
 
     }
