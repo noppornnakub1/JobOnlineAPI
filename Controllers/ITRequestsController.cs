@@ -520,7 +520,7 @@ namespace JobOnlineAPI.Controllers
                     {
                         if (approver != null)
                         {
-                            await _emailService.SendEmailAsync(approver, subject, approverBody, true, "IT-Request");
+                            await _emailService.SendEmailAsync(approver, subject, approverBody, true, "IT-Request", null);
                         }
                     }
                 }
@@ -537,7 +537,7 @@ namespace JobOnlineAPI.Controllers
                     </div>
                     """;
 
-                    await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true, "IT-Request");
+                    await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true, "IT-Request", null);
                 }
             }
             catch (Exception ex)
@@ -602,7 +602,7 @@ namespace JobOnlineAPI.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(email, subject, body, true, "IT-Request");
+                    await _emailService.SendEmailAsync(email, subject, body, true, "IT-Request", null);
                     successCount++;
                     _logger.LogInformation("Successfully sent email to {Email}", email);
                 }

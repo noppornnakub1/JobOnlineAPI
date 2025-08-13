@@ -41,7 +41,7 @@ namespace JobOnlineAPI.JobOnlineAPI.Tests
                 CreatedByRole = "HR"
             };
 
-            _emailServiceMock.Setup(e => e.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()))
+            _emailServiceMock.Setup(e => e.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<int>()))
                 .Returns(Task.CompletedTask);
 
             var jobId = await _repository.AddJobAsync(job);

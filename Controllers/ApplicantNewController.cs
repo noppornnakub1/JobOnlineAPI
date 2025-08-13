@@ -272,7 +272,7 @@ namespace JobOnlineAPI.Controllers
 
         [HttpGet("GetCandidateData")]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetApplicantData([FromQuery] int? id, int? userId)
+        public async Task<IActionResult> GetApplicantData([FromQuery] int? id, int? JobId)
         {
             try
             {
@@ -280,9 +280,14 @@ namespace JobOnlineAPI.Controllers
 
                 var parameters = new DynamicParameters();
                 parameters.Add($"@{ApplicantIdKey}", id);
-                parameters.Add($"@{UserIdKey}", userId);
+                if (JobId != 0)
+                {
+                    parameters.Add($"@{JobIdKey}", JobId);
+                }
+                // parameters.Add($"{JobIdKey}", JobId);
+                // sp_GetApplicantDataV2
                 var result = await connection.QueryAsync(
-                    "sp_GetApplicantDataV2",
+                    "sp_GetApplicantDataV1",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -650,7 +655,7 @@ namespace JobOnlineAPI.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(email, subject, body, true, "Jobs");
+                    await _emailService.SendEmailAsync(email, subject, body, true, "Jobs",null);
                     successCount++;
                     _logger.LogInformation("Successfully sent email to {Email}", email);
                 }

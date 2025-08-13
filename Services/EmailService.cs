@@ -48,7 +48,7 @@ namespace JobOnlineAPI.Services
 
         // }
 
-        public async Task SendEmailAsync(string to, string subject, string body, bool isHtml, string typeMail)
+        public async Task SendEmailAsync(string to, string subject, string body, bool isHtml, string typeMail, int? JobsId)
         {
             var emailMessage = new MimeMessage();
             emailMessage.From.Add(new MailboxAddress(_emailSettings.SenderName, _emailSettings.FromEmail));
@@ -86,10 +86,10 @@ namespace JobOnlineAPI.Services
                 Console.WriteLine($"❌ Error sending email: {errorMessage}");
             }
 
-            await LogEmailAsync(to, subject, body, status, errorMessage, typeMail);
+            await LogEmailAsync(to, subject, body, status, errorMessage, typeMail, JobsId);
         }
 
-        private async Task LogEmailAsync(string recipient, string subject, string body, string status, string? errorMessage, string? mailType)
+        private async Task LogEmailAsync(string recipient, string subject, string body, string status, string? errorMessage, string? mailType, int? JobsId)
         {
             using var connection = new SqlConnection(_dbConnection.ConnectionString);
             var parameters = new
@@ -100,7 +100,8 @@ namespace JobOnlineAPI.Services
                 Status = status,
                 ErrorMessage = errorMessage,
                 MailType = mailType,
-                SystemTag = "ONEEJobs"
+                SystemTag = "ONEEJobs",
+                JobID = JobsId
             };
 
             await connection.ExecuteAsync("sp_LogEmailActivity", parameters, commandType: CommandType.StoredProcedure);

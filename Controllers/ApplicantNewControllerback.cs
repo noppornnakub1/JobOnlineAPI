@@ -483,7 +483,7 @@ namespace JobOnlineAPI.Controllers
                     var emailStaff = (x.EMAIL ?? "").Trim();
                     if (string.IsNullOrWhiteSpace(emailStaff))
                         continue;
-                    await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update infomation", managerBody, true,"Register");
+                    await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate update infomation", managerBody, true,"Register", null);
                 }
             }
             else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail != "HRConfirmed" && typeMail != "Draft")
@@ -491,7 +491,7 @@ namespace JobOnlineAPI.Controllers
                 if (!string.IsNullOrEmpty(dbResult.ApplicantEmail))
                 {
                     string applicantBody = GenerateEmailBody(true, dbResult.CompanyName, fullNameThai, jobTitle, firstHr);
-                    await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true,"Register");
+                    await _emailService.SendEmailAsync(dbResult.ApplicantEmail, "Application Received", applicantBody, true,"Register", null);
                 }
 
                 foreach (var x in results)
@@ -501,7 +501,7 @@ namespace JobOnlineAPI.Controllers
                         continue;
 
                     string managerBody = GenerateEmailBody(false, emailStaff, fullNameThai, jobTitle, null, dbResult.ApplicantId);
-                    await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true,"Register");
+                    await _emailService.SendEmailAsync(emailStaff, "ONEE Jobs - You've got the new candidate", managerBody, true,"Register", null);
                 }
             }
 
@@ -949,7 +949,7 @@ namespace JobOnlineAPI.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true, "Register");
+                    await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true, "Register", null);
                     successCount++;
                 }
                 catch (Exception ex)
@@ -1024,7 +1024,7 @@ namespace JobOnlineAPI.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true, "Register");
+                    await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true, "Register", null);
                     successCount++;
                 }
                 catch (Exception ex)
@@ -1092,7 +1092,7 @@ namespace JobOnlineAPI.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true, "Register");
+                    await _emailService.SendEmailAsync(hrEmail, "ONEE Jobs - List of candidates for job interview", hrBody, true, "Register", null);
                     successCount++;
                 }
                 catch (Exception ex)
@@ -1159,7 +1159,7 @@ namespace JobOnlineAPI.Controllers
             {
                 foreach (var email in candidateEmails)
                 {
-                    await _emailService.SendEmailAsync(email, "ONEE Jobs - List of selected candidates", reqBody, true, "Register");
+                    await _emailService.SendEmailAsync(email, "ONEE Jobs - List of selected candidates", reqBody, true, "Register", null);
                     successCount++;
                 }
             }
