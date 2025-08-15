@@ -345,7 +345,7 @@ namespace JobOnlineAPI.Controllers
     
 
 
-        [HttpPost("export-excelV2")]
+        [HttpPost("export-excelV2s")]
         public async Task<IActionResult> ExportApplicantsV3Async([FromBody] Dictionary<string, List<int>> request)
         {
             request.TryGetValue("applicantIds", out var applicantIds);
@@ -552,6 +552,75 @@ namespace JobOnlineAPI.Controllers
                 fileDownloadName: zipFileName
             );
         }
+
+        [HttpPost("export-excelV2")]
+        public async Task<IActionResult> ExportApplicantsAsync([FromBody] Dictionary<string, List<int>> request)
+        {
+            request.TryGetValue("applicantIds", out var applicantIds);
+            request.TryGetValue("userIds", out var userIds);
+
+            if ((applicantIds == null || applicantIds.Count == 0) &&
+                (userIds == null || userIds.Count == 0))
+            {
+                return BadRequest("ต้องระบุอย่างน้อย applicantId หรือ userId");
+            }
+
+            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@ApplicantIDs", JsonSerializer.Serialize(applicantIds ?? new List<int>()));
+            parameters.Add("@UserIDs", JsonSerializer.Serialize(userIds ?? new List<int>()));
+
+            // === ดึงหลาย result sets จากสโตร์ใหม่ ===
+            using var grid = await connection.QueryMultipleAsync(
+                "sp_GetDataExportExcel",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            // ชุดที่ 1: applicants
+            var rawApplicants = (await grid.ReadAsync<dynamic>()).ToList();
+            var applicants = rawApplicants.Select(r => (IDictionary<string, object>)r).ToList();
+            if (applicants.Count == 0)
+                return NotFound("ไม่พบข้อมูลผู้สมัครที่ตรงกับเงื่อนไข");
+
+            // ชุดที่ 2–4: column definitions
+            var sheet1Defs = (await grid.ReadAsync<ColumnDef>()).OrderBy(x => x.Order).ToList();
+            var sheet2Defs = (await grid.ReadAsync<ColumnDef>()).OrderBy(x => x.Order).ToList();
+            var sheet3Defs = (await grid.ReadAsync<ColumnDef>()).OrderBy(x => x.Order).ToList();
+
+            // map เป็น (Key, Display) ให้เข้ากับ GenerateExcelFile เดิม
+            var columnOrderSheet1 = sheet1Defs.Select(x => (x.Key, x.Display)).ToList();
+            var columnOrderSheet2 = sheet2Defs.Select(x => (x.Key, x.Display)).ToList();
+            var columnOrderSheet3 = sheet3Defs.Select(x => (x.Key, x.Display)).ToList();
+
+            // ==== สร้างไฟล์ Excel ทีละชีต ====
+            byte[] excelFile1 = GenerateExcelFile(applicants, columnOrderSheet1, "PM-TEMPLOY 1");
+            byte[] excelFile2 = GenerateExcelFile(applicants, columnOrderSheet2, "PM-TEMPLOY 2");
+            byte[] excelFile3 = GenerateExcelFile(applicants, columnOrderSheet3, "PM-TEMPLOY 3");
+
+            // ==== สร้าง ZIP ====
+            using var zipStream = new MemoryStream();
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                using (var s1 = archive.CreateEntry("PM-TEMPLOY1.xlsx").Open()) s1.Write(excelFile1, 0, excelFile1.Length);
+                using (var s2 = archive.CreateEntry("PM-TEMPLOY2.xlsx").Open()) s2.Write(excelFile2, 0, excelFile2.Length);
+                using (var s3 = archive.CreateEntry("PM-TEMPLOY3.xlsx").Open()) s3.Write(excelFile3, 0, excelFile3.Length);
+            }
+            zipStream.Position = 0;
+
+            var zipFileName = $"PM-TEMPLOY_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
+            return File(zipStream.ToArray(), "application/zip", zipFileName);
+        }
+
+    // ใช้ class นี้สำหรับ map ค่าคอลัมน์จากสโตร์
+    public sealed class ColumnDef
+    {
+        public int SheetNo { get; set; }
+        public int Order { get; set; }
+        public string Key { get; set; } = "";
+        public string Display { get; set; } = "";
+    }
 
         private byte[] GenerateExcelFile(List<IDictionary<string, object>> applicants, List<(string Key, string Display)> columnOrder, string sheetName)
         {
