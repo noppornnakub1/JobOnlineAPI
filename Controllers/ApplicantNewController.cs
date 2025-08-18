@@ -340,30 +340,51 @@ namespace JobOnlineAPI.Controllers
                     await _emailNotificationService.SendNotificationEmailsAsync(requestData);
                 }
 
+                // 18/08/2568 แก้เรื่อง check RankOfSelect c]h; Update
+                // if (typeMail != "notiMail")
+                // {
+                //     bool hasRankOfSelect = requestData.Candidates?
+                //         .Any(c => c.RankOfSelect.HasValue) == true;
+                //     if (hasRankOfSelect)
+                //     {
+                //         foreach (var candidate in requestData.Candidates!)
+                //         {
+                //             var singleUpdate = new ApplicantRequestData
+                //             {
+                //                 ApplicantID = candidate.ApplicantID,
+                //                 Status = typeMail == "Hire" ? requestData.Status : candidate.Status,
+                //                 Remark = candidate.Remark,
+                //                 RankOfSelect = candidate.RankOfSelect,
+                //                 JobID = candidate.JobID
+                //             };
+
+                //             await UpdateStatusInDatabaseV2(singleUpdate);
+                //         }
+                //     }
+                //     else
+                //     {
+                //         await UpdateStatusInDatabaseV2(requestData);
+                //     }
+                // }
 
                 if (typeMail != "notiMail")
                 {
-                    bool hasRankOfSelect = requestData.Candidates?
-                        .Any(c => c.RankOfSelect.HasValue) == true;
-                    if (hasRankOfSelect)
-                    {
-                        foreach (var candidate in requestData.Candidates!)
-                        {
-                            var singleUpdate = new ApplicantRequestData
-                            {
-                                ApplicantID = candidate.ApplicantID,
-                                Status = typeMail == "Hire" ? requestData.Status : candidate.Status,
-                                Remark = candidate.Remark,
-                                RankOfSelect = candidate.RankOfSelect,
-                                JobID = candidate.JobID
-                            };
+                    var hasRank = requestData.Candidates?.Any(c => c.RankOfSelect.HasValue) == true;
 
-                            await UpdateStatusInDatabaseV2(singleUpdate);
-                        }
-                    }
-                    else
+                    var updates = hasRank
+                        ? requestData.Candidates!.Select(c => new ApplicantRequestData
+                        {
+                            ApplicantID = c.ApplicantID,
+                            Status = typeMail == "Hire" ? requestData.Status : c.Status,
+                            Remark = c.Remark,
+                            RankOfSelect = c.RankOfSelect,
+                            JobID = c.JobID
+                        })
+                        : new[] { requestData };
+
+                    foreach (var update in updates)
                     {
-                        await UpdateStatusInDatabaseV2(requestData);
+                        await UpdateStatusInDatabaseV2(update);
                     }
                 }
 
