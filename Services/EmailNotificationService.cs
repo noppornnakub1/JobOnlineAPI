@@ -289,9 +289,9 @@ namespace JobOnlineAPI.Services
             using var connection = _context.CreateConnection();
             var url = new DynamicParameters();
             url.Add("@ApplicantID", candidateApplicantID);
-
+            url.Add("@JobID", jobIds);
             var urllist = await connection.QueryAsync<dynamic>(
-                "EXEC GetDataForEmailNotiSelectCandidate @ApplicantID",
+                "EXEC GetDataForEmailNotiSelectCandidate @ApplicantID @JobID",
                 url);
 
             var urlResult = urllist.FirstOrDefault();
