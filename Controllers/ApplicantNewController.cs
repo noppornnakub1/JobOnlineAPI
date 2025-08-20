@@ -380,7 +380,7 @@ namespace JobOnlineAPI.Controllers
                             RankOfSelect = c.RankOfSelect,
                             JobID = c.JobID
                         })
-                        : new[] { requestData };
+                        : [requestData];
 
                     foreach (var update in updates)
                     {
