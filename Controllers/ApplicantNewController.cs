@@ -125,7 +125,6 @@ namespace JobOnlineAPI.Controllers
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("OutJobID", dbType: DbType.Int32, direction: ParameterDirection.Output);
             await conn.ExecuteAsync("InsertOrUpdateApplicantDataV12", param, commandType: CommandType.StoredProcedure);
-            //await conn.ExecuteAsync("InsertOrUpdateApplicantDataV11", param, commandType: CommandType.StoredProcedure);
 
             return (
                 param.Get<int>("ApplicantID"),
@@ -254,7 +253,6 @@ namespace JobOnlineAPI.Controllers
                 var parameters = new DynamicParameters();
                 parameters.Add("@Department", department);
                 parameters.Add("@JobID", jobId);
-                // sp_GetCandidateAll
                 var result = await connection.QueryAsync(
                     "sp_GetCandidateAllV2",
                     parameters,
@@ -284,8 +282,6 @@ namespace JobOnlineAPI.Controllers
                 {
                     parameters.Add($"@{JobIdKey}", JobId);
                 }
-                // parameters.Add($"{JobIdKey}", JobId);
-                // sp_GetApplicantDataV2
                 var result = await connection.QueryAsync(
                     "sp_GetApplicantDataV1",
                     parameters,
@@ -339,33 +335,6 @@ namespace JobOnlineAPI.Controllers
                 {
                     await _emailNotificationService.SendNotificationEmailsAsync(requestData);
                 }
-
-                // 18/08/2568 แก้เรื่อง check RankOfSelect c]h; Update
-                // if (typeMail != "notiMail")
-                // {
-                //     bool hasRankOfSelect = requestData.Candidates?
-                //         .Any(c => c.RankOfSelect.HasValue) == true;
-                //     if (hasRankOfSelect)
-                //     {
-                //         foreach (var candidate in requestData.Candidates!)
-                //         {
-                //             var singleUpdate = new ApplicantRequestData
-                //             {
-                //                 ApplicantID = candidate.ApplicantID,
-                //                 Status = typeMail == "Hire" ? requestData.Status : candidate.Status,
-                //                 Remark = candidate.Remark,
-                //                 RankOfSelect = candidate.RankOfSelect,
-                //                 JobID = candidate.JobID
-                //             };
-
-                //             await UpdateStatusInDatabaseV2(singleUpdate);
-                //         }
-                //     }
-                //     else
-                //     {
-                //         await UpdateStatusInDatabaseV2(requestData);
-                //     }
-                // }
 
                 if (typeMail != "notiMail")
                 {
@@ -459,21 +428,6 @@ namespace JobOnlineAPI.Controllers
             int? rankOfSelect = data.TryGetValue("RankOfSelect", out var rankObj) && int.TryParse(rankObj?.ToString(), out int RankOfSelect)
                 ? RankOfSelect
                 : (int?)null;
-            // return new ApplicantRequestData(
-            //     ApplicantID,
-            //     status,
-            //     candidates,
-            //     emailSend,
-            //     requesterMail,
-            //     requesterName,
-            //     requesterPost,
-            //     department,
-            //     tel,
-            //     telOff,
-            //     remark,
-            //     jobTitle,
-            //     typeMail,
-            //     nameCon);
             return new ApplicantRequestData
             {
                 ApplicantID = ApplicantID,
@@ -537,7 +491,6 @@ namespace JobOnlineAPI.Controllers
             parameters.Add("@ApplicantID", requestData.ApplicantID);
             parameters.Add("@Status", requestData.Status ?? "");
             parameters.Add("@JobID", requestData.JobID);
-            // parameters.Add("@RankOfSelect", requestData.Status ?? "");
             if (!string.IsNullOrWhiteSpace(requestData.Remark))
             {
                 parameters.Add("@Remark", requestData.Remark);
@@ -548,7 +501,6 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("@RankOfSelect", requestData.RankOfSelect);
             }
 
-            //sp_UpdateApplicantStatusV2
             await connection.ExecuteAsync(
                 "sp_UpdateApplicantStatusV3",
                 parameters,
@@ -652,7 +604,6 @@ namespace JobOnlineAPI.Controllers
                 if (rowsAffected != 0)
                 {
                     await SendEmailsJobsStatusAsync(approvalData.JobId);
-                    // await _emailNotificationService.SendEmailsJobsStatusAsync(approvalData.JobId);
                 }
                 else
                 {
