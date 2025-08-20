@@ -15,7 +15,7 @@ public class PersonalDetailsForm : IDocument
     public string? BirthDate { get; set; }
     public int Age { get; set; }
     public string? Weight { get; set; }
-    public string? height { get; set; }
+    public string? Height { get; set; }
     public string? CurrentAddress { get; set; }
     public string? CurrentSubDistrict { get; set; }
     public string? CurrentDistrict { get; set; }
@@ -118,7 +118,7 @@ public class PersonalDetailsForm : IDocument
                          row.RelativeItem(3).Padding(5).Text($"วัน/เดือน/ปี เกิด: {BirthDate}").FontSize(8);
                          row.RelativeItem(2).Padding(5).Text($"อายุ: {Age} ปี").FontSize(8);
                          row.RelativeItem(2).Padding(5).Text($"น้ำหนัก: {Weight} กก.").FontSize(8);
-                         row.RelativeItem(2).Padding(5).Text($"ส่วนสูง: {height} ซม.").FontSize(8);
+                         row.RelativeItem(2).Padding(5).Text($"ส่วนสูง: {Height} ซม.").FontSize(8);
                      });
 
                      innerCol.Item().PaddingBottom(0).Row(row =>
