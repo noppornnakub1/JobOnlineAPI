@@ -8,7 +8,6 @@ using System.Data;
 using System.Runtime.InteropServices;
 using JobOnlineAPI.Filters;
 using JobOnlineAPI.Models;
-using static System.Net.WebRequestMethods;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -393,9 +392,6 @@ namespace JobOnlineAPI.Controllers
             param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
             param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
 
-            // await conn.ExecuteAsync("InsertApplicantDataV6", param, commandType: CommandType.StoredProcedure);
-            // await conn.ExecuteAsync("InsertOrUpdateApplicantDataV8", param, commandType: CommandType.StoredProcedure);
-            // await conn.ExecuteAsync("InsertOrUpdateApplicantDataV9", param, commandType: CommandType.StoredProcedure);
             await conn.ExecuteAsync("InsertOrUpdateApplicantDataV10", param, commandType: CommandType.StoredProcedure);
 
             return (
@@ -690,7 +686,6 @@ namespace JobOnlineAPI.Controllers
         }
 
         [HttpGet("GetCandidateData")]
-        //[TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetApplicantData([FromQuery] int? id, int? userId)
         {
