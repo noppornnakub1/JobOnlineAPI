@@ -1,6 +1,6 @@
+using JobOnlineAPI.Views.Register;
 using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Fluent;
-using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
 namespace JobOnlineAPI.Controllers
@@ -21,7 +21,7 @@ namespace JobOnlineAPI.Controllers
                 NickNameTH = "คอปเตอร์",
                 NickNameENG = "Copter",
                 Weight = "94.2",
-                height = "174",
+                Height = "174",
                 Salary = "60,000",
                 JobStartDate = "08/09/2025",
                 CurrentAddress = "219 ซอย รัชดาภิเษก 32",

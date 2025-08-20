@@ -568,8 +568,8 @@ namespace JobOnlineAPI.Controllers
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
 
             var parameters = new DynamicParameters();
-            parameters.Add("@ApplicantIDs", JsonSerializer.Serialize(applicantIds ?? new List<int>()));
-            parameters.Add("@UserIDs", JsonSerializer.Serialize(userIds ?? new List<int>()));
+            parameters.Add("@ApplicantIDs", JsonSerializer.Serialize(applicantIds ?? []));
+            parameters.Add("@UserIDs", JsonSerializer.Serialize(userIds ?? []));
 
             // === ดึงหลาย result sets จากสโตร์ใหม่ ===
             using var grid = await connection.QueryMultipleAsync(
@@ -605,7 +605,7 @@ namespace JobOnlineAPI.Controllers
             {
                 using (var s1 = archive.CreateEntry("PM-TEMPLOY1.xlsx").Open()) s1.Write(excelFile1, 0, excelFile1.Length);
                 using (var s2 = archive.CreateEntry("PM-TEMPLOY2.xlsx").Open()) s2.Write(excelFile2, 0, excelFile2.Length);
-                using (var s3 = archive.CreateEntry("PM-TEMPLOY3.xlsx").Open()) s3.Write(excelFile3, 0, excelFile3.Length);
+                using var s3 = archive.CreateEntry("PM-TEMPLOY3.xlsx").Open(); s3.Write(excelFile3, 0, excelFile3.Length);
             }
             zipStream.Position = 0;
 
@@ -622,7 +622,7 @@ namespace JobOnlineAPI.Controllers
         public string Display { get; set; } = "";
     }
 
-        private byte[] GenerateExcelFile(List<IDictionary<string, object>> applicants, List<(string Key, string Display)> columnOrder, string sheetName)
+        private static byte[] GenerateExcelFile(List<IDictionary<string, object>> applicants, List<(string Key, string Display)> columnOrder, string sheetName)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             using var package = new ExcelPackage();
