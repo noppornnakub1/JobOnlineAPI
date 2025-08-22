@@ -10,11 +10,6 @@ namespace JobOnlineAPI.Services
     {
         private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
-        public string GenerateJwtToken(UserAdminModel user)
-        {
-            return GenerateToken(user.Username, user.Role);
-        }
-
         public string GenerateJwtToken(UserModel user)
         {
             return GenerateToken(user.Username, user.Role);
