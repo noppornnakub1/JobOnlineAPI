@@ -7,7 +7,6 @@ using JobOnlineAPI.Services;
 using Rotativa.AspNetCore;
 using System.Dynamic;
 using JobOnlineAPI.Filters;
-using JobOnlineAPI.Models;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -211,7 +210,6 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("NewID", dbType: DbType.Int32, direction: ParameterDirection.Output);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
 
-                // usp_DynamicInsertUpdateT_EMP_IT_REQ
                 var result = await connection.QueryAsync(
                     "usp_DynamicInsertUpdateT_EMP_IT_REQV2",
                     parameters,
@@ -311,7 +309,6 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add("REQ_NO", string.IsNullOrWhiteSpace(reqNo) ? null : reqNo);
                 parameters.Add("ApplicantID", applicantId);
                 parameters.Add("ErrorMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
-                // usp_GetT_EMP_IT_REQ_ByReqNoV2
                 using var multi = await connection.QueryMultipleAsync(
                     "usp_GetT_EMP_IT_REQ_ByReqNoV3",
                     parameters,
@@ -613,7 +610,7 @@ namespace JobOnlineAPI.Controllers
             var parameters = new DynamicParameters();
             parameters.Add("@ApplicantID", ApplicantID);
             parameters.Add("@TypeCondition", TypeCondition);
-            // sp_GetDateSendEMailIT
+
             var result = await connection.QueryAsync<dynamic>(
                 "EXEC sp_GetDateSendEmailITV2 @ApplicantID, @TypeCondition",
                 parameters);
