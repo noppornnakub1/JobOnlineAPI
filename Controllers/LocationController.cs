@@ -5,14 +5,9 @@ namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class LocationController : ControllerBase
+    public class LocationController(ILocationService locationService) : ControllerBase
     {
-        private readonly ILocationService _locationService;
-
-        public LocationController(ILocationService locationService)
-        {
-            _locationService = locationService;
-        }
+        private readonly ILocationService _locationService = locationService;
 
         [HttpGet("provinces")]
         public async Task<IActionResult> GetProvinces()
