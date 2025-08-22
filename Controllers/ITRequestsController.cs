@@ -131,13 +131,7 @@ namespace JobOnlineAPI.Controllers
                             return BadRequest(new { Error = "CreatedBy is required and cannot be empty in each array item." });
                         }
 
-                        if (createdBy == null)
-                            createdBy = createdByElement.GetString()!;
-                        //else if (createdBy != createdByElement.GetString())
-                        //{
-                        //    _logger.LogWarning("All items in the array must have the same CreatedBy value.");
-                        //    return BadRequest(new { Error = "All items in the array must have the same CreatedBy value." });
-                        //}
+                        createdBy ??= createdByElement.GetString()!;
 
                         var requestData = new Dictionary<string, object>();
                         foreach (var property in item.EnumerateObject())
@@ -592,7 +586,7 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, new { Error = "Internal server error", Details = ex.Message });
             }
         }
-        private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body, string TypeMail)
+        private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body)
         {
             int successCount = 0;
             foreach (var email in recipients)
@@ -682,7 +676,7 @@ namespace JobOnlineAPI.Controllers
                 SubjectMail = $@"แจ้งผลการดำเนินการ IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}";
             }
 
-            return await SendEmailsAsync(emails!,SubjectMail, hrBody, "IT-Request");
+            return await SendEmailsAsync(emails!,SubjectMail, hrBody);
         }
 
     }
