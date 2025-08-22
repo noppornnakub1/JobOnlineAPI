@@ -4,29 +4,14 @@ using QuestPDF.Infrastructure;
 
 namespace JobOnlineAPI.Views.Register
 {
-    public class PersonalDetailsForm : IDocument
+    public class PersonalDetailsForms : IDocument
     {
-        public string? JobTitle { get; set; }
-        public string? Salary { get; set; }
-        public string? JobStartDate { get; set; }
-        public string? FullNameTH { get; set; }
-        public string? NickNameTH { get; set; }
-        public string? FullNameENG { get; set; }
-        public string? NickNameENG { get; set; }
-        public string? IDCard { get; set; }
-        public string? BirthDate { get; set; }
-        public int Age { get; set; }
-        public string? Weight { get; set; }
-        public string? Height { get; set; }
-        public string? CurrentAddress { get; set; }
-        public string? CurrentSubDistrict { get; set; }
-        public string? CurrentDistrict { get; set; }
-        public string? CurrentProvince { get; set; }
-        public string? ZipCode { get; set; }
-        public string? Phone { get; set; }
-        public string? Email { get; set; }
-
         public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
+        private readonly dynamic _form;
+        public PersonalDetailsForms(dynamic form)
+        {
+            _form = form;
+        }
 
         public void Compose(IDocumentContainer container)
         {
@@ -57,7 +42,7 @@ namespace JobOnlineAPI.Views.Register
                     col.Spacing(0);
                     col.Item().PaddingBottom(0).Row(row =>
                     {
-                        row.RelativeItem(4).AlignRight().Padding(5).Text($"วันที่พร้อมเริ่มงาน: {JobStartDate}").FontSize(8);
+                        row.RelativeItem(4).AlignRight().Padding(5).Text($"วันที่พร้อมเริ่มงาน: {_form.BirthDate}").FontSize(8);
                     });
                     col.Item().Border(1).BorderColor(Colors.Black).Column(innerCol =>
                     {
@@ -67,7 +52,7 @@ namespace JobOnlineAPI.Views.Register
                                 .Padding(2)
                                 .PaddingLeft(5)
                                 .AlignMiddle()
-                                .Text($"ตำแหน่งที่ต้องการสมัคร: {JobTitle}")
+                                .Text($"ตำแหน่งที่ต้องการสมัคร: {_form.JobTitle}")
                                 .FontSize(8);
                             row.RelativeItem(4)
                                 .BorderLeft(1)
@@ -76,7 +61,7 @@ namespace JobOnlineAPI.Views.Register
                                 .PaddingLeft(5)
                                 .MinHeight(15)
                                 .AlignMiddle()
-                                .Text($"อัตราเงินเดือนที่ต้องการ: {Salary} บาท")
+                                .Text($"อัตราเงินเดือนที่ต้องการ: {_form.Salary} บาท")
                                 .FontSize(8);
                         });
                     });
@@ -85,75 +70,76 @@ namespace JobOnlineAPI.Views.Register
                     {
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อ-สกุล: {FullNameTH}").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"ชื่อเล่น: {NickNameTH}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ชื่อ-สกุล: {_form.FirstNameThai}  {_form.LastNameThai}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ชื่อเล่น: {_form.Nickname}").FontSize(8);
                         });
                         innerCol.Item().Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"Name-Surname: {FullNameENG}").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"Nick Name: {NickNameENG}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"Name-Surname: {_form.FirstNameEng} {_form.LastNameEng}").FontSize(8);
+                            // row.RelativeItem().Padding(5).Text($"Nick Name: {_form.NickNameENG}").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem(4).Padding(5).Text($"บัตรประจำตัวประชาชน: {IDCard}").FontSize(8);
-                            row.RelativeItem(3).Padding(5).Text($"วัน/เดือน/ปี เกิด: {BirthDate}").FontSize(8);
-                            row.RelativeItem(2).Padding(5).Text($"อายุ: {Age} ปี").FontSize(8);
-                            row.RelativeItem(2).Padding(5).Text($"น้ำหนัก: {Weight} กก.").FontSize(8);
-                            row.RelativeItem(2).Padding(5).Text($"ส่วนสูง: {Height} ซม.").FontSize(8);
+                            row.RelativeItem(4).Padding(5).Text($"บัตรประจำตัวประชาชน: {_form.CitizenID}").FontSize(8);
+                            row.RelativeItem(3).Padding(5).Text($"วัน/เดือน/ปี เกิด: {_form.BirthDate}").FontSize(8);
+                            row.RelativeItem(2).Padding(5).Text($"อายุ: 0 ปี").FontSize(8);
+                            row.RelativeItem(2).Padding(5).Text($"น้ำหนัก: {_form.Weight} กก.").FontSize(8);
+                            row.RelativeItem(2).Padding(5).Text($"ส่วนสูง: {_form.Height} ซม.").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ที่อยู่(ปัจจุบัน): {CurrentAddress}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ที่อยู่(ปัจจุบัน): {_form.CurrentAddress}").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"แขวง/ตำบล: {CurrentSubDistrict}").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"เขต/อำเภอ: {CurrentDistrict}").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"จังหวัด: {CurrentProvince}").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"รหัสไปรษณีย์: {ZipCode}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"แขวง/ตำบล: {_form.CurrentSubDistrict}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"เขต/อำเภอ: {_form.CurrentDistrict}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"จังหวัด: {_form.CurrentProvince}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"รหัสไปรษณีย์: {_form.CurrentPostalCode}").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: {Phone}").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"E-mail: {Email}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: {_form.MobilePhone}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"E-mail: {_form.Email}").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"สถานภาพสมรส: โสด").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"จำนวนบุตร: 0").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"สถานภาพสมรส: {_form.MaritalStatus}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"จำนวนบุตร: {_form.MaleChildren + _form.FemaleChildren}").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อคู่สมรส: ").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"อาชีพ: ").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"บริษัท: ").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ชื่อคู่สมรส: {_form.SpouseFullName}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"อาชีพ: {_form.SpouseOccupation}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ประเภทธุรกิจ: {_form.SpouseCompanyType}").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: {Phone}").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"E-mail: {Email}").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"สถานที่ทำงาน: {_form.SpouseCompanyAddress}").FontSize(8);
+                            // row.RelativeItem().Padding(5).Text($"เบอร์โทร: {Phone}").FontSize(8);
+                            // row.RelativeItem().Padding(5).Text($"E-mail: {Email}").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อบิดา: ").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"อายุ: ปี").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"อาชีพ: ").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: ").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ชื่อบิดา: ................................").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"อายุ: ........ ปี").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"อาชีพ: ................................").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: ................................").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อมารดา: ").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"อายุ: ปี").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"อาชีพ: ").FontSize(8);
-                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: ").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ชื่อมารดา: ................................").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"อายุ: ........ ปี").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"อาชีพ: ................................").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: ................................").FontSize(8);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ท่านมีพี่-น้องจำนวน: คน").FontSize(8);
+                            row.RelativeItem().Padding(5).Text($"ท่านมีพี่-น้องจำนวน: ........ คน").FontSize(8);
                             row.RelativeItem().Padding(5).Text($"ท่านเป็นคนที่: (กรุณากรอกรายละเอียดของพี่น้องที่ประกอบอาชีพ)").FontSize(8);
                         });
                     });
-                    col.Item().Padding(5).Text("ข้อมูลประวัติการศึกษา (Educational Details)").FontSize(9);
+                    // col.Item().Padding(5).Text("ข้อมูลประวัติการศึกษา (Educational Details)").FontSize(9);
                     col.Item().Border(1).BorderColor(Colors.Black).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
@@ -335,7 +321,7 @@ namespace JobOnlineAPI.Views.Register
                             .Border(1).BorderColor(Colors.Black);
                         row.ConstantItem(100).PaddingLeft(5)
                             .Text("ยินยอม (Yes)").FontSize(8);
-                        
+
                         row.ConstantItem(8).Height(8)
                             .Border(1).BorderColor(Colors.Black).PaddingLeft(8);
                         row.ConstantItem(100).PaddingLeft(5)
@@ -349,7 +335,7 @@ namespace JobOnlineAPI.Views.Register
                             .Border(1).BorderColor(Colors.Black);
                         row.ConstantItem(100).PaddingLeft(5)
                             .Text("เคย (Yes)").FontSize(8);
-                        
+
                         row.ConstantItem(8).Height(8)
                             .Border(1).BorderColor(Colors.Black).PaddingLeft(8);
                         row.ConstantItem(100).PaddingLeft(5)
@@ -364,7 +350,7 @@ namespace JobOnlineAPI.Views.Register
                             .Border(1).BorderColor(Colors.Black);
                         row.ConstantItem(100).PaddingLeft(5)
                             .Text("เคย (Yes)").FontSize(8);
-                        
+
                         row.ConstantItem(8).Height(8)
                             .Border(1).BorderColor(Colors.Black).PaddingLeft(8);
                         row.ConstantItem(100).PaddingLeft(5)
@@ -378,7 +364,7 @@ namespace JobOnlineAPI.Views.Register
                             .Border(1).BorderColor(Colors.Black);
                         row.ConstantItem(100).PaddingLeft(5)
                             .Text("ไม่มี (No)").FontSize(8);
-                        
+
                         row.ConstantItem(8).Height(8)
                             .Border(1).BorderColor(Colors.Black).PaddingLeft(8);
                         row.ConstantItem(100).PaddingLeft(5)
