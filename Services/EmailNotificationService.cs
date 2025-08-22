@@ -263,56 +263,70 @@ namespace JobOnlineAPI.Services
 
         public async Task<int> SendNotificationEmailsAsync(ApplicantRequestData requestData)
         {
-            var candidateNames = requestData.Candidates?
-                .Select(candidate => $"{candidate.Title} {candidate.FirstNameThai} {candidate.LastNameThai}".Trim())
+            try
+            {
+                var candidateNames = requestData.Candidates?
+                    .Select(candidate => $"{candidate.Title} {candidate.FirstNameThai} {candidate.LastNameThai}".Trim())
+                    .ToList() ?? [];
+
+                var candidateEmails = requestData.Candidates?
+                    .Select(candidate => candidate.Email ?? "")
+                    .ToList() ?? [];
+
+                var jobIds = new List<int?> { requestData?.JobID };
+
+                // var candidateApplicantIDs = requestData.Candidates?
+                //     .Select(candidate => candidate.ApplicantID ?? "")
+                //     .ToList() ?? [];
+                var candidateApplicantIDs = requestData?.Candidates?
+                .Select(candidate => candidate.ApplicantID)
                 .ToList() ?? [];
 
-            var candidateEmails = requestData.Candidates?
-                .Select(candidate => candidate.Email ?? "")
-                .ToList() ?? [];
+                string candidateName = candidateNames.FirstOrDefault() ?? "ผู้สมัคร";
+                // string candidateApplicantID = candidateApplicantIDs.FirstOrDefault() ?? "0";
 
-            var jobIds = new List<int?> { requestData?.JobID };
+                // string candidateApplicantID = candidateApplicantIDs.Count != 0
+                // ? candidateApplicantIDs.First().ToString()
+                // : "0";
+                int candidateApplicantID = candidateApplicantIDs.Count != 0
+                    ? candidateApplicantIDs.First()
+                    : 0;
+                int jobId = requestData?.JobID ?? 0; 
 
-            // var candidateApplicantIDs = requestData.Candidates?
-            //     .Select(candidate => candidate.ApplicantID ?? "")
-            //     .ToList() ?? [];
-            var candidateApplicantIDs = requestData?.Candidates?
-            .Select(candidate => candidate.ApplicantID)
-            .ToList() ?? [];
+                using var connection = _context.CreateConnection();
+                var url = new DynamicParameters();
+                url.Add("@ApplicantID", candidateApplicantID, DbType.Int32);
+                url.Add("@JobID", jobId, DbType.Int32);
+                var urllist = await connection.QueryAsync<dynamic>(
+                    "GetDataForEmailNotiSelectCandidate",
+                    url,
+                    commandType: CommandType.StoredProcedure);
 
-            string candidateName = candidateNames.FirstOrDefault() ?? "ผู้สมัคร";
-            // string candidateApplicantID = candidateApplicantIDs.FirstOrDefault() ?? "0";
-            string candidateApplicantID = candidateApplicantIDs.Count != 0
-            ? candidateApplicantIDs.First().ToString()
-            : "0";
+                var urlResult = urllist.FirstOrDefault();
+                string fromRegis = urlResult != null ? urlResult.LoginUrl?.ToString() ?? "ลิงก์ไม่พร้อมใช้งาน" : "ลิงก์ไม่พร้อมใช้งาน";
 
-            using var connection = _context.CreateConnection();
-            var url = new DynamicParameters();
-            url.Add("@ApplicantID", candidateApplicantID);
-            url.Add("@JobID", jobIds);
-            var urllist = await connection.QueryAsync<dynamic>(
-                "EXEC GetDataForEmailNotiSelectCandidate @ApplicantID @JobID",
-                url);
+                string reqBody = $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ{candidateName}</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: ผลสัมภาษณ์ผู้สมัครตำแหน่ง {requestData?.JobTitle}</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>
+                        ตามที่ท่านได้สมัครในตำแหน่ง {requestData?.JobTitle} ทางบริษัทได้พิจารณาให้คุณผ่านการคัดเลือก กรุณาเข้าไปกรอกรายละเอียดของท่าน ตามลิงก์ด้านล่าง
+                    </p>
+                    <p style='margin: 0 0 10px 0;'>
+                        Click : <a href='{fromRegis}'>{fromRegis}</a>
+                    </p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
 
-            var urlResult = urllist.FirstOrDefault();
-            string fromRegis = urlResult != null ? urlResult.LoginUrl?.ToString() ?? "ลิงก์ไม่พร้อมใช้งาน" : "ลิงก์ไม่พร้อมใช้งาน";
-
-            string reqBody = $@"
-            <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ{candidateName}</p>
-                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: ผลสัมภาษณ์ผู้สมัครตำแหน่ง {requestData?.JobTitle}</p>
-                <br>
-                <p style='margin: 0 0 10px 0;'>
-                    ตามที่ท่านได้สมัครในตำแหน่ง {requestData?.JobTitle} ทางบริษัทได้พิจารณาให้คุณผ่านการคัดเลือก กรุณาเข้าไปกรอกรายละเอียดของท่าน ตามลิงก์ด้านล่าง
-                </p>
-                <p style='margin: 0 0 10px 0;'>
-                    Click : <a href='{fromRegis}'>{fromRegis}</a>
-                </p>
-                <br>
-                <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
-            </div>";
-
-            return await SendEmailsAsync(candidateEmails, "ONEE Jobs - List of selected candidates", reqBody, jobIds.FirstOrDefault());
+                return await SendEmailsAsync(candidateEmails, "ONEE Jobs - List of selected candidates", reqBody, jobIds.FirstOrDefault());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing GetDataForEmailNotiSelectCandidate with");
+                throw;
+            }
         }
 
         private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body, int? jobIds)
