@@ -1,4 +1,4 @@
-// using JobOnlineAPI.Views.Register;
+using JobOnlineAPI.Views.Register;
 using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
