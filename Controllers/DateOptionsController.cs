@@ -6,14 +6,9 @@ namespace JobOnlineAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class DateOptionsController : ControllerBase
+    public class DateOptionsController(IDbConnection dbConnection) : ControllerBase
     {
-        private readonly IDbConnection _dbConnection;
-
-        public DateOptionsController(IDbConnection dbConnection)
-        {
-            _dbConnection = dbConnection;
-        }
+        private readonly IDbConnection _dbConnection = dbConnection;
 
         [HttpGet("GetDateOptions")]
         public async Task<IActionResult> GetDateOptions([FromQuery] int? currentYear)
