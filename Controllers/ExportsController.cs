@@ -69,9 +69,16 @@ namespace JobOnlineAPI.Controllers
                 using var zipStream = new MemoryStream();
                 using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: false))
                 {
-                    using (var s1 = archive.CreateEntry("PM-TEMPLOY1.xlsx").Open()) s1.Write(excelFile1, 0, excelFile1.Length);
-                    using (var s2 = archive.CreateEntry("PM-TEMPLOY2.xlsx").Open()) s2.Write(excelFile2, 0, excelFile2.Length);
-                    using var s3 = archive.CreateEntry("PM-TEMPLOY3.xlsx").Open(); s3.Write(excelFile3, 0, excelFile3.Length);
+                    try
+                    {
+                        using (var s1 = archive.CreateEntry("PM-TEMPLOY1.xlsx").Open()) s1.Write(excelFile1, 0, excelFile1.Length);
+                        using (var s2 = archive.CreateEntry("PM-TEMPLOY2.xlsx").Open()) s2.Write(excelFile2, 0, excelFile2.Length);
+                        using var s3 = archive.CreateEntry("PM-TEMPLOY3.xlsx").Open(); s3.Write(excelFile3, 0, excelFile3.Length);
+                    }
+                    catch (IOException ex)
+                    {
+                        return StatusCode(500, $"ข้อผิดพลาดในการสร้าง ZIP: {ex.Message}");
+                    }
                 }
 
                 var zipFileName = $"PM-TEMPLOY_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..8]}.zip";
