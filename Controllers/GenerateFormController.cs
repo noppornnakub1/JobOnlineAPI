@@ -2,14 +2,20 @@ using JobOnlineAPI.Views.Register;
 using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
+using System.Data;
+using System.Data.SqlClient;
+using Dapper;
+
+
 
 namespace JobOnlineAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class GenerateFormController(IWebHostEnvironment env) : ControllerBase
+    public class GenerateFormController(IWebHostEnvironment env, IConfiguration config) : ControllerBase
     {
         private readonly IWebHostEnvironment _env = env ?? throw new ArgumentNullException(nameof(env));
+        private readonly IConfiguration _config = config;
 
         [HttpPost("generate-form")]
         public IActionResult GenerateForm([FromBody] PersonalDetailsForm form)
@@ -42,5 +48,26 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, $"ข้อผิดพลาดในการสร้าง PDF: {ex.Message}");
             }
         }
+        
+        // [HttpPost("generate-form")]
+        // public IActionResult GenerateForm([FromBody] dynamic request)
+        // {
+        //     int applicantId = request.ApplicantID;
+        //     int jobId = request.JobID;
+
+        //     using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+        //     var form = connection.QueryFirstOrDefault<dynamic>(
+        //         "sp_GetApplicantDataV1",
+        //         new { ApplicantID = applicantId, JobID = jobId },
+        //         commandType: CommandType.StoredProcedure);
+
+        //     if (form == null)
+        //         return NotFound("ไม่พบข้อมูลผู้สมัคร");
+
+        //     QuestPDF.Settings.License = LicenseType.Community;
+        //     var pdf = new PersonalDetailsForm(form).GeneratePdf();  // 🔑 ส่ง dynamic เข้าไปเลย
+
+        //     return File(pdf, "application/pdf", $"form_{applicantId}.pdf");
+        // }
     }
 }
