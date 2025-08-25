@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Data;
+using System.Data.SqlClient;
+using System.Reflection;
+using Dapper;
+using JobOnlineAPI.Filters;
 using JobOnlineAPI.Models;
 using JobOnlineAPI.Repositories;
-using JobOnlineAPI.Filters;
-using System.Data;
-using System.Data.SqlClient;
-using Dapper;
+using Microsoft.AspNetCore.Mvc;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -13,8 +14,7 @@ namespace JobOnlineAPI.Controllers
     public class JobsController(IJobRepository jobRepository, IConfiguration configuration) : ControllerBase
     {
         private readonly IJobRepository _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
-        private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         /// <summary>
         /// ดึงรายการตำแหน่งงานทั้งหมด
@@ -39,25 +39,56 @@ namespace JobOnlineAPI.Controllers
         /// ดึงตำแหน่งงานทั้งหมดโดยไม่มีการปิด (ไม่ใช้ filter)
         /// </summary>
         [HttpGet("all-without-closing")]
-        public async Task<ActionResult<IEnumerable<Job>>> GetAllJobsWithoutClosingFilter([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult<IEnumerable<Job>>> GetAllJobsWithoutClosingFilter()
         {
-            if (page <= 0 || pageSize <= 0)
-                return BadRequest("Page and pageSize must be positive integers.");
+            var jobs = new List<Job>();
+            var connectionString = _configuration.GetConnectionString("DefaultConnection")
+                ?? throw new ArgumentNullException("Connection string 'DefaultConnection' is not found.");
 
-            try
+            using (var connection = new SqlConnection(connectionString))
             {
-                using var connection = new SqlConnection(_connectionString);
-                var parameters = new { Page = page, PageSize = pageSize };
-                var jobs = await connection.QueryAsync<Job>("sp_GetAllJobsWithoutClosingFilter", parameters, commandType: CommandType.StoredProcedure);
-                if (!jobs.Any())
-                    return NotFound("No jobs found without closing filter.");
-                return Ok(jobs);
+                var command = new SqlCommand("sp_GetAllJobsWithoutClosingFilter", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                await connection.OpenAsync();
+                using var reader = await command.ExecuteReaderAsync();
+                var schemaTable = reader.GetSchemaTable();
+                var properties = typeof(Job).GetProperties();
+
+                while (await reader.ReadAsync())
+                {
+                    var job = new Job();
+
+                    foreach (DataRow schemaRow in schemaTable.Rows)
+                    {
+                        string columnName = schemaRow["ColumnName"]?.ToString() ?? string.Empty;
+                        if (string.IsNullOrEmpty(columnName)) continue;
+
+                        PropertyInfo? property = properties.FirstOrDefault(p => p.Name == columnName);
+
+                        if (property != null && !reader.IsDBNull(reader.GetOrdinal(columnName)))
+                        {
+                            if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
+                                property.SetValue(job, reader.GetInt32(columnName));
+                            else if (property.PropertyType == typeof(string))
+                                property.SetValue(job, reader.GetString(columnName));
+                            else if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
+                                property.SetValue(job, reader.GetDateTime(columnName));
+                            else if (property.PropertyType == typeof(decimal) || property.PropertyType == typeof(decimal?))
+                                property.SetValue(job, reader.GetDecimal(columnName));
+                        }
+                    }
+
+                    jobs.Add(job);
+                }
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Error = "Failed to retrieve jobs.", Details = ex.Message });
-            }
+
+            return Ok(jobs);
         }
+
+
 
         /// <summary>
         /// ดึงข้อมูลตำแหน่งงานตาม ID
@@ -113,8 +144,6 @@ namespace JobOnlineAPI.Controllers
                 return BadRequest("Job ID is invalid or mismatched.");
             if (string.IsNullOrWhiteSpace(job.JobTitle))
                 return BadRequest("Job title is required.");
-            if (!User.IsInRole("Admin"))
-                return Unauthorized("Only admins can update jobs.");
 
             try
             {
