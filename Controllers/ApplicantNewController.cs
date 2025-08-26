@@ -821,6 +821,69 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+
+        [HttpPost("insertApplicant")]
+        public async Task<IActionResult> InsertApplicant([FromForm] IFormCollection formData)
+        {
+            try
+            {
+                IDictionary<string, object?> data = new ExpandoObject();
+                foreach (var key in formData.Keys)
+                {
+                    data[key] = formData[key].ToString();
+                }
+
+                string jsonInput = JsonSerializer.Serialize(data);
+                string educationList = data.ContainsKey("EducationList") ? data["EducationList"]?.ToString() ?? "[]" : "[]";
+                string workList = data.ContainsKey("WorkExperienceList") ? data["WorkExperienceList"]?.ToString() ?? "[]" : "[]";
+                string skillsList = data.ContainsKey("SkillsList") ? data["SkillsList"]?.ToString() ?? "[]" : "[]";
+                string filesList = "[]";
+
+                if (formData.Files.Count > 0)
+                {
+                    var file = formData.Files["ResumeFile"];
+                    if (file != null)
+                    {
+                        var fileObj = new[]
+                        {
+                            new {
+                                FileName = file.FileName,
+                                FileSize = file.Length,
+                                FileType = Path.GetExtension(file.FileName)
+                            }
+                        };
+                        filesList = JsonSerializer.Serialize(fileObj);
+                    }
+                }
+
+                using var connection = _context.CreateConnection();
+                var parameters = new DynamicParameters();
+                parameters.Add("@JsonInput", jsonInput, DbType.String);
+                parameters.Add("@EducationList", educationList, DbType.String);
+                parameters.Add("@WorkExperienceList", workList, DbType.String);
+                parameters.Add("@SkillsList", skillsList, DbType.String);
+                parameters.Add("@FilesList", filesList, DbType.String);
+                parameters.Add("@ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+                await connection.ExecuteAsync("InsertApplicantDataRegister", parameters, commandType: CommandType.StoredProcedure);
+
+                int applicantId = parameters.Get<int>("@ApplicantID");
+
+                return Ok(new
+                {
+                    Success = true,
+                    ApplicantID = applicantId,
+                    Message = "สมัครงานสำเร็จ"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inserting applicant");
+                return StatusCode(500, new { Success = false, Error = ex.ToString() });
+            }
+        }
+
+
         private BadRequestObjectResult? ValidateConsentInput(IDictionary<string, object?> data)
         {
             if (!data.ContainsKey("UserId") || !data.ContainsKey("confirmConsent"))

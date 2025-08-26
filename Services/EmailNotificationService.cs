@@ -31,8 +31,9 @@ namespace JobOnlineAPI.Services
             var parameters = new DynamicParameters();
             parameters.Add("@Role", role);
             parameters.Add("@Department", department);
+            //sp_GetDateSendEmail 
             var staffList = await connection.QueryAsync<StaffEmail>(
-                "EXEC sp_GetDateSendEmail @Role, @Department",
+                "EXEC sp_GetDataSendEmailRecipients  @Role, @Department",
                 parameters);
             return staffList.Select(staff => staff.Email?.Trim() ?? string.Empty)
                            .Where(email => !string.IsNullOrWhiteSpace(email));
@@ -47,10 +48,10 @@ namespace JobOnlineAPI.Services
                 : null;
 
             int successCount = 0;
-
+            //"sp_GetDateSendEmailV3"
             using var connection = _context.CreateConnection();
             var results = await connection.QueryAsync<StaffEmail>(
-                "sp_GetDateSendEmailV3",
+                "sp_GetDataSendEmailRegister",
                 new { JobID = dbResult.OutJobID },
                 commandType: CommandType.StoredProcedure);
 
@@ -220,7 +221,7 @@ namespace JobOnlineAPI.Services
                 <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
             </div>";
 
-            var recipients = await GetEmailRecipientsAsync(3);
+            var recipients = await GetEmailRecipientsAsync(3,requestData.Department);
             return await SendEmailsAsync(recipients, "ONEE Jobs - List of candidates for job interview", hrBody, null);
         }
 
@@ -234,9 +235,6 @@ namespace JobOnlineAPI.Services
 
             string hrBody = $@"
             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณสมศรี (ผู้จัดการฝ่ายบุคคล)</p>
-                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรื่อง: การเรียกสัมภาษณ์ผู้สมัครตำแหน่ง {requestData.JobTitle}</p>
-                <br>
                 <p style='margin: 0 0 10px 0;'>
                     เรียน ฝ่ายบุคคล<br>
                     ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {requestData.JobTitle} จำนวน {candidateNames.Count} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
@@ -329,26 +327,49 @@ namespace JobOnlineAPI.Services
             }
         }
 
+        // private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body, int? jobIds)
+        // {
+        //     int successCount = 0;
+        //     foreach (var email in recipients)
+        //     {
+        //         if (string.IsNullOrWhiteSpace(email))
+        //             continue;
+
+        //         try
+        //         {
+        //             await _emailService.SendEmailAsync(email, subject, body, true, "Register", jobIds);
+        //             successCount++;
+        //             _logger.LogInformation("Successfully sent email to {Email}", email);
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             _logger.LogError(ex, "Failed to send email to {Email}: {Message}", email, ex.Message);
+        //         }
+        //     }
+        //     return successCount;
+        // }
         private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body, int? jobIds)
         {
-            int successCount = 0;
-            foreach (var email in recipients)
-            {
-                if (string.IsNullOrWhiteSpace(email))
-                    continue;
+            var recipientList = recipients
+                .Where(email => !string.IsNullOrWhiteSpace(email))
+                .ToList();
 
-                try
-                {
-                    await _emailService.SendEmailAsync(email, subject, body, true, "Register", jobIds);
-                    successCount++;
-                    _logger.LogInformation("Successfully sent email to {Email}", email);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send email to {Email}: {Message}", email, ex.Message);
-                }
+            if (!recipientList.Any()) return 0;
+
+            try
+            {
+                string to = string.Join(";", recipientList);
+
+                await _emailService.SendEmailAsync(to, subject, body, true, "Register", jobIds);
+
+                _logger.LogInformation("Successfully sent email to {Count} recipients", recipientList.Count);
+                return recipientList.Count;
             }
-            return successCount;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send email to multiple recipients: {Message}", ex.Message);
+                return 0;
+            }
         }
 
         private static string GenerateManagerEmailBody(string fullNameThai, string jobTitle)

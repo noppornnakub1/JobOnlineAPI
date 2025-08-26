@@ -94,8 +94,9 @@ namespace JobOnlineAPI.Repositories
 
             try
             {
+                //"sp_GetDateSendEmailV4"
                 var staffList = await db.QueryAsync<StaffEmail>(
-                    "sp_GetDateSendEmailV4",
+                    "sp_GetDataSendEmailJobManagement",
                     emailParameters,
                     commandType: CommandType.StoredProcedure
                 );
