@@ -3,7 +3,6 @@ using System.Data;
 using System.Data.SqlClient;
 using Dapper;
 
-
 namespace JobOnlineAPI.Controllers
 {
     [ApiController]
@@ -41,5 +40,4 @@ namespace JobOnlineAPI.Controllers
             }
         }
     }
-
 }
