@@ -5,8 +5,7 @@ using QuestPDF.Infrastructure;
 using System.Data;
 using System.Data.SqlClient;
 using Dapper;
-
-
+using System.Text.Json;
 
 namespace JobOnlineAPI.Controllers
 {
@@ -48,9 +47,30 @@ namespace JobOnlineAPI.Controllers
                 return StatusCode(500, $"ข้อผิดพลาดในการสร้าง PDF: {ex.Message}");
             }
         }
+
+        [HttpPost("generate-formV2")]
+        public IActionResult GenerateFormV2([FromBody] JsonElement request)
+        {
+            int applicantId = request.GetProperty("ApplicantID").GetInt32();
+            int jobId = request.GetProperty("JobID").GetInt32();
+
+            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            var form = connection.QueryFirstOrDefault<dynamic>(
+                "sp_GetApplicantDataV1",
+                new { ApplicantID = applicantId, JobID = jobId },
+                commandType: CommandType.StoredProcedure);
+
+            if (form == null)
+                return NotFound("ไม่พบข้อมูลผู้สมัคร");
+
+            QuestPDF.Settings.License = LicenseType.Community;
+            var pdf = new PersonalDetailsForms(form).GeneratePdf();
+
+            return File(pdf, "application/pdf", $"form_{applicantId}.pdf");
+        }
         
-        // [HttpPost("generate-form")]
-        // public IActionResult GenerateForm([FromBody] dynamic request)
+        // [HttpPost("generate-formV2")]
+        // public IActionResult GenerateFormV2([FromBody] dynamic request)
         // {
         //     int applicantId = request.ApplicantID;
         //     int jobId = request.JobID;
@@ -65,7 +85,7 @@ namespace JobOnlineAPI.Controllers
         //         return NotFound("ไม่พบข้อมูลผู้สมัคร");
 
         //     QuestPDF.Settings.License = LicenseType.Community;
-        //     var pdf = new PersonalDetailsForm(form).GeneratePdf();  // 🔑 ส่ง dynamic เข้าไปเลย
+        //     var pdf = new PersonalDetailsForms(form).GeneratePdf();  // 🔑 ส่ง dynamic เข้าไปเลย
 
         //     return File(pdf, "application/pdf", $"form_{applicantId}.pdf");
         // }
