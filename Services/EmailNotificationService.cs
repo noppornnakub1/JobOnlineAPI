@@ -327,34 +327,13 @@ namespace JobOnlineAPI.Services
             }
         }
 
-        // private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body, int? jobIds)
-        // {
-        //     int successCount = 0;
-        //     foreach (var email in recipients)
-        //     {
-        //         if (string.IsNullOrWhiteSpace(email))
-        //             continue;
-
-        //         try
-        //         {
-        //             await _emailService.SendEmailAsync(email, subject, body, true, "Register", jobIds);
-        //             successCount++;
-        //             _logger.LogInformation("Successfully sent email to {Email}", email);
-        //         }
-        //         catch (Exception ex)
-        //         {
-        //             _logger.LogError(ex, "Failed to send email to {Email}: {Message}", email, ex.Message);
-        //         }
-        //     }
-        //     return successCount;
-        // }
         private async Task<int> SendEmailsAsync(IEnumerable<string> recipients, string subject, string body, int? jobIds)
         {
             var recipientList = recipients
                 .Where(email => !string.IsNullOrWhiteSpace(email))
                 .ToList();
 
-            if (!recipientList.Any()) return 0;
+            if (recipientList.Count == 0) return 0;
 
             try
             {
