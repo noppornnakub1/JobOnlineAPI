@@ -823,51 +823,40 @@ namespace JobOnlineAPI.Controllers
 
 
         [HttpPost("insertApplicant")]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> InsertApplicant([FromForm] IFormCollection formData)
         {
             try
             {
-                IDictionary<string, object?> data = new ExpandoObject();
+                IDictionary<string, object?> req = new ExpandoObject();
                 foreach (var key in formData.Keys)
                 {
-                    data[key] = formData[key].ToString();
+                    req[key] = formData[key].ToString();
                 }
+                string jsonInput = JsonSerializer.Serialize(req);
+                string educationList = req.ContainsKey("EducationList") ? req["EducationList"]?.ToString() ?? "[]" : "[]";
+                string workList = req.ContainsKey("WorkExperienceList") ? req["WorkExperienceList"]?.ToString() ?? "[]" : "[]";
+                string skillsList = req.ContainsKey("SkillsList") ? req["SkillsList"]?.ToString() ?? "[]" : "[]";
+                var files = formData.Files;
+                var fileMetadatas = await _fileProcessingService.ProcessFilesAsync(files);
+                string filesList = JsonSerializer.Serialize(fileMetadatas);
 
-                string jsonInput = JsonSerializer.Serialize(data);
-                string educationList = data.ContainsKey("EducationList") ? data["EducationList"]?.ToString() ?? "[]" : "[]";
-                string workList = data.ContainsKey("WorkExperienceList") ? data["WorkExperienceList"]?.ToString() ?? "[]" : "[]";
-                string skillsList = data.ContainsKey("SkillsList") ? data["SkillsList"]?.ToString() ?? "[]" : "[]";
-                string filesList = "[]";
+                using var conn = _context.CreateConnection();
+                var param = new DynamicParameters();
+                param.Add("@JsonInput", jsonInput);
+                param.Add("@EducationList", educationList);
+                param.Add("@WorkExperienceList", workList);
+                param.Add("@SkillsList", skillsList);
+                param.Add("@FilesList", filesList);
+                param.Add("@ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-                if (formData.Files.Count > 0)
-                {
-                    var file = formData.Files["ResumeFile"];
-                    if (file != null)
-                    {
-                        var fileObj = new[]
-                        {
-                            new {
-                                FileName = file.FileName,
-                                FileSize = file.Length,
-                                FileType = Path.GetExtension(file.FileName)
-                            }
-                        };
-                        filesList = JsonSerializer.Serialize(fileObj);
-                    }
-                }
+                await conn.ExecuteAsync("InsertApplicantDataRegister", param, commandType: CommandType.StoredProcedure);
 
-                using var connection = _context.CreateConnection();
-                var parameters = new DynamicParameters();
-                parameters.Add("@JsonInput", jsonInput, DbType.String);
-                parameters.Add("@EducationList", educationList, DbType.String);
-                parameters.Add("@WorkExperienceList", workList, DbType.String);
-                parameters.Add("@SkillsList", skillsList, DbType.String);
-                parameters.Add("@FilesList", filesList, DbType.String);
-                parameters.Add("@ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
-
-                await connection.ExecuteAsync("InsertApplicantDataRegister", parameters, commandType: CommandType.StoredProcedure);
-
-                int applicantId = parameters.Get<int>("@ApplicantID");
+                int applicantId = param.Get<int>("@ApplicantID");
+                _fileProcessingService.MoveFilesToApplicantDirectory(applicantId, fileMetadatas);
+                await _emailNotificationService.SendApplicationEmailsAsync(req, 
+                    (applicantId, req["Email"]?.ToString() ?? "", "", "", req["JobTitle"]?.ToString() ?? "", req["CompanyName"]?.ToString() ?? "", req.ContainsKey("JobID") ? Convert.ToInt32(req["JobID"]) : 0),
+                    _applicationFormUri);
 
                 return Ok(new
                 {
@@ -878,11 +867,10 @@ namespace JobOnlineAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error inserting applicant");
-                return StatusCode(500, new { Success = false, Error = ex.ToString() });
+                _logger.LogError(ex, "❌ Error inserting applicant");
+                return StatusCode(500, new { Success = false, Error = ex.Message });
             }
         }
-
 
         private BadRequestObjectResult? ValidateConsentInput(IDictionary<string, object?> data)
         {
