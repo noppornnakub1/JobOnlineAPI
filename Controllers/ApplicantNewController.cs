@@ -834,9 +834,22 @@ namespace JobOnlineAPI.Controllers
                     req[key] = formData[key].ToString();
                 }
                 string jsonInput = JsonSerializer.Serialize(req);
-                string educationList = req.ContainsKey("EducationList") ? req["EducationList"]?.ToString() ?? "[]" : "[]";
-                string workList = req.ContainsKey("WorkExperienceList") ? req["WorkExperienceList"]?.ToString() ?? "[]" : "[]";
-                string skillsList = req.ContainsKey("SkillsList") ? req["SkillsList"]?.ToString() ?? "[]" : "[]";
+                string educationList = "[]";
+                string workList = "[]";
+                string skillsList = "[]";
+
+                if (req.TryGetValue("EducationList", out var educationObj) && educationObj != null)
+                {
+                    educationList = educationObj.ToString() ?? "[]";
+                }
+                if (req.TryGetValue("WorkExperienceList", out var workObj) && workObj != null)
+                {
+                    workList = workObj.ToString() ?? "[]";
+                }
+                if (req.TryGetValue("SkillsList", out var skillsObj) && skillsObj != null)
+                {
+                    skillsList = skillsObj.ToString() ?? "[]";
+                }
                 var files = formData.Files;
                 var fileMetadatas = await _fileProcessingService.ProcessFilesAsync(files);
                 string filesList = JsonSerializer.Serialize(fileMetadatas);
@@ -855,7 +868,7 @@ namespace JobOnlineAPI.Controllers
                 int applicantId = param.Get<int>("@ApplicantID");
                 _fileProcessingService.MoveFilesToApplicantDirectory(applicantId, fileMetadatas);
                 await _emailNotificationService.SendApplicationEmailsAsync(req, 
-                    (applicantId, req["Email"]?.ToString() ?? "", "", "", req["JobTitle"]?.ToString() ?? "", req["CompanyName"]?.ToString() ?? "", req.ContainsKey("JobID") ? Convert.ToInt32(req["JobID"]) : 0),
+                    (applicantId, req["Email"]?.ToString() ?? "", "", "", req["JobTitle"]?.ToString() ?? "", req["CompanyName"]?.ToString() ?? "", req.TryGetValue("JobID", out object? value) ? Convert.ToInt32(value) : 0),
                     _applicationFormUri);
 
                 return Ok(new
