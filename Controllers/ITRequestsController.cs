@@ -562,16 +562,17 @@ namespace JobOnlineAPI.Controllers
         }
         [HttpGet("dataUserAdmin")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
-        public async Task<IActionResult> GetDataUserAdmin([FromQuery] int? ApplicantID)
+        public async Task<IActionResult> GetDataUserAdmin([FromQuery] int? JobID)
         {
             try
             {
                 using var connection = new SqlConnection(_dbConnection.ConnectionString);
                 var parameters = new DynamicParameters();
-                parameters.Add("@ApplicantID", ApplicantID);
-
+                parameters.Add("@JobID", JobID);
+                // parameters.Add("@ApplicantID", ApplicantID);
+                // sp_listNameSignatures
                 var result = await connection.QueryAsync(new CommandDefinition(
-                    "sp_listNameSignatures",
+                    "sp_listNameSignaturesV2",
                     parameters,
                     commandType: CommandType.StoredProcedure));
 
