@@ -16,6 +16,7 @@ namespace JobOnlineAPI.Views.Register
             _form = form;
         }
 
+        [Obsolete]
         public void Compose(IDocumentContainer container)
         {
             
@@ -25,12 +26,15 @@ namespace JobOnlineAPI.Views.Register
                 page.MarginVertical(20);
                 page.MarginHorizontal(20);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
+                // page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
                 page.Header()
                     .AlignCenter()
                     .Column(col =>
                     {
-                        col.Item().AlignCenter().Width(80)
-                            .Image(Path.Combine("Views", "imagesform", "one_logo.png"));
+                        // col.Item().AlignCenter().Width(80)
+                        //     .Image(Path.Combine("Views", "imagesform", "one_logo.png"));
+                        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Views", "imagesform", "one_logo.png");
+                        col.Item().AlignCenter().Width(80).Image(imagePath, ImageScaling.FitWidth);
                         col.Item().AlignCenter()
                             .PaddingTop(4).PaddingBottom(0)
                             .Text("บริษัท เดอะ วัน เอ็นเตอร์ไพรส์ จำกัด (มหาชน)")
@@ -46,7 +50,15 @@ namespace JobOnlineAPI.Views.Register
                     col.Spacing(0);
                     col.Item().PaddingBottom(0).Row(row =>
                     {
-                        row.RelativeItem(4).AlignRight().Padding(5).Text($"วันที่พร้อมเริ่มงาน: {_form["JobStartDate"] ?? ""}").FontSize(10);
+                        // row.RelativeItem(4).AlignRight().Padding(5).Text($"วันที่พร้อมเริ่มงาน: {_form["JobStartDate"] ?? ""}").FontSize(10);
+                        var JobStartDateText = _form["JobStartDate"] is DateTime dt ? dt.ToString("dd/MM/yyyy") : "";
+                        row.RelativeItem(4).AlignRight().Padding(5).Text(
+                            text =>
+                            {
+                                text.Span("วันที่พร้อมเริ่มงาน: ").FontSize(10).Bold();
+                                text.Span($"{JobStartDateText}").FontSize(10);
+                            }
+                        );
                     });
                     col.Item().Border(1).BorderColor(Colors.Black).Column(innerCol =>
                     {
@@ -56,8 +68,13 @@ namespace JobOnlineAPI.Views.Register
                                 .Padding(2)
                                 .PaddingLeft(5)
                                 .AlignMiddle()
-                                .Text($"ตำแหน่งที่ต้องการสมัคร: {_form["JobTitle"] ?? ""}")
-                                .FontSize(10);
+                                .Text(
+                                    text =>
+                                    {
+                                        text.Span("ตำแหน่งที่ต้องการสมัคร: ").FontSize(10).Bold();
+                                        text.Span($"{_form["JobTitle"] ?? ""}").FontSize(10);
+                                    }
+                                );
                             row.RelativeItem(4)
                                 .BorderLeft(1)
                                 .BorderColor(Colors.Black)
@@ -65,85 +82,276 @@ namespace JobOnlineAPI.Views.Register
                                 .PaddingLeft(5)
                                 .MinHeight(15)
                                 .AlignMiddle()
-                                .Text($"อัตราเงินเดือนที่ต้องการ: {_form["Salary"] ?? ""} บาท")
-                                .FontSize(10);
+                                .Text(
+                                    text =>
+                                    {
+                                        text.Span("อัตราเงินเดือนที่ต้องการ: ").FontSize(10).Bold();
+                                        text.Span($"{_form["Salary"] ?? ""} บาท").FontSize(10);
+                                    }
+                                );
                         });
                     });
-                    col.Item().Padding(5).Text("ข้อมูลส่วนตัว (Personal Details)").FontSize(10);
+                    col.Item().Padding(5).Text("ข้อมูลส่วนตัว (Personal Details)").Bold().FontSize(10);
                     col.Item().Border(1).BorderColor(Colors.Black).Padding(5).Column(innerCol =>
                     {
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อ-สกุล: {_form["FirstNameThai"] ?? ""}  {_form["LastNameThai"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"ชื่อเล่น: {_form["Nickname"] ?? ""}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                    text =>
+                                    {
+                                        text.Span("ชื่อ-สกุล: ").FontSize(10).Bold();
+                                        text.Span($"{_form["FirstNameThai"] ?? ""}  {_form["LastNameThai"] ?? ""}").FontSize(10);
+                                    }
+                                );
+                            row.RelativeItem().Padding(5).Text(
+                                    text =>
+                                    {
+                                        text.Span("ชื่อเล่น: ").FontSize(10).Bold();
+                                        text.Span($"{_form["Nickname"] ?? ""}").FontSize(10);
+                                    }
+                                );
                         });
                         innerCol.Item().Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"Name-Surname: {_form["FirstNameEng"] ?? ""} {_form["LastNameEng"] ?? ""}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                    text =>
+                                    {
+                                        text.Span("Name-Surname: ").FontSize(10).Bold();
+                                        text.Span($"{_form["FirstNameEng"] ?? ""} {_form["LastNameEng"] ?? ""}").FontSize(10);
+                                    }
+                                );
                             // row.RelativeItem().Padding(5).Text($"Nick Name: {_form.NickNameENG}").FontSize(10);
                         });
                         var birthDateText = _form["BirthDate"] is DateTime dt ? dt.ToString("dd/MM/yyyy") : "";
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem(4).Padding(5).Text($"บัตรประจำตัวประชาชน: {_form["CitizenID"] ?? ""}").FontSize(10);
-                            row.RelativeItem(3).Padding(5).Text($"วัน/เดือน/ปี เกิด: {birthDateText}").FontSize(10);
-                            row.RelativeItem(2).Padding(5).Text($"อายุ: {_form["Age"]} ปี").FontSize(10);
-                            row.RelativeItem(2).Padding(5).Text($"น้ำหนัก: {_form["Weight"] ?? ""} กก.").FontSize(10);
-                            row.RelativeItem(2).Padding(5).Text($"ส่วนสูง: {_form["Height"] ?? ""} ซม.").FontSize(10);
+                            row.RelativeItem(4).Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("บัตรประจำตัวประชาชน: ").FontSize(10).Bold();
+                                    text.Span($"{_form["CitizenID"] ?? ""}").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem(3).Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("วัน/เดือน/ปี เกิด: ").FontSize(10).Bold();
+                                    text.Span($"{birthDateText}").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem(2).Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("อายุ: ").FontSize(10).Bold();
+                                    text.Span($"{_form["Age"]} ปี").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem(2).Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("น้ำหนัก: ").FontSize(10).Bold();
+                                    text.Span($"{_form["Weight"] ?? ""} กก.").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem(2).Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("ส่วนสูง: ").FontSize(10).Bold();
+                                    text.Span($"{_form["Height"] ?? ""} ซม.").FontSize(10);
+                                }
+                            );
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ที่อยู่(ปัจจุบัน): {_form["CurrentAddress"] ?? ""}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("ที่อยู่(ปัจจุบัน): ").FontSize(10).Bold();
+                                    text.Span($"{_form["CurrentAddress"] ?? ""}").FontSize(10);
+                                }
+                            );
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"แขวง/ตำบล: {_form["CurrentSubDistrict"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"เขต/อำเภอ: {_form["CurrentDistrict"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"จังหวัด: {_form["CurrentProvince"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"รหัสไปรษณีย์: {_form["CurrentPostalCode"] ?? ""}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("แขวง/ตำบล: ").FontSize(10).Bold();
+                                    text.Span($"{_form["CurrentSubDistrict"] ?? ""}").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("เขต/อำเภอ: ").FontSize(10).Bold();
+                                    text.Span($"{_form["CurrentDistrict"] ?? ""}").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("จังหวัด: ").FontSize(10).Bold();
+                                    text.Span($"{_form["CurrentProvince"] ?? ""}").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("รหัสไปรษณีย์: ").FontSize(10).Bold();
+                                    text.Span($"{_form["Height"] ?? ""}").FontSize(10);
+                                }
+                            );
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: {_form["MobilePhone"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"E-mail: {_form["Email"] ?? ""}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("เบอร์โทร: ").FontSize(10).Bold();
+                                    text.Span($"{_form["MobilePhone"] ?? ""}").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("Email: ").FontSize(10).Bold();
+                                    text.Span($"{_form["HeiEmailght"] ?? ""}").FontSize(10);
+                                }
+                            );
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"สถานภาพสมรส: {_form["MaritalStatus"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"จำนวนบุตร: {Convert.ToInt32(_form["MaleChildren"] ?? 0) + Convert.ToInt32(_form["FemaleChildren"] ?? 0)}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("สถานภาพสมรส: ").FontSize(10).Bold();
+                                    text.Span($"{_form["MaritalStatus"] ?? ""}").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("จำนวนบุตร: ").FontSize(10).Bold();
+                                    text.Span($"{Convert.ToInt32(_form["MaleChildren"] ?? 0) + Convert.ToInt32(_form["FemaleChildren"] ?? 0)}").FontSize(10);
+                                }
+                            );
                             // .Text($"จำนวนบุตร: {_form.MaleChildren + _form.FemaleChildren}").FontSize(10);
 
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อคู่สมรส: {_form["SpouseFullName"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"อาชีพ: {_form["SpouseOccupation"] ?? ""}").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"ประเภทธุรกิจ: {_form["SpouseCompanyType"] ?? ""}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("ชื่อคู่สมรส: ").FontSize(10).Bold();
+                                        text.Span($"{_form["SpouseFullName"] ?? ""}").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("อาชีพ: ").FontSize(10).Bold();
+                                        text.Span($"{_form["SpouseOccupation"] ?? ""}").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("ประเภทธุรกิจ: ").FontSize(10).Bold();
+                                        text.Span($"{_form["SpouseCompanyType"] ?? ""}").FontSize(10);
+                                    }
+                            );
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"สถานที่ทำงาน: {_form["SpouseCompanyAddress"] ?? ""}").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("สถานที่ทำงาน: ").FontSize(10).Bold();
+                                        text.Span($"{_form["SpouseCompanyAddress"] ?? ""}").FontSize(10);
+                                    }
+                            );
                             // row.RelativeItem().Padding(5).Text($"เบอร์โทร: {Phone}").FontSize(10);
                             // row.RelativeItem().Padding(5).Text($"E-mail: {Email}").FontSize(10);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อบิดา: ").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"อายุ:  ปี").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"อาชีพ: ").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: ").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("ชื่อบิดา: ").FontSize(10).Bold();
+                                        text.Span($"").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("อายุ: ").FontSize(10).Bold();
+                                        text.Span($" ปี").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("อาชีพ: ").FontSize(10).Bold();
+                                        text.Span($"").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("เบอร์โทร: ").FontSize(10).Bold();
+                                        text.Span($"").FontSize(10);
+                                    }
+                            );
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ชื่อมารดา: ").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"อายุ:  ปี").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"อาชีพ: ").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"เบอร์โทร: ").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("ชื่อมารดา: ").FontSize(10).Bold();
+                                        text.Span($"").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("อายุ: ").FontSize(10).Bold();
+                                        text.Span($" ปี").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("อาชีพ: ").FontSize(10).Bold();
+                                        text.Span($"").FontSize(10);
+                                    }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                    {
+                                        text.Span("เบอร์โทร: ").FontSize(10).Bold();
+                                        text.Span($"").FontSize(10);
+                                    }
+                            );
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
-                            row.RelativeItem().Padding(5).Text($"ท่านมีพี่-น้องจำนวน: คน").FontSize(10);
-                            row.RelativeItem().Padding(5).Text($"ท่านเป็นคนที่: (กรุณากรอกรายละเอียดของพี่น้องที่ประกอบอาชีพ)").FontSize(10);
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("ท่านมีพี่-น้องจำนวน: ").FontSize(10).Bold();
+                                    text.Span($" คน").FontSize(10);
+                                }
+                            );
+                            row.RelativeItem().Padding(5).Text(
+                                text =>
+                                {
+                                    text.Span("ท่านเป็นคนที่: ").FontSize(10).Bold();
+                                    text.Span($"").FontSize(10);
+                                }
+                            );
                         });
                     });
                     var educationList = new List<EducationsDto>();
@@ -164,7 +372,7 @@ namespace JobOnlineAPI.Views.Register
                             educationList.Add(new EducationsDto());
                         }
                     }
-                    col.Item().Padding(5).Text("ข้อมูลประวัติการศึกษา (Educational Details)").FontSize(10);
+                    col.Item().Padding(5).Text("ข้อมูลประวัติการศึกษา (Educational Details)").FontSize(10).Bold();
                     col.Item().Border(1).BorderColor(Colors.Black).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
@@ -179,28 +387,28 @@ namespace JobOnlineAPI.Views.Register
                         });
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("วุฒิการศึกษา / สาขา\n(Education Level / Major)").FontSize(10);
+                            .Text("วุฒิการศึกษา / สาขา\n(Education Level / Major)").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ชื่อสถานศึกษา\n(Name of place)").FontSize(10);
+                            .Text("ชื่อสถานศึกษา\n(Name of place)").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("จังหวัด/ประเทศ\n(Province/Country)").FontSize(10);
+                            .Text("จังหวัด/ประเทศ\n(Province/Country)").FontSize(10).Bold();
                         table.Cell().ColumnSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ปีการศึกษา\n(Graduated year)").FontSize(10);
+                            .Text("ปีการศึกษา\n(Graduated year)").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("วุฒิการศึกษา / สาขา\n(Education Level / Major)").FontSize(10);
+                            .Text("วุฒิการศึกษา / สาขา\n(Education Level / Major)").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("GPA").FontSize(10);
+                            .Text("GPA").FontSize(10).Bold();
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten3).AlignCenter().AlignMiddle()
-                            .Text("ตั้งแต่ปี\n(From)").FontSize(10);
+                            .Text("ตั้งแต่ปี\n(From)").FontSize(10).Bold();
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten3).AlignCenter().AlignMiddle()
-                            .Text("ถึงปี\n(To)").FontSize(10);
+                            .Text("ถึงปี\n(To)").FontSize(10).Bold();
                         foreach (var edu in educationList)
                         {
                             table.Cell().Border(1).Padding(3).Text(edu.EducationLevel ?? "").FontSize(10);
@@ -244,28 +452,28 @@ namespace JobOnlineAPI.Views.Register
                         });
                         table.Cell().ColumnSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ระยะเวลา\nPeriod").FontSize(10);
+                            .Text("ระยะเวลา\nPeriod").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("บริษัท\nCompany's Name").FontSize(10);
+                            .Text("บริษัท\nCompany's Name").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ตำแหน่ง\nPosition").FontSize(10);
+                            .Text("ตำแหน่ง\nPosition").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ลักษณะงานโดยสังเขป\nJob descriptions").FontSize(10);
+                            .Text("ลักษณะงานโดยสังเขป\nJob descriptions").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("เหตุผลที่ลาออก\nReasion for leaving").FontSize(10);
+                            .Text("เหตุผลที่ลาออก\nReasion for leaving").FontSize(10).Bold();
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("เงินเดือนสุดท้าย").FontSize(10);
+                            .Text("เงินเดือนสุดท้าย").FontSize(10).Bold();
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten3).AlignCenter().AlignMiddle()
-                            .Text("ตั้งแต่ปี(From)\nMM/YY").FontSize(10);
+                            .Text("ตั้งแต่ปี(From)\nMM/YY").FontSize(10).Bold();
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten3).AlignCenter().AlignMiddle()
-                            .Text("ถึงปี(To)\nMM/YY").FontSize(10);
+                            .Text("ถึงปี(To)\nMM/YY").FontSize(10).Bold();
 
                         foreach (var work in workList)
                         {
@@ -293,6 +501,7 @@ namespace JobOnlineAPI.Views.Register
                 page.MarginVertical(20);
                 page.MarginHorizontal(20);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
+                // page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
                 page.Header()
                     .AlignCenter()
                     .Column(col =>
@@ -337,7 +546,7 @@ namespace JobOnlineAPI.Views.Register
                             });
                         }
                     }
-                    col.Item().Padding(5).Text("ความสามารถพิเศษ").FontSize(10);
+                    col.Item().Padding(5).Text("ความสามารถพิเศษ").FontSize(10).Bold();
                     col.Item().Row(row =>
                     {
                         row.RelativeItem().Border(1).BorderColor(Colors.Black).Column(col1 =>
@@ -350,8 +559,13 @@ namespace JobOnlineAPI.Views.Register
                                 if (skill.SkillType == "TOEIC" || skill.SkillType == "TOEFL" || skill.SkillType == "IELTS")
                                 {
                                     col1.Item().Padding(5)
-                                    .Text($"{skill.SkillType ?? ""}: {skill.SkillScore ?? 0} คะแนน")
-                                    .FontSize(10);
+                                    .Text(
+                                       text =>
+                                        {
+                                            text.Span($"{skill.SkillType ?? ""}: ").FontSize(10).Bold();
+                                            text.Span($"{skill.SkillScore ?? 0} คะแนน").FontSize(10);
+                                        }
+                                    );
                                 }
                             }
                         });
@@ -370,16 +584,23 @@ namespace JobOnlineAPI.Views.Register
                                             .Text(skill.SkillType == "ComSkill" 
                                                 ? "ความรู้ทางคอมพิวเตอร์ (Computer Skills)" 
                                                 : "ความรู้หรือทักษะอื่น ๆ (Other Skills)")
-                                            .FontSize(10);
+                                            .FontSize(10).Bold();
 
                                         // ถ้ามีข้อความ → แตกเป็นหลายบรรทัด
                                         var desc = (skill.SkillDescription ?? "").Split('\n');
                                         foreach (var line in desc)
                                         {
                                             box.Item()
-                                                .PaddingHorizontal(5).Height(20)
+                                                .PaddingHorizontal(5)
+                                                .MinHeight(20)
                                                 .BorderBottom(0.5f).BorderColor(Colors.Black)
-                                                .Text(line).FontSize(10);     
+                                                .Element(e =>
+                                                {
+                                                    e.ScaleToFit()
+                                                    .Text(line)
+                                                    .FontSize(10)
+                                                    .WrapAnywhere();
+                                                });
                                         }
 
                                         // ถ้าไม่มี หรือบรรทัดน้อยกว่า 3 → เติม blank row
@@ -395,7 +616,7 @@ namespace JobOnlineAPI.Views.Register
                         });
                     });
 
-                    col.Item().PaddingTop(8).Text("ข้าพเจ้ายินยอมให้ตรวจสอบประวัติจากผู้ว่าจ้างเดิมถึงปัจจุบัน").FontSize(10);
+                    col.Item().PaddingTop(8).Text("ข้าพเจ้ายินยอมให้ตรวจสอบประวัติจากผู้ว่าจ้างเดิมถึงปัจจุบัน").FontSize(10).Bold();
                     col.Item().PaddingTop(4).Row(row =>
                     {
                         row.ConstantItem(12).MinHeight(12)
@@ -415,7 +636,7 @@ namespace JobOnlineAPI.Views.Register
                             .Text("ไม่ยินยอม (No)").FontSize(10);
                     });
 
-                    col.Item().PaddingTop(8).Text("ข้าพเจ้าเคยสมัครงานกับบริษัท เดอะ วัน เอ็นเตอร์ไพรส์ จำกัด (มหาชน)").FontSize(10);
+                    col.Item().PaddingTop(8).Text("ข้าพเจ้าเคยสมัครงานกับบริษัท เดอะ วัน เอ็นเตอร์ไพรส์ จำกัด (มหาชน)").FontSize(10).Bold();
                     col.Item().PaddingTop(4).Row(row =>
                     {
                         row.ConstantItem(12).MinHeight(12)
@@ -436,7 +657,7 @@ namespace JobOnlineAPI.Views.Register
                     });
 
 
-                    col.Item().PaddingTop(8).Text("ข้าพเจ้าเคยป่วยหนักหรือต้องพักรักษาตัวอยู่ในสถานพยาบาล").FontSize(10);
+                    col.Item().PaddingTop(8).Text("ข้าพเจ้าเคยป่วยหนักหรือต้องพักรักษาตัวอยู่ในสถานพยาบาล").FontSize(10).Bold();
                     col.Item().PaddingTop(4).Row(row =>
                     {
                         row.ConstantItem(12).MinHeight(12)
@@ -456,7 +677,7 @@ namespace JobOnlineAPI.Views.Register
                             .Text("ไม่เคย (No)").FontSize(10);
                     });
 
-                    col.Item().PaddingTop(8).Text("ข้าพเจ้ามีโรคประจำตัว").FontSize(10);
+                    col.Item().PaddingTop(8).Text("ข้าพเจ้ามีโรคประจำตัว").FontSize(10).Bold();
                     col.Item().PaddingTop(4).Row(row =>
                     {
                         row.ConstantItem(12).MinHeight(12)
@@ -480,7 +701,7 @@ namespace JobOnlineAPI.Views.Register
                         .FontSize(10);   
                     });
 
-                    col.Item().PaddingTop(8).Text("บุคคลที่ติดต่อในกรณีเร่งด่วน").FontSize(10);
+                    col.Item().PaddingTop(8).Text("บุคคลที่ติดต่อในกรณีเร่งด่วน").FontSize(10).Bold();
                     col.Item().Border(1).BorderColor(Colors.Black).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
@@ -494,19 +715,19 @@ namespace JobOnlineAPI.Views.Register
                         // Header
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ชื่อ-สกุล\n(Name-Surname)").FontSize(10);
+                            .Text("ชื่อ-สกุล\n(Name-Surname)").FontSize(10).Bold();
 
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ความสัมพันธ์\n(Relation)").FontSize(10);
+                            .Text("ความสัมพันธ์\n(Relation)").FontSize(10).Bold();
 
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("โทรศัพท์\n(Tel.)").FontSize(10);
+                            .Text("โทรศัพท์\n(Tel.)").FontSize(10).Bold();
 
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
-                            .Text("ที่อยู่\n(Address)").FontSize(10);
+                            .Text("ที่อยู่\n(Address)").FontSize(10).Bold();
 
                         // Data Row
                         table.Cell().Border(1).Padding(3)

@@ -318,7 +318,7 @@ namespace JobOnlineAPI.Services
                     <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                 </div>";
 
-                return await SendEmailsAsync(candidateEmails, "ONEE Jobs - List of selected candidates", reqBody, jobIds.FirstOrDefault());
+                return await SendEmailsAsync(candidateEmails, "ONEE Jobs - แจ้งผลการสัมภาษณ์งาน", reqBody, jobIds.FirstOrDefault());
             }
             catch (Exception ex)
             {
