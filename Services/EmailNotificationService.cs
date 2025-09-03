@@ -11,6 +11,7 @@ namespace JobOnlineAPI.Services
         Task<int> SendHireToHrEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendManagerEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendHrEmailsAsync(ApplicantRequestData requestData);
+        Task<int> SendEmailWhenHRReceived(ApplicantRequestData requestData);
         Task<int> SendNotificationEmailsAsync(ApplicantRequestData requestData);
         Task<int> SendApplicationEmailsAsync(IDictionary<string, object?> req, (int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName, int OutJobID) dbResult, string applicationFormUri);
         Task<int> SendEmailsJobsStatusAsync(int JobID);
@@ -77,7 +78,7 @@ namespace JobOnlineAPI.Services
                         _logger.LogError(ex, "Failed to send email to {Email}: {Message}", emailStaff, ex.Message);
                     }
                 }
-            } 
+            }
             else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail == "HRConfirmed")
             {
                 string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle);
@@ -221,7 +222,7 @@ namespace JobOnlineAPI.Services
                 <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
             </div>";
 
-            var recipients = await GetEmailRecipientsAsync(3,requestData.Department);
+            var recipients = await GetEmailRecipientsAsync(3, requestData.Department);
             return await SendEmailsAsync(recipients, "ONEE Jobs - List of candidates for job interview", hrBody, null);
         }
 
@@ -289,7 +290,7 @@ namespace JobOnlineAPI.Services
                 int candidateApplicantID = candidateApplicantIDs.Count != 0
                     ? candidateApplicantIDs.First()
                     : 0;
-                int jobId = requestData?.JobID ?? 0; 
+                int jobId = requestData?.JobID ?? 0;
 
                 using var connection = _context.CreateConnection();
                 var url = new DynamicParameters();
@@ -462,5 +463,44 @@ namespace JobOnlineAPI.Services
             return await SendEmailsAsync(emails!, SubjectMail, hrBody, null);
         }
 
+        public async Task<int> SendEmailWhenHRReceived(ApplicantRequestData requestData)
+        {
+            using var connection = _context.CreateConnection();
+            var parameters = new DynamicParameters();
+            var DepartmentName = requestData?.DeptName;
+            var JobTitle = requestData?.JobTitle;
+            
+            int jobId = requestData?.JobID ?? 0;
+            parameters.Add("@JobID", jobId, DbType.Int32);
+            // ตัวอย่าง Dapper async
+            var result = await connection.QueryAsync<dynamic>(
+                "sp_GetDataSendMailJobs @JobID",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            var emails = result
+                .Select(r => ((string?)r?.EMAIL)?.Trim())
+                .Where(email => !string.IsNullOrWhiteSpace(email))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            string hrBody = string.Empty;
+            string SubjectMail = string.Empty;
+            hrBody = $@"
+                <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ทีม {DepartmentName}</p>
+                    <br>
+                    <p style='margin: 0 0 10px 0;'>
+                        ฝ่ายทรัพยากรบุคคลขอแจ้งให้ทราบว่า ได้รับเรื่องการเรียกผู้สมัครงานเข้าสัมภาษณ์เรียบร้อยแล้ว 
+                        โดยขณะนี้อยู่ระหว่างการติดต่อผู้สมัครเพื่อนัดหมายวันและเวลาสัมภาษณ์
+                    </p>
+                    <br>
+                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นระบบอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                </div>";
+            SubjectMail = $@"แจ้งสถานะการเรียกสัมภาษณ์งาน - ตำแหน่ง {JobTitle}";
+
+            return await SendEmailsAsync(emails!, SubjectMail, hrBody, null);
+        }
     }
 }
+

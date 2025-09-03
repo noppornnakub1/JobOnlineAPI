@@ -331,10 +331,15 @@ namespace JobOnlineAPI.Controllers
                 {
                     await _emailNotificationService.SendManagerEmailsAsync(requestData);
                 }
+                else if (typeMail == "Acknowledge")
+                {
+                    await _emailNotificationService.SendEmailWhenHRReceived(requestData);
+                }
                 else if (typeMail == "notiMail")
                 {
                     await _emailNotificationService.SendNotificationEmailsAsync(requestData);
                 }
+
 
                 if (typeMail != "notiMail")
                 {

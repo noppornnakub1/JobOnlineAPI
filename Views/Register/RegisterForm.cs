@@ -215,7 +215,7 @@ namespace JobOnlineAPI.Views.Register
                                 text =>
                                 {
                                     text.Span("Email: ").FontSize(10).Bold();
-                                    text.Span($"{_form["HeiEmailght"] ?? ""}").FontSize(10);
+                                    text.Span($"{_form["Email"] ?? ""}").FontSize(10);
                                 }
                             );
                         });
@@ -417,7 +417,7 @@ namespace JobOnlineAPI.Views.Register
                             table.Cell().Border(1).Padding(3).AlignCenter().Text(edu.StartYear?.ToString() ?? "").FontSize(10);
                             table.Cell().Border(1).Padding(3).AlignCenter().Text(edu.EndYear?.ToString() ?? "").FontSize(10);
                             table.Cell().Border(1).Padding(3).Text(edu.Major ?? "").FontSize(10);
-                            table.Cell().Border(1).Padding(3).Text(edu.GPA ?? 0).FontSize(10);
+                            table.Cell().Border(1).Padding(3).AlignCenter().Text(edu.GPA ?? 0).FontSize(10);
                         }
                     });
 

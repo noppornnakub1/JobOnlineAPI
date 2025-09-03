@@ -26,6 +26,7 @@ namespace JobOnlineAPI.Models
         public string? RequesterName { get; set; }
         public string? RequesterPost { get; set; }
         public string? Department { get; set; }
+        public string? DeptName { get; set; }
         public string? Tel { get; set; }
         public string? TelOff { get; set; }
         public string? Remark { get; set; }
