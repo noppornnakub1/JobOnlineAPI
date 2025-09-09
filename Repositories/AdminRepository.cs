@@ -56,7 +56,8 @@ namespace JobOnlineAPI.Repositories
         public async Task<User?> GetUserByEmailAsync(string email, int JobID)
         {
             using IDbConnection db = new SqlConnection(_connectionString);
-            var query = "sp_Userlogin";
+            //sp_Userlogin
+            var query = "sp_UserloginNew";
 
             try
             {

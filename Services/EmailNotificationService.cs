@@ -474,7 +474,7 @@ namespace JobOnlineAPI.Services
             parameters.Add("@JobID", jobId, DbType.Int32);
             // ตัวอย่าง Dapper async
             var result = await connection.QueryAsync<dynamic>(
-                "sp_GetDataSendMailJobs @JobID",
+                "sp_GetDataSendMailJobs",
                 parameters,
                 commandType: CommandType.StoredProcedure);
 

@@ -101,6 +101,116 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        [HttpPost("submit-application-with-filesNew")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> SubmitApplicationWithFilesNew([FromForm] IFormFileCollection files, [FromForm] string jsonData)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(jsonData))
+                    return BadRequest("JSON data is required.");
+
+                // แปลง JSON → ExpandoObject
+                var request = JsonSerializer.Deserialize<ExpandoObject>(jsonData);
+                if (request is not IDictionary<string, object?> req || !req.TryGetValue("JobID", out var jobIdObj) || jobIdObj == null)
+                    return BadRequest("Invalid or missing JobID.");
+
+                int jobId = jobIdObj is JsonElement j && j.ValueKind == JsonValueKind.Number
+                    ? j.GetInt32()
+                    : Convert.ToInt32(jobIdObj);
+
+                await _networkShareService.ConnectAsync();
+                try
+                {
+                    // 1) Process files (ตรวจ type, เก็บ metadata)
+                    var fileMetadatas = await _fileProcessingService.ProcessFilesAsync(files);
+
+                    // 2) Save เข้า DB (เรียก Store ใหม่)
+                    var dbResult = await SaveApplicationToDatabaseNewAsync(req, jobId, fileMetadatas);
+
+                    // 3) ย้ายไฟล์ไปโฟลเดอร์ applicant_xx
+                    _fileProcessingService.MoveFilesToApplicantDirectory(dbResult.ApplicantId, fileMetadatas);
+
+                    // 4) ส่งอีเมลแจ้งเตือน
+                    await _emailNotificationService.SendApplicationEmailsAsync(req, dbResult, _applicationFormUri);
+
+                    return Ok(new
+                    {
+                        ApplicantID = dbResult.ApplicantId,
+                        FileMetadatas = fileMetadatas,
+                        StorageLocation = _networkShareService.GetBasePath(),
+                        Message = "Application and files submitted successfully."
+                    });
+                }
+                finally
+                {
+                    _networkShareService.Disconnect();
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to deserialize JSON data: {Message}", ex.Message);
+                return BadRequest("Invalid JSON data.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing application: {Message}", ex.Message);
+                return StatusCode(500, new { Error = "Server error", ex.Message });
+            }
+        }
+
+        private async Task<(int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName, int OutJobID)> SaveApplicationToDatabaseNewAsync(
+            IDictionary<string, object?> req,
+            int jobId,
+            List<Dictionary<string, object>> fileMetadatas)
+        {
+            using var conn = _context.CreateConnection();
+            var param = new DynamicParameters();
+
+            // Serialize lists (Education, WorkExperience, Skills, Relationship)
+            string[] listKeys = ["EducationList", "WorkExperienceList", "SkillsList", "RelationshipList"];
+            foreach (var key in listKeys)
+            {
+                param.Add(key, req.TryGetValue(key, out var val) && val is JsonElement je && je.ValueKind == JsonValueKind.Array
+                    ? je.GetRawText()
+                    : "[]");
+            }
+
+            // Main JSON input
+            param.Add("JsonInput", JsonSerializer.Serialize(req));
+
+            // Files list
+            param.Add("FilesList", JsonSerializer.Serialize(fileMetadatas));
+
+            // JobId
+            param.Add("JobID", jobId);
+
+            // OUTPUT params
+            param.Add("ApplicantID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            param.Add("ApplicantEmail", dbType: DbType.String, direction: ParameterDirection.Output, size: 100);
+            param.Add("HRManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+            param.Add("JobManagerEmails", dbType: DbType.String, direction: ParameterDirection.Output, size: 500);
+            param.Add("JobTitle", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
+            param.Add("CompanyName", dbType: DbType.String, direction: ParameterDirection.Output, size: 200);
+            param.Add("OutJobID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            // Call new Store
+            await conn.ExecuteAsync("InsertOrUpdateApplicantDataNew", param, commandType: CommandType.StoredProcedure);
+
+            return (
+                param.Get<int>("ApplicantID"),
+                param.Get<string>("ApplicantEmail"),
+                param.Get<string>("HRManagerEmails"),
+                param.Get<string>("JobManagerEmails"),
+                param.Get<string>("JobTitle"),
+                param.Get<string>("CompanyName"),
+                param.Get<int>("OutJobID")
+            );
+        }
+
+
+
+
         private async Task<(int ApplicantId, string ApplicantEmail, string HrManagerEmails, string JobManagerEmails, string JobTitle, string CompanyName, int OutJobID)> SaveApplicationToDatabaseAsync(IDictionary<string, object?> req, int jobId, List<Dictionary<string, object>> fileMetadatas)
         {
             using var conn = _context.CreateConnection();
@@ -241,7 +351,7 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        [HttpGet("GetCandidate")]
+        [HttpGet("GetCandidateForJobs")]
         [TypeFilter(typeof(JwtAuthorizeAttribute))]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetFilteredCandidates([FromQuery] string? department, [FromQuery] int? jobId)
@@ -253,8 +363,10 @@ namespace JobOnlineAPI.Controllers
                 var parameters = new DynamicParameters();
                 parameters.Add("@Department", department);
                 parameters.Add("@JobID", jobId);
+                
+                //sp_GetCandidateAllV2
                 var result = await connection.QueryAsync(
-                    "sp_GetCandidateAllV2",
+                    "sp_GetCandidateAllForJobs",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -268,7 +380,7 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
-        [HttpGet("GetCandidateData")]
+        [HttpGet("GetApplicantDataForForm")]
         [ProducesResponseType(typeof(IEnumerable<dynamic>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetApplicantData([FromQuery] int? id, int? JobId)
         {
@@ -282,8 +394,9 @@ namespace JobOnlineAPI.Controllers
                 {
                     parameters.Add($"@{JobIdKey}", JobId);
                 }
+                //sp_GetApplicantDataV1
                 var result = await connection.QueryAsync(
-                    "sp_GetApplicantDataV1",
+                    "sp_GetApplicantDataAllForForm",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -766,8 +879,9 @@ namespace JobOnlineAPI.Controllers
                 parameters.Add($"@Email", Email);
                 parameters.Add($"@JobID", JobID);
                 parameters.Add($"@UseBypass", true);
+                //sp_Userlogin
                 var result = await connection.QueryAsync(
-                    "sp_Userlogin",
+                    "sp_UserloginNew",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
