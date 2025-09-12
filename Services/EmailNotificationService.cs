@@ -228,29 +228,34 @@ namespace JobOnlineAPI.Services
 
         public async Task<int> SendHrEmailsAsync(ApplicantRequestData requestData)
         {
-            var candidateNames = requestData.Candidates?
-                .Select(candidate => $"{candidate.Title} {candidate.FirstNameThai} {candidate.LastNameThai}".Trim())
-                .ToList() ?? [];
+            // var candidateNames = requestData.Candidates?
+            //     .Select(candidate => $"{candidate.Title} {candidate.FirstNameThai} {candidate.LastNameThai}".Trim())
+            //     .ToList() ?? [];
 
-            string candidateNamesString = string.Join(" ", candidateNames);
+            // string candidateNamesString = string.Join(" ", candidateNames);
+
+            var candidateNames = requestData.Candidates?
+                .Select((candidate, index) => $"{index + 1}. คุณ {candidate.FirstNameThai} {candidate.LastNameThai}".Trim())
+                .ToList() ?? new List<string>();
+
+            string candidateNamesString = string.Join("<br>", candidateNames);
 
             string hrBody = $@"
             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
                 <p style='margin: 0 0 10px 0;'>
-                    เรียน ฝ่ายบุคคล<br>
-                    ตามที่ได้รับแจ้งข้อมูลผู้สมัครในตำแหน่ง {requestData.JobTitle} จำนวน {candidateNames.Count} ท่าน ผมได้พิจารณาประวัติและคุณสมบัติเบื้องต้นแล้ว และประสงค์จะขอเรียกผู้สมัครดังต่อไปนี้เข้ามาสัมภาษณ์
+                    เรียน ฝ่ายสรรหาทรัพยากรบุคคล<br>
+                    หลังจากที่พิจารณาคุณสมบัติของผู้สมัคร ในตำแหน่ง {requestData.JobTitle} แล้วนั้น <br>
+                    ทางต้นสังกัด ใคร่ขอให้ทางฝ่ายสรรหาทรัพยากรบุคคล ติดต่อผู้สมัครเพื่อนัดหมายการสัมภาษณ์ รายละเอียด ดังนี้
                 </p>
                 <p style='margin: 0 0 10px 0;'>
-                    จากข้อมูลผู้สมัคร ดิฉัน/ผมเห็นว่า {candidateNamesString} มีคุณสมบัติที่เหมาะสมกับตำแหน่งงาน และมีความเชี่ยวชาญในทักษะที่จำเป็นต่อการทำงานในทีมของเรา
+                    {candidateNamesString}
                 </p>
                 <br>
-                <p style='margin: 0 0 10px 0;'>ขอความกรุณาฝ่ายบุคคลประสานงานกับผู้สมัครเพื่อนัดหมายการสัมภาษณ์</p>
+                <p style='margin: 0 0 10px 0;'>ในส่วนของวัน เวลา นัดหมายในการสัมภาษณ์งานนั้น </p>
                 <p style='margin: 0 0 10px 0;'>หากท่านมีข้อสงสัยประการใด กรุณาติดต่อได้ที่เบอร์ด้านล่าง</p>
-                <p style='margin: 0 0 10px 0;'>ขอบคุณสำหรับความช่วยเหลือ</p>
-                <p style='margin: 0 0 10px 0;'>ขอแสดงความนับถือ</p>
                 <p style='margin: 0 0 10px 0;'>{requestData.RequesterName}</p>
                 <p style='margin: 0 0 10px 0;'>{requestData.RequesterPost}</p>
-                <p style='margin: 0 0 10px 0;'>โทร: {requestData.Tel} ต่อ {requestData.TelOff}</p>
+                <p style='margin: 0 0 10px 0;'>โทร: {requestData.TelOff}</p>
                 <p style='margin: 0 0 10px 0;'>อีเมล: {requestData.RequesterMail}</p>
                 <br>
                 <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
