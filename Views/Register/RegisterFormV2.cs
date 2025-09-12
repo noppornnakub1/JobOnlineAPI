@@ -246,9 +246,9 @@ namespace JobOnlineAPI.Views.Register
                                                                             row.RelativeItem().Text(
                                                         text =>
                                                                                             {
-                                                                                            text.Span("เนื่องจาก: ").FontSize(12).Bold();
-                                                                                            text.Span($"{_form["ReasonMilitary"] ?? "............................."}").FontSize(12);
-                                                                                        });
+                                                                                                text.Span("เนื่องจาก: ").FontSize(12).Bold();
+                                                                                                text.Span($"{_form["ReasonMilitary"] ?? "............................."}").FontSize(12);
+                                                                                            });
                                                                         });
                                                         });
                                                 //----------------------- สถานภาพสมรส -----------------------
@@ -281,10 +281,10 @@ namespace JobOnlineAPI.Views.Register
                                                         .Text(
                                                         text =>
                                                                                             {
-                                                                                            text.Span("จำนวนบุตร: ").FontSize(12).Bold();
-                                                                                            text.Span($"{Convert.ToInt32(_form["MaleChildren"] ?? 0) + Convert.ToInt32(_form["FemaleChildren"] ?? 0)} คน").FontSize(12);
-                                                                                            text.Span("\n No. of Children: ").FontSize(12).Bold();
-                                                                                        }
+                                                                                                text.Span("จำนวนบุตร: ").FontSize(12).Bold();
+                                                                                                text.Span($"{Convert.ToInt32(_form["MaleChildren"] ?? 0) + Convert.ToInt32(_form["FemaleChildren"] ?? 0)} คน").FontSize(12);
+                                                                                                text.Span("\n No. of Children: ").FontSize(12).Bold();
+                                                                                            }
                                                                                         );
                                                                         });
                                                         });
@@ -432,12 +432,12 @@ namespace JobOnlineAPI.Views.Register
                                                                         {
                                                                             table.ColumnsDefinition(columns =>
                                                                                         {
-                                                                                        columns.RelativeColumn(3);
-                                                                                        columns.RelativeColumn(1);
-                                                                                        columns.RelativeColumn(3);
-                                                                                        columns.RelativeColumn(4);
-                                                                                        columns.RelativeColumn(2);
-                                                                                    });
+                                                                                            columns.RelativeColumn(3);
+                                                                                            columns.RelativeColumn(1);
+                                                                                            columns.RelativeColumn(3);
+                                                                                            columns.RelativeColumn(4);
+                                                                                            columns.RelativeColumn(2);
+                                                                                        });
                                                                             // Header
                                                                             table.Cell().Border(1).BorderColor(Colors.Black)
                                                         .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
@@ -448,9 +448,9 @@ namespace JobOnlineAPI.Views.Register
                                                                             table.Cell().Border(1).BorderColor(Colors.Black)
                                                         .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle().Column(col =>
                                                                                             {
-                                                                                            col.Item().Text("อาชีพ/ตำแหน่ง").FontSize(12).Bold();
-                                                                                            col.Item().Text("[Occupation]").FontSize(12).Bold();
-                                                                                        });
+                                                                                                col.Item().Text("อาชีพ/ตำแหน่ง").FontSize(12).Bold();
+                                                                                                col.Item().Text("[Occupation]").FontSize(12).Bold();
+                                                                                            });
                                                                             table.Cell().Border(1).BorderColor(Colors.Black)
                                                         .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                                         .Text("บริษัท[Company's Name]").FontSize(12).Bold();
@@ -487,11 +487,11 @@ namespace JobOnlineAPI.Views.Register
                                                                         {
                                                                             table.ColumnsDefinition(columns =>
                                                                                         {
-                                                                                        columns.RelativeColumn(3);
-                                                                                        columns.RelativeColumn(4);
-                                                                                        columns.RelativeColumn(3);
-                                                                                        columns.RelativeColumn(4);
-                                                                                    });
+                                                                                            columns.RelativeColumn(3);
+                                                                                            columns.RelativeColumn(4);
+                                                                                            columns.RelativeColumn(3);
+                                                                                            columns.RelativeColumn(4);
+                                                                                        });
                                                                             // Header
                                                                             table.Cell().Border(1).BorderColor(Colors.Black)
                                                         .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
@@ -528,7 +528,7 @@ namespace JobOnlineAPI.Views.Register
             row.ConstantItem(15).Height(15).CornerRadius(1)
             .Border(1).BorderColor(Colors.Black)
             .AlignCenter().AlignMiddle()
-            .Text(formValue?.ToLower() == expectedValue.ToLower() ? "✓" : "")
+            .Text(string.Equals(formValue, expectedValue, StringComparison.OrdinalIgnoreCase) ? "✓" : "")
             .FontSize(9).Bold();
             row.RelativeItem().PaddingLeft(5).Column(col =>
                         {
