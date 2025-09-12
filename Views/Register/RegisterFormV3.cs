@@ -1091,7 +1091,7 @@ namespace JobOnlineAPI.Views.Register
             row.ConstantItem(15).Height(15).CornerRadius(1)
                 .Border(1).BorderColor(Colors.Black)
                 .AlignCenter().AlignMiddle()
-                .Text(formValue?.ToLower() == expectedValue.ToLower() ? "✓" : "")
+                .Text(string.Equals(formValue, expectedValue, StringComparison.OrdinalIgnoreCase) ? "✓" : "")
                 .FontSize(9).Bold();
             row.RelativeItem().PaddingLeft(5).Column(col =>
             {
@@ -1102,7 +1102,7 @@ namespace JobOnlineAPI.Views.Register
                 }
             });
         }
-        private string FormatBuddhistDate(object? value, string? format)
+        private static string FormatBuddhistDate(object? value, string? format)
         {
             if (DateTime.TryParse(value?.ToString(), out var dt))
             {
