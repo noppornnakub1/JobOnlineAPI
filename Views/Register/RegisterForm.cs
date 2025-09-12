@@ -3,7 +3,6 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using QuestPDF.Infrastructure;
 
 namespace JobOnlineAPI.Views.Register
 {
@@ -19,20 +18,17 @@ namespace JobOnlineAPI.Views.Register
         [Obsolete]
         public void Compose(IDocumentContainer container)
         {
-            
+
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
                 page.MarginVertical(20);
                 page.MarginHorizontal(20);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
-                // page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
                 page.Header()
                     .AlignCenter()
                     .Column(col =>
                     {
-                        // col.Item().AlignCenter().Width(80)
-                        //     .Image(Path.Combine("Views", "imagesform", "one_logo.png"));
                         var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Views", "imagesform", "one_logo.png");
                         col.Item().AlignCenter().Width(80).Image(imagePath, ImageScaling.FitWidth);
                         col.Item().AlignCenter()
@@ -50,7 +46,6 @@ namespace JobOnlineAPI.Views.Register
                     col.Spacing(0);
                     col.Item().PaddingBottom(0).Row(row =>
                     {
-                        // row.RelativeItem(4).AlignRight().Padding(5).Text($"วันที่พร้อมเริ่มงาน: {_form["JobStartDate"] ?? ""}").FontSize(10);
                         var JobStartDateText = _form["JobStartDate"] is DateTime dt ? dt.ToString("dd/MM/yyyy") : "";
                         row.RelativeItem(4).AlignRight().Padding(5).Text(
                             text =>
@@ -120,7 +115,6 @@ namespace JobOnlineAPI.Views.Register
                                         text.Span($"{_form["FirstNameEng"] ?? ""} {_form["LastNameEng"] ?? ""}").FontSize(10);
                                     }
                                 );
-                            // row.RelativeItem().Padding(5).Text($"Nick Name: {_form.NickNameENG}").FontSize(10);
                         });
                         var birthDateText = _form["BirthDate"] is DateTime dt ? dt.ToString("dd/MM/yyyy") : "";
                         innerCol.Item().PaddingBottom(0).Row(row =>
@@ -235,8 +229,6 @@ namespace JobOnlineAPI.Views.Register
                                     text.Span($"{Convert.ToInt32(_form["MaleChildren"] ?? 0) + Convert.ToInt32(_form["FemaleChildren"] ?? 0)}").FontSize(10);
                                 }
                             );
-                            // .Text($"จำนวนบุตร: {_form.MaleChildren + _form.FemaleChildren}").FontSize(10);
-
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
@@ -271,8 +263,6 @@ namespace JobOnlineAPI.Views.Register
                                         text.Span($"{_form["SpouseCompanyAddress"] ?? ""}").FontSize(10);
                                     }
                             );
-                            // row.RelativeItem().Padding(5).Text($"เบอร์โทร: {Phone}").FontSize(10);
-                            // row.RelativeItem().Padding(5).Text($"E-mail: {Email}").FontSize(10);
                         });
                         innerCol.Item().PaddingBottom(0).Row(row =>
                         {
@@ -501,7 +491,6 @@ namespace JobOnlineAPI.Views.Register
                 page.MarginVertical(20);
                 page.MarginHorizontal(20);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
-                // page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
                 page.Header()
                     .AlignCenter()
                     .Column(col =>
@@ -581,8 +570,8 @@ namespace JobOnlineAPI.Views.Register
                                     {
                                         // Header
                                         box.Item().Background(Colors.Grey.Lighten3).Padding(5)
-                                            .Text(skill.SkillType == "ComSkill" 
-                                                ? "ความรู้ทางคอมพิวเตอร์ (Computer Skills)" 
+                                            .Text(skill.SkillType == "ComSkill"
+                                                ? "ความรู้ทางคอมพิวเตอร์ (Computer Skills)"
                                                 : "ความรู้หรือทักษะอื่น ๆ (Other Skills)")
                                             .FontSize(10).Bold();
 
@@ -695,10 +684,10 @@ namespace JobOnlineAPI.Views.Register
                             .FontSize(8);
                         row.ConstantItem(100).PaddingLeft(5)
                             .Text("มี (Yes)").FontSize(10);
-                            
+
                         row.ConstantItem(100)
-                        .Text($"{( _form["Marital_Status4"]?.ToString()?.ToLower() != "no" ? $"โรคประจำตัว: {_form["Marital_Status4"]}" : "")}")
-                        .FontSize(10);   
+                        .Text($"{(_form["Marital_Status4"]?.ToString()?.ToLower() != "no" ? $"โรคประจำตัว: {_form["Marital_Status4"]}" : "")}")
+                        .FontSize(10);
                     });
 
                     col.Item().PaddingTop(8).Text("บุคคลที่ติดต่อในกรณีเร่งด่วน").FontSize(10).Bold();
@@ -762,7 +751,7 @@ namespace JobOnlineAPI.Views.Register
         public int? StartYear { get; set; }
         public int? EndYear { get; set; }
         public string? Major { get; set; }
-        public decimal? GPA { get; set; } 
+        public decimal? GPA { get; set; }
     }
     public class WorkExperiencesDto
     {
@@ -780,6 +769,6 @@ namespace JobOnlineAPI.Views.Register
         public string? SkillDescription { get; set; }
 
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
-        public double? SkillScore { get; set; } 
+        public double? SkillScore { get; set; }
     }
 }
