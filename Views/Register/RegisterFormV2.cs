@@ -1,7 +1,6 @@
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 namespace JobOnlineAPI.Views.Register
 {
@@ -24,7 +23,6 @@ namespace JobOnlineAPI.Views.Register
                 page.MarginVertical(8);
                 page.MarginHorizontal(8);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
-                // page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
 
                 page.Header().Column(headerCol =>
                 {
@@ -245,10 +243,6 @@ namespace JobOnlineAPI.Views.Register
 
                     col.Item().PaddingTop(0).Border(1).BorderColor(Colors.Black).Column(innerRow =>
                     {
-                        // innerRow.Item().PaddingTop(2).Row(col =>
-                        // {
-                        //     col.RelativeItem().Padding(3).Text("ข้อมูลส่วนตัว อื่นๆ (Personal Details Other)").Bold().FontSize(13);
-                        // });
                         //----------------------- สถานภาพทางทหาร -----------------------
                         innerRow.Item().PaddingTop(2).PaddingLeft(5).Row(col =>
                         {
@@ -537,7 +531,7 @@ namespace JobOnlineAPI.Views.Register
                         });
 
                         innerRow.Item().PaddingRight(5).PaddingBottom(5).Row(col =>
-                        { 
+                        {
                             col.RelativeItem().Border(1).BorderColor(Colors.Black).Table(table =>
                             {
                                 table.ColumnsDefinition(columns =>
@@ -581,7 +575,7 @@ namespace JobOnlineAPI.Views.Register
                                     .WrapAnywhere();
                             });
                         });
-                        
+
                     });
                 }); // Close Content Page 1
 
@@ -618,7 +612,7 @@ namespace JobOnlineAPI.Views.Register
                     var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Views", "imagesform", "one_logo.png");
 
                     // โลโก้ตรงกลาง
-                    col.Item().AlignCenter().PaddingLeft(50).Width(80).Image(imagePath, ImageScaling.FitWidth);
+                    col.Item().AlignCenter().PaddingLeft(50).Width(80).Image(imagePath).FitWidth();
                     col.Item().AlignCenter().PaddingLeft(50).Text("บริษัท เดอะ วัน เอ็นเตอร์ไพรส์ จำกัด (มหาชน)").FontSize(12).Bold();
                     col.Item().AlignCenter().PaddingLeft(50).Text("The ONE Enterprise Public Company Limited").FontSize(12);
 
@@ -685,7 +679,7 @@ namespace JobOnlineAPI.Views.Register
             container.Column(col =>
             {
                 var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Views", "imagesform", "one_logo.png");
-                col.Item().AlignCenter().Width(80).Image(imagePath, ImageScaling.FitWidth);
+                col.Item().AlignCenter().Width(80).Image(imagePath).FitWidth();
                 col.Item().AlignCenter().Text("บริษัท เดอะ วัน เอ็นเตอร์ไพรส์ จำกัด (มหาชน)").FontSize(12).Bold();
                 col.Item().AlignCenter().Text("The ONE Enterprise Public Company Limited").FontSize(12);
             });
@@ -699,7 +693,7 @@ namespace JobOnlineAPI.Views.Register
         public int? StartYear { get; set; }
         public int? EndYear { get; set; }
         public string? Major { get; set; }
-        public decimal? GPA { get; set; } 
+        public decimal? GPA { get; set; }
     }
     public class WorkExperiencesV2Dto
     {
@@ -717,6 +711,6 @@ namespace JobOnlineAPI.Views.Register
         public string? SkillDescription { get; set; }
 
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
-        public double? SkillScore { get; set; } 
+        public double? SkillScore { get; set; }
     }
 }
