@@ -15,7 +15,7 @@ namespace JobOnlineAPI.Views.Register
             _form = form;
         }
 
-        [Obsolete]
+        [Obsolete("This method is obsolete. Please implement the new IDocument interface properly.")]
         public void Compose(IDocumentContainer container)
         {
 
