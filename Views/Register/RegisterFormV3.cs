@@ -13,41 +13,35 @@ namespace JobOnlineAPI.Views.Register
         {
             _form = form;
         }
-
-        [Obsolete]
+        [Obsolete("This method is obsolete. Please use the updated IDocument interface implementation or a newer document generation approach.")]
         public void Compose(IDocumentContainer container)
         {
-
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
                 page.MarginVertical(8);
                 page.MarginHorizontal(8);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
-
                 page.Header().Column(headerCol =>
                 {
                     headerCol.Item().ShowOnce().Element(ComposeFirstPageHeader);// ✅ Header หน้าแรก (มีกรอบรูป)
                     headerCol.Item().SkipOnce().Element(ComposeOtherPageHeader); // ✅ Header ทุกหน้าถัดไป (ไม่มีกรอบรูป)
                 });
-
                 page.Content().Column(col =>
                 {
-
                     col.Item().Border(1).BorderColor(Colors.Black).Padding(3).Column(innerRow =>
                     {
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem().Padding(3).Text("ข้อมูลส่วนตัว (Personal Details)").Bold().FontSize(13);
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(4).Padding(3).Text(
                                     text =>
                                     {
                                         text.Span("ชื่อ-สกุล[TH]: ").FontSize(12).Bold();
-                                        text.Span($"{_form["FirstNameThai"] ?? ""}  {_form["LastNameThai"] ?? ""}").FontSize(12);
+                                        text.Span($"{_form["FirstNameThai"] ?? ""} {_form["LastNameThai"] ?? ""}").FontSize(12);
                                     }
                                 );
                             col.RelativeItem(4).AlignLeft().Padding(3).Text(
@@ -59,7 +53,6 @@ namespace JobOnlineAPI.Views.Register
                                 );
                             col.RelativeItem(4);
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem().Padding(3).Text(
@@ -70,13 +63,9 @@ namespace JobOnlineAPI.Views.Register
                                     }
                                 );
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
-
-                            // var birthDateText = DateTime.TryParse(_form["BirthDate"]?.ToString(), out var dt) ? dt.ToString("dd-MM-yyyy") : "";
                             var birthDateText = FormatBuddhistDate(_form["BirthDate"], "DD MMM YYYY");
-
                             col.RelativeItem(4).Padding(3).Text(
                                 text =>
                                 {
@@ -84,7 +73,6 @@ namespace JobOnlineAPI.Views.Register
                                     text.Span(birthDateText).FontSize(12);
                                 }
                             );
-
                             col.ConstantItem(75).AlignLeft().Padding(3).Text(
                                 text =>
                                 {
@@ -107,7 +95,6 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             );
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(4).Padding(3).Text(
@@ -133,9 +120,7 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             );
                         });
-
                         // ---------------------------------------------- ที่อยู่ตามทะเบียนบ้าน ----------------------------------------------
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem().Padding(3).Text(
@@ -146,7 +131,6 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             );
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem().Padding(3).Text(
@@ -178,9 +162,7 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             );
                         });
-
                         // ---------------------------------------------- ที่อยู่ปัจจุบัน ----------------------------------------------
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem().Padding(3).Text(
@@ -191,7 +173,6 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             );
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem().Padding(3).Text(
@@ -223,9 +204,7 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             );
                         });
-
                         // ---------------------------------------------- ข้อมูลติดต่อ ----------------------------------------------
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(3).Padding(3).Text(
@@ -251,9 +230,7 @@ namespace JobOnlineAPI.Views.Register
                             );
                         });
                     }); // Close ข้อมูลส่วนตัว
-
                     // ---------------------------------------------- ข้อมูลอื่นๆ ----------------------------------------------
-
                     col.Item().PaddingTop(0).Border(1).BorderColor(Colors.Black).Column(innerRow =>
                     {
                         //----------------------- สถานภาพทางทหาร -----------------------
@@ -264,25 +241,20 @@ namespace JobOnlineAPI.Views.Register
                                 col.Item().Text("สถานภาพทางทหาร: ").FontSize(12).Bold();
                                 col.Item().Text("Military Service").FontSize(12).Bold();
                             });
-
                             col.RelativeItem(2).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["MinitaryService"]?.ToString() ?? "", "completed", "ผ่านการเกณฑ์ทหาร", "Completed");
                             });
-
                             col.RelativeItem(2).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["MinitaryService"]?.ToString() ?? "", "no completed", "ยังไม่ได้เกณฑ์ทหาร", "No Completed");
                             });
-
                             col.RelativeItem(6).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["MinitaryService"]?.ToString() ?? "", "exemted", $"ได้รับการยกเว้น เนื่องจาก: {_form["ReasonMinitary"] ?? "............................."}", "Exemted,Please specific");
                             });
                         });
-
                         //----------------------- สถานภาพสมรส -----------------------
-
                         innerRow.Item().PaddingTop(2).PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(2).Padding(3).Column(col =>
@@ -290,27 +262,22 @@ namespace JobOnlineAPI.Views.Register
                                 col.Item().Text("สถานภาพสมรส: ").FontSize(12).Bold();
                                 col.Item().Text("Marital Status").FontSize(12).Bold();
                             });
-
                             col.RelativeItem(2).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["MaritalStatus"]?.ToString() ?? "", "single", "โสด", "Single");
                             });
-
                             col.RelativeItem(2).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["MaritalStatus"]?.ToString() ?? "", "married", "สมรส", "Married");
                             });
-
                             col.RelativeItem(2).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["MaritalStatus"]?.ToString() ?? "", "divorced", "หย่า", "Divorced");
                             });
-
                             col.RelativeItem(2).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["MaritalStatus"]?.ToString() ?? "", "widowed", "หม้าย", "Widowed");
                             });
-
                             col.RelativeItem(4).PaddingLeft(10).PaddingTop(4).Row(row =>
                             {
                                 row.RelativeItem().PaddingLeft(5)
@@ -324,7 +291,6 @@ namespace JobOnlineAPI.Views.Register
                                 );
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Text(
@@ -334,13 +300,11 @@ namespace JobOnlineAPI.Views.Register
                                     text.Span($"{_form["SpouseFullName"] ?? ""}").FontSize(12);
                                 }
                             );
-
                             col.RelativeItem(3).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["SpouseAliveStatus"]?.ToString() ?? "", "alive", "มีชีวิต", "");
                                 RenderCheckBox(row, _form["SpouseAliveStatus"]?.ToString() ?? "", "deceased", "ถึงแก่กรรม", "");
                             });
-
                             col.RelativeItem(5).Padding(4).Text(
                                 text =>
                                 {
@@ -349,8 +313,6 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             );
                         });
-
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem().Padding(3).Text(
@@ -390,21 +352,18 @@ namespace JobOnlineAPI.Views.Register
                     var ReferenceList = new List<RelationshipDto>();
                     RelationshipDto? Father = null;
                     RelationshipDto? Mother = null;
-
                     if (_form["RelationshipList"] != null && _form["RelationshipList"] != DBNull.Value)
                     {
                         var options = new JsonSerializerOptions
                         {
                             NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
                         };
-
                         var relationships = JsonSerializer.Deserialize<List<RelationshipDto>>(
                             _form["RelationshipList"]?.ToString() ?? "[]", options
                         ) ?? new List<RelationshipDto>();
                         Father = relationships.FirstOrDefault(r => r.RELATION_TYPE == "Father");
                         Mother = relationships.FirstOrDefault(r => r.RELATION_TYPE == "Mother");
                     }
-
                     col.Item().PaddingTop(5).Column(innerRow =>
                     {
                         innerRow.Item().PaddingLeft(5).Row(col =>
@@ -437,14 +396,12 @@ namespace JobOnlineAPI.Views.Register
                                     text.Span($"{Father?.MOBILE ?? ""}").FontSize(12);
                                 }
                             );
-
                             col.RelativeItem(3).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, Father?.ALIVE_STATUS ?? "", "alive", "มีชีวิต", "");
                                 RenderCheckBox(row, Father?.ALIVE_STATUS ?? "", "deceased", "ถึงแก่กรรม", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(4).Padding(3).Text(text =>
@@ -452,19 +409,16 @@ namespace JobOnlineAPI.Views.Register
                                 text.Span("ชื่อ-สกุล มารดา: ").FontSize(12).Bold();
                                 text.Span($"{Mother?.NAMESURNAME ?? ""}").FontSize(12);
                             });
-
                             col.ConstantItem(50).Padding(3).Text(text =>
                             {
                                 text.Span("อายุ: ").FontSize(12).Bold();
                                 text.Span($"{Mother?.AGE} ปี").FontSize(12);
                             });
-
                             col.RelativeItem(3).Padding(3).Text(text =>
                             {
                                 text.Span("อาชีพ: ").FontSize(12).Bold();
                                 text.Span($"{Mother?.CAREER ?? ""}").FontSize(12);
                             });
-
                             col.RelativeItem(3).Padding(3).Text(text =>
                             {
                                 text.Span("เบอร์โทร: ").FontSize(12).Bold();
@@ -476,7 +430,6 @@ namespace JobOnlineAPI.Views.Register
                                 RenderCheckBox(row, Mother?.ALIVE_STATUS ?? "", "deceased", "ถึงแก่กรรม", "");
                             });
                         });
-
                         var RelationshipList = new List<RelationshipDto>();
                         if (_form["RelationshipList"] != null && _form["RelationshipList"] != DBNull.Value)
                         {
@@ -495,7 +448,6 @@ namespace JobOnlineAPI.Views.Register
                         {
                             RelationshipList.Add(new RelationshipDto());
                         }
-
                         innerRow.Item().PaddingTop(1).PaddingBottom(1).Row(col =>
                         {
                             col.RelativeItem().PaddingTop(5).Text($"ท่านมีพี่-น้องจำนวน {_form["SiblingsAll"]?.ToString() ?? ""} คน ท่านเป็นคนที่ {_form["NumberAY"]} (กรุณากรอกรายละเอียดของพี่น้องที่ประกอบอาชีพ)").FontSize(12).Bold();
@@ -512,40 +464,31 @@ namespace JobOnlineAPI.Views.Register
                                     columns.RelativeColumn(5);
                                     columns.RelativeColumn(2);
                                 });
-
                                 // Header
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("ชื่อ-สกุล").FontSize(12).Bold();
-
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("อายุ").FontSize(12).Bold();
-
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("อาชีพ/ตำแหน่ง").FontSize(12).Bold();
-
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("บริษัท").FontSize(12).Bold();
-
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("เบอร์โทรศัพท์").FontSize(12).Bold();
-
                                 // Data Row
                                 foreach (var Sibling in RelationshipList)
                                 {
                                     table.Cell().Border(1).Padding(3)
                                         .Text(Sibling.NAMESURNAME ?? "").FontSize(12).AlignCenter();
-
                                     table.Cell().Border(1).Padding(3)
                                         .Text(Sibling.AGE ?? "").FontSize(12).AlignCenter();
-
                                     table.Cell().Border(1).Padding(3)
                                         .Text(Sibling.CAREER ?? "").FontSize(12).AlignCenter();
-
                                     table.Cell().Border(1).Padding(3)
                                         .Text(Sibling.COMPANY ?? "")
                                         .FontSize(12).AlignCenter()
@@ -559,31 +502,26 @@ namespace JobOnlineAPI.Views.Register
                         });
                         var UrgentList = new List<RelationshipDto>();
                         RelationshipDto? Urgent = null;
-
                         if (_form["RelationshipList"] != null && _form["RelationshipList"] != DBNull.Value)
                         {
                             var options = new JsonSerializerOptions
                             {
                                 NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
                             };
-
                             var relationships = JsonSerializer.Deserialize<List<RelationshipDto>>(
                                 _form["RelationshipList"]?.ToString() ?? "[]", options
                             ) ?? new List<RelationshipDto>();
                             Urgent = relationships.FirstOrDefault(r => r.RELATION_TYPE == "Urgent");
                         }
-
                         // ถ้า Urgent เป็น null → สร้าง object เปล่าให้ 1 ตัว
                         if (Urgent == null)
                         {
                             UrgentList.Add(new RelationshipDto());
                         }
-
                         innerRow.Item().PaddingTop(1).PaddingBottom(1).Row(col =>
                         {
                             col.RelativeItem().PaddingTop(5).Text("บุคคลที่ติดต่อในกรณีเร่งด่วน").FontSize(12).Bold();
                         });
-
                         innerRow.Item().PaddingRight(5).PaddingBottom(5).Row(col =>
                         {
                             col.RelativeItem().Border(1).BorderColor(Colors.Black).Table(table =>
@@ -595,46 +533,36 @@ namespace JobOnlineAPI.Views.Register
                                     columns.RelativeColumn(2);
                                     columns.RelativeColumn(7);
                                 });
-
                                 // Header
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("ชื่อ-สกุล").FontSize(12).Bold();
-
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("ความสัมพันธ์").FontSize(12).Bold();
-
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("เบอร์โทรศัพท์").FontSize(12).Bold();
-
                                 table.Cell().Border(1).BorderColor(Colors.Black)
                                     .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                     .Text("ที่อยู่").FontSize(12).Bold();
-
                                 // Data Row
                                 table.Cell().Border(1).Padding(3).AlignCenter()
                                     .Text(Urgent?.NAMESURNAME ?? "").FontSize(12);
-
                                 table.Cell().Border(1).Padding(3).AlignCenter()
                                     .Text(Urgent?.RELATION_DESCRIPTION ?? "").FontSize(12);
-
                                 table.Cell().Border(1).Padding(3).AlignCenter()
                                     .Text(Urgent?.MOBILE ?? "").FontSize(12);
-
                                 table.Cell().Border(1).Padding(3).AlignCenter()
                                     .Text(Urgent?.ADDRESS ?? "")
                                     .FontSize(12)
                                     .WrapAnywhere();
                             });
                         });
-
                     });
                 }); // Close Content Page 1
             }); // Close container Page 1
             // -------------------------------------------------------------- Page 2 --------------------------------------------------------------
-
             container.Page(page =>
             {
                 page.Content().Column(col =>
@@ -643,7 +571,6 @@ namespace JobOnlineAPI.Views.Register
                     page.MarginVertical(8);
                     page.MarginHorizontal(8);
                     page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
-
                     var educationList = new List<EducationsV3Dto>();
                     if (_form["EducationList"] != null && _form["EducationList"] != DBNull.Value)
                     {
@@ -659,7 +586,6 @@ namespace JobOnlineAPI.Views.Register
                     {
                         educationList.Add(new EducationsV3Dto());
                     }
-
                     col.Item().Padding(5).Text("ข้อมูลประวัติการศึกษา (Educational Details)").FontSize(12).Bold();
                     col.Item().Border(1).BorderColor(Colors.Black).Table(table =>
                     {
@@ -673,7 +599,6 @@ namespace JobOnlineAPI.Views.Register
                             columns.RelativeColumn(2);
                             columns.RelativeColumn(2);
                         });
-
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                             .Text("ระดับการศึกษา").FontSize(12).Bold();
@@ -692,7 +617,6 @@ namespace JobOnlineAPI.Views.Register
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                             .Text("GPA").FontSize(12).Bold();
-
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten3).AlignCenter().AlignMiddle()
                             .Text("ตั้งแต่ปี").FontSize(12).Bold();
@@ -710,7 +634,6 @@ namespace JobOnlineAPI.Views.Register
                             table.Cell().Border(1).Padding(3).AlignCenter().Text(edu.GPA == null || edu.GPA == 0 ? "" : edu.GPA.ToString()).FontSize(12);
                         }
                     });
-
                     var workList = new List<WorkExperiencesV3Dto>();
                     if (_form["WorkExperienceList"] != null && _form["WorkExperienceList"] != DBNull.Value)
                     {
@@ -718,12 +641,10 @@ namespace JobOnlineAPI.Views.Register
                             _form["WorkExperienceList"].ToString() ?? "[]"
                         ) ?? new List<WorkExperiencesV3Dto>();
                     }
-
                     while (workList.Count < 10)
                     {
                         workList.Add(new WorkExperiencesV3Dto());
                     }
-
                     col.Item().Padding(5).Text("ข้อมูลประวัติการทำงาน (Work Experiences)").FontSize(12).Bold();
                     col.Item().Border(1).BorderColor(Colors.Black).Table(table =>
                     {
@@ -732,7 +653,7 @@ namespace JobOnlineAPI.Views.Register
                             columns.RelativeColumn(1); // index
                             columns.RelativeColumn(2); // Start
                             columns.RelativeColumn(2); // End
-                            columns.RelativeColumn(2); // ExperiencesYear 
+                            columns.RelativeColumn(2); // ExperiencesYear
                             columns.RelativeColumn(3); // Position
                             columns.RelativeColumn(5); // Company
                             columns.RelativeColumn(2); // Salary
@@ -752,47 +673,35 @@ namespace JobOnlineAPI.Views.Register
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                             .Text("บริษัท").FontSize(12).Bold();
-
                         table.Cell().RowSpan(2).Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                             .Text("เงินเดือนสุดท้าย").FontSize(12).Bold();
-
-
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten3).AlignCenter().AlignMiddle()
                             .Text("ตั้งแต่ปี").FontSize(12).Bold();
                         table.Cell().Border(1).BorderColor(Colors.Black)
                             .Background(Colors.Grey.Lighten3).AlignCenter().AlignMiddle()
                             .Text("ถึงปี").FontSize(12).Bold();
-
                         foreach (var (work, index) in workList.Select((w, i) => (w, i)))
                         {
                             var workStart = FormatBuddhistDate(work.StartDate, "MMM YYYY");
                             var workEnd = FormatBuddhistDate(work.EndDate, "MMM YYYY");
-
                             // ✅ แถวที่ 1: ข้อมูลหลัก
                             table.Cell().RowSpan(2).Border(1).Padding(3).AlignCenter().AlignMiddle()
                                 .Text((index + 1).ToString()).FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter().AlignMiddle()
                                 .Text(workStart ?? "").FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter().AlignMiddle()
                                 .Text(workEnd ?? "").FontSize(12);
-
                             // สมมติอยากแสดง "อายุงาน" ตรงกลาง (ตามภาพ = 3 ปี)
                             table.Cell().Border(1).Padding(3).AlignCenter().AlignMiddle()
                                 .Text(work.WorkDuration).FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter().AlignMiddle()
                                 .Text(work.Position ?? "").FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter().AlignMiddle()
                                 .Text(work.CompanyName ?? "").FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter().AlignMiddle()
                                 .Text(work.Salary ?? "").FontSize(12);
-
                             // ✅ แถวที่ 2: ลักษณะงานโดยสังเขป (สร้างเสมอ)
                             table.Cell().ColumnSpan(6).Border(1).Padding(3).MinHeight(30)
                             .Text(text =>
@@ -803,13 +712,10 @@ namespace JobOnlineAPI.Views.Register
                                 else
                                     text.Span(" ").FontSize(12); // เว้น space ให้มีเนื้อหา
                             });
-
                         }
                     });
-
                 });
             });
-
             // -------------------------------------------------------------- Page 3 --------------------------------------------------------------
             container.Page(page =>
             {
@@ -819,7 +725,6 @@ namespace JobOnlineAPI.Views.Register
                     page.MarginVertical(8);
                     page.MarginHorizontal(8);
                     page.DefaultTextStyle(x => x.FontSize(11).FontFamily("DB Heavent"));
-
                     col.Item().Padding(5).Text("ความสามารถพิเศษ").FontSize(12).Bold();
                     col.Item().Column(innerRow =>
                     {
@@ -836,7 +741,6 @@ namespace JobOnlineAPI.Views.Register
                                 {
                                     NumberHandling = JsonNumberHandling.AllowReadingFromString
                                 };
-
                                 skills = JsonSerializer.Deserialize<List<SkillsV3Dto>>(
                                     _form["SkillsList"]?.ToString() ?? "[]", options
                                 ) ?? new List<SkillsV3Dto>();
@@ -857,7 +761,6 @@ namespace JobOnlineAPI.Views.Register
                                 )?
                                 .FirstOrDefault(r => r.SkillType == "Interests");
                             }
-
                             if (skills.Count == 0)
                             {
                                 for (int i = 0; i < 3; i++)
@@ -870,12 +773,9 @@ namespace JobOnlineAPI.Views.Register
                                     });
                                 }
                             }
-
                             col.RelativeItem().Border(1).BorderColor(Colors.Black).Column(col =>
                             {
-
                                 col.Item().PaddingLeft(5).Text("ภาษาต่างประเทศ [Language]").FontSize(12).Bold();
-
                                 // รายการ TOEIC / TOEFL / IELTS
                                 col.Item().PaddingLeft(8).Row(row =>
                                 {
@@ -891,32 +791,27 @@ namespace JobOnlineAPI.Views.Register
                                         }
                                     }
                                 });
-
                                 col.Item().PaddingLeft(5).Text("ภาษาอื่นๆ [Orther Language]").FontSize(12).Bold();
                                 col.Item().PaddingLeft(8).PaddingRight(5).Row(row =>
                                 {
                                     row.RelativeItem().Text($"{Other?.SkillType}: {Other?.SkillScore} คะแนน").FontSize(12);
                                 });
-
                                 col.Item().PaddingLeft(5).Text("งานอดิเรก [Hobbies]").FontSize(12).Bold();
                                 col.Item().PaddingLeft(8).PaddingRight(5).Row(row =>
                                 {
                                     row.RelativeItem().Text(Hobbies?.SkillDescription).FontSize(12);
                                 });
-
                                 col.Item().PaddingLeft(5).Text("กิจกรรม [Activites]").FontSize(12).Bold();
                                 col.Item().PaddingLeft(8).PaddingRight(5).Row(row =>
                                 {
                                     row.RelativeItem().Text(Activites?.SkillDescription).FontSize(12);
                                 });
-
                                 col.Item().PaddingLeft(5).Text("กีฬาที่ท่านสนใจ [Interests]").FontSize(12).Bold();
                                 col.Item().PaddingLeft(8).PaddingRight(5).Row(row =>
                                 {
                                     row.RelativeItem().Text(Interests?.SkillDescription).FontSize(12);
                                 });
                             });
-
                             col.RelativeItem().Column(col =>
                             {
                                 foreach (var skill in skills)
@@ -931,7 +826,6 @@ namespace JobOnlineAPI.Views.Register
                                                     ? "ความรู้ทางคอมพิวเตอร์ (Computer Skills)"
                                                     : "ความรู้หรือทักษะอื่น ๆ (Other Skills)")
                                                 .FontSize(12).Bold();
-
                                             // ถ้ามีข้อความ → แตกเป็นหลายบรรทัด
                                             var desc = (skill.SkillDescription ?? "").Split('\n');
                                             foreach (var line in desc)
@@ -948,7 +842,6 @@ namespace JobOnlineAPI.Views.Register
                                                         .WrapAnywhere();
                                                     });
                                             }
-
                                             // ถ้าไม่มี หรือบรรทัดน้อยกว่า 3 → เติม blank row
                                             int filled = desc.Length;
                                             for (int i = filled; i < 3; i++)
@@ -960,7 +853,6 @@ namespace JobOnlineAPI.Views.Register
                                 }
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Text("ท่านมียานพาหนะเป็นของตนเองหรือไม่ รถจักรยานยนต์[Motorcycle]").FontSize(12).Bold();
@@ -968,13 +860,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireVehiclesMotorcycle"]?.ToString() ?? "", "no", "ไม่มี[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireVehiclesMotorcycle"]?.ToString() ?? "", "yes", $"มี[Yes] License:{_form["MotorcycleLicense"]?.ToString() ?? ""}", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).PaddingTop(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Text("ท่านมียานพาหนะเป็นของตนเองหรือไม่ รถยนต์[Car]").FontSize(12).Bold();
@@ -982,13 +872,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireVehiclesCar"]?.ToString() ?? "", "no", "ไม่มี[No]", "");
                             });
-
                             col.RelativeItem(4).PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireVehiclesCar"]?.ToString() ?? "", "yes", $"มี[Yes] License: {_form["CarLicense"]?.ToString() ?? ""}", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Column(col =>
@@ -1000,13 +888,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireDisabilities"]?.ToString() ?? "", "no", "ไม่มี[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireDisabilities"]?.ToString() ?? "", "yes", "มี/โปรดระบุ[Yes]", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Column(col =>
@@ -1018,13 +904,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireConvicted"]?.ToString() ?? "", "no", "ไม่เคย[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireConvicted"]?.ToString() ?? "", "yes", "เคย[Yes]", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Column(col =>
@@ -1036,13 +920,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireFiredjob"]?.ToString() ?? "", "no", "ไม่เคย[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireFiredjob"]?.ToString() ?? "", "yes", "เคย[Yes]", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Column(col =>
@@ -1054,13 +936,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireApplyjob"]?.ToString() ?? "", "no", "ไม่มี[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireApplyjob"]?.ToString() ?? "", "yes", "มี[Yes]", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Column(col =>
@@ -1072,13 +952,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireWorkShifts"]?.ToString() ?? "", "no", "ไม่ได้[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireWorkShifts"]?.ToString() ?? "", "yes", "ได้[Yes]", "");
                             });
                         });
-
                         innerRow.Item().PaddingLeft(5).Row(col =>
                         {
                             col.RelativeItem(6).Padding(3).Column(col =>
@@ -1090,13 +968,11 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireCheckInformation"]?.ToString() ?? "", "no", "ไม่ยินยอม[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
                                 RenderCheckBox(row, _form["QuestionnaireCheckInformation"]?.ToString() ?? "", "yes", "ยินยอม[Yes]", "");
                             });
                         });
-
                         RelationshipDto? Relative = null;
                         if (_form["RelationshipList"] != null && _form["RelationshipList"] != DBNull.Value)
                         {
@@ -1104,7 +980,6 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
                             };
-
                             var relationships = JsonSerializer.Deserialize<List<RelationshipDto>>(
                                 _form["RelationshipList"]?.ToString() ?? "[]", options
                             ) ?? new List<RelationshipDto>();
@@ -1121,10 +996,9 @@ namespace JobOnlineAPI.Views.Register
                             {
                                 RenderCheckBox(row, _form["QuestionnaireRelative"]?.ToString() ?? "", "no", "ไม่มี[No]", "");
                             });
-
                             col.RelativeItem(4).AlignLeft().PaddingTop(4).Row(row =>
                             {
-                                RenderCheckBox(row, _form["QuestionnaireRelative"]?.ToString() ?? "", "yes", $"มี[Yes] ชื่อ-สกุล: {Relative?.NAMESURNAME ?? "..................................."}  \n ตำแหน่ง: {Relative?.CAREER ?? "............................. "}", "");
+                                RenderCheckBox(row, _form["QuestionnaireRelative"]?.ToString() ?? "", "yes", $"มี[Yes] ชื่อ-สกุล: {Relative?.NAMESURNAME ?? "..................................."} \n ตำแหน่ง: {Relative?.CAREER ?? "............................. "}", "");
                             });
                         });
                     });
@@ -1136,19 +1010,16 @@ namespace JobOnlineAPI.Views.Register
                         {
                             NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
                         };
-
                         var relationships = JsonSerializer.Deserialize<List<RelationshipDto>>(
                             _form["RelationshipList"]?.ToString() ?? "[]", options
                         ) ?? new List<RelationshipDto>();
                         Reference = relationships.FirstOrDefault(r => r.RELATION_TYPE == "Reference");
                     }
-
                     // ถ้า Reference เป็น null → สร้าง object เปล่าให้ 1 ตัว
                     if (Reference == null)
                     {
                         ReferenceList.Add(new RelationshipDto());
                     }
-
                     col.Item().Padding(5).Text("บุคคลอ้างอิง [References]").FontSize(12).Bold();
                     col.Item().Column(innerRow =>
                     {
@@ -1162,41 +1033,31 @@ namespace JobOnlineAPI.Views.Register
                                 columns.RelativeColumn(7);
                                 columns.RelativeColumn(2);
                             });
-
                             // Header
                             table.Cell().Border(1).BorderColor(Colors.Black)
                                 .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                 .Text("ชื่อ-สกุล").FontSize(12).Bold();
-
                             table.Cell().Border(1).BorderColor(Colors.Black)
                                 .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                 .Text("ความสัมพันธ์").FontSize(12).Bold();
-
                             table.Cell().Border(1).BorderColor(Colors.Black)
                                 .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                 .Text("ตำแหน่ง").FontSize(12).Bold();
-
                             table.Cell().Border(1).BorderColor(Colors.Black)
                                 .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                 .Text("บริษัท").FontSize(12).Bold();
-
                             table.Cell().Border(1).BorderColor(Colors.Black)
                                 .Background(Colors.Grey.Lighten2).AlignCenter().AlignMiddle()
                                 .Text("เบอร์โทรศัพท์").FontSize(12).Bold();
-
                             // Data Row
                             table.Cell().Border(1).Padding(3).AlignCenter()
                                 .Text(Reference?.NAMESURNAME ?? "").FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter()
                                 .Text(Reference?.RELATION_DESCRIPTION ?? "").FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter()
                                 .Text(Reference?.CAREER ?? "").FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter()
                                 .Text(Reference?.COMPANY ?? "").FontSize(12);
-
                             table.Cell().Border(1).Padding(3).AlignCenter()
                                 .Text(Reference?.MOBILE ?? "")
                                 .FontSize(12)
@@ -1214,8 +1075,6 @@ namespace JobOnlineAPI.Views.Register
                             });
                         });
                     });
-
-
                     page.Footer().AlignRight().Column(col =>
                     {
                         var DateNow = FormatBuddhistDate(DateTime.Now, "DD MMM YYYY");
@@ -1225,9 +1084,7 @@ namespace JobOnlineAPI.Views.Register
                     });
                 }); // Close container Page 2
             });
-
         }
-
         private void RenderCheckBox(RowDescriptor row, string formValue, string expectedValue, string label, string sublabel)
         {
             // ✅ กล่องติ๊ก
@@ -1236,7 +1093,6 @@ namespace JobOnlineAPI.Views.Register
                 .AlignCenter().AlignMiddle()
                 .Text(formValue?.ToLower() == expectedValue.ToLower() ? "✓" : "")
                 .FontSize(9).Bold();
-
             row.RelativeItem().PaddingLeft(5).Column(col =>
             {
                 col.Item().Text(label).FontSize(12).Bold();
@@ -1269,7 +1125,6 @@ namespace JobOnlineAPI.Views.Register
             }
             return "";
         }
-
         private void ComposeFirstPageHeader(IContainer container)
         {
             container.Row(row =>
@@ -1278,12 +1133,10 @@ namespace JobOnlineAPI.Views.Register
                 row.RelativeItem(17).Column(col =>
                 {
                     var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Views", "imagesform", "one_logo.png");
-
                     // โลโก้ตรงกลาง
                     col.Item().AlignCenter().PaddingLeft(50).Width(80).Image(imagePath).FitWidth();
                     col.Item().AlignCenter().PaddingLeft(50).Text("บริษัท เดอะ วัน เอ็นเตอร์ไพรส์ จำกัด (มหาชน)").FontSize(12).Bold();
                     col.Item().AlignCenter().PaddingLeft(50).Text("The ONE Enterprise Public Company Limited").FontSize(12);
-
                     // กรอบเต็มความกว้าง (ยาวเหมือนภาพ 2)
                     col.Item().PaddingTop(10);
                     col.Item().Border(1).BorderColor(Colors.Black).Padding(8).Row(innerRow =>
@@ -1294,18 +1147,15 @@ namespace JobOnlineAPI.Views.Register
                             left.Item().Text("บริษัท เดอะ วัน เอ็นเตอร์ไพรส์ จำกัด (มหาชน)").FontSize(12).Bold();
                             left.Item().Text("The ONE Enterprise Public Company Limited").FontSize(12).Bold();
                         });
-
                         // วันที่พร้อมเริ่มงาน + อัตราเงินเดือนที่ต้องการ
                         innerRow.RelativeItem(6).AlignCenter().Column(right =>
                         {
                             var jobStartDateText = FormatBuddhistDate(_form["JobStartDate"], "DD MMM YYYY");
-
                             right.Item().Text(t =>
                             {
                                 t.Span("วันที่พร้อมเริ่มงาน: ").Bold().FontSize(12);
                                 t.Span(jobStartDateText).FontSize(12);
                             });
-
                             right.Item().Text(t =>
                             {
                                 var salary = decimal.TryParse(_form["Salary"]?.ToString(), out var s) ? s.ToString("N0") : "";
@@ -1314,7 +1164,6 @@ namespace JobOnlineAPI.Views.Register
                             });
                         });
                     });
-
                     col.Item().Border(1).BorderColor(Colors.Black).PaddingTop(9).PaddingBottom(6).PaddingLeft(5).Row(innerRow =>
                     {
                         // ตำแหน่งที่ต้องการสมัคร
@@ -1330,8 +1179,7 @@ namespace JobOnlineAPI.Views.Register
                         });
                     });
                 });
-
-                // กรอบรูปถ่าย 
+                // กรอบรูปถ่าย
                 row.RelativeItem(4).AlignTop().AlignRight().PaddingTop(10).Column(col =>
                 {
                     col.Item().Width(110).Height(150) // ~ 1.5 x 2 นิ้ว
@@ -1341,7 +1189,6 @@ namespace JobOnlineAPI.Views.Register
                 });
             });
         }
-
         private void ComposeOtherPageHeader(IContainer container)
         {
             container.Column(col =>
@@ -1378,7 +1225,6 @@ namespace JobOnlineAPI.Views.Register
     {
         public string? SkillType { get; set; }
         public string? SkillDescription { get; set; }
-
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
         public double? SkillScore { get; set; }
     }
@@ -1395,7 +1241,5 @@ namespace JobOnlineAPI.Views.Register
         public string? ADDRESS { get; set; }
         public string? RelativeFullName { get; set; }
         public string? RelativeOccupation { get; set; }
-
     }
-
 }
