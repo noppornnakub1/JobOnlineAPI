@@ -1085,7 +1085,7 @@ namespace JobOnlineAPI.Views.Register
                 }); // Close container Page 2
             });
         }
-        private void RenderCheckBox(RowDescriptor row, string formValue, string expectedValue, string label, string sublabel)
+        private static void RenderCheckBox(RowDescriptor row, string formValue, string expectedValue, string label, string sublabel)
         {
             // ✅ กล่องติ๊ก
             row.ConstantItem(15).Height(15).CornerRadius(1)
