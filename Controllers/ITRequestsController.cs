@@ -273,18 +273,18 @@ namespace JobOnlineAPI.Controllers
                 }
 
 
-                var firstResult = result.FirstOrDefault();
-                if (firstResult != null)
-                {
-                    string? reqNo = firstResult.ReqNo;
-                    string? approver1 = firstResult.APPROVER1;
-                    string? approver2 = firstResult.APPROVER2;
-                    string? approver3 = firstResult.APPROVER3;
-                    string? approver4 = firstResult.APPROVER4;
-                    string? approver5 = firstResult.APPROVER5;
-                    bool isUpdate = requestDataList.Any(data => data.ContainsKey("ID"));
-                    await SendITRequestEmail(requestDataList, newId.Value, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
-                }
+                //var firstResult = result.FirstOrDefault();
+                //if (firstResult != null)
+                //{
+                //    string? reqNo = firstResult.ReqNo;
+                //    string? approver1 = firstResult.APPROVER1;
+                //    string? approver2 = firstResult.APPROVER2;
+                //    string? approver3 = firstResult.APPROVER3;
+                //    string? approver4 = firstResult.APPROVER4;
+                //    string? approver5 = firstResult.APPROVER5;
+                //    bool isUpdate = requestDataList.Any(data => data.ContainsKey("ID"));
+                //    await SendITRequestEmail(requestDataList, newId.Value, isUpdate, reqNo, approver1, approver2, approver3, approver4, approver5);
+                //}
 
                 return Ok(new
                 {
@@ -496,40 +496,40 @@ namespace JobOnlineAPI.Controllers
                     .Where(a => !string.IsNullOrWhiteSpace(a) && IsValidEmail(a))
                     .ToList();
 
-                if (approvers.Count != 0)
-                {
-                    string approverBody = $"""
-                    <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                        <p>An IT request #{reqNo} requires your approval.</p>
-                        <h3>Services Requested:</h3>
-                        {servicesList}
-                        <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
-                    </div>
-                    """;
+                //if (approvers.Count != 0)
+                //{
+                //    string approverBody = $"""
+                //    <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                //        <p>An IT request #{reqNo} requires your approval.</p>
+                //        <h3>Services Requested:</h3>
+                //        {servicesList}
+                //        <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
+                //    </div>
+                //    """;
 
-                    foreach (var approver in approvers)
-                    {
-                        if (approver != null)
-                        {
-                            await _emailService.SendEmailAsync(approver, subject, approverBody, true, "IT-Request", null);
-                        }
-                    }
-                }
+                //    foreach (var approver in approvers)
+                //    {
+                //        if (approver != null)
+                //        {
+                //            await _emailService.SendEmailAsync(approver, subject, approverBody, true, "IT-Request", null);
+                //        }
+                //    }
+                //}
 
-                // Email for Requester
-                if (IsValidEmail(requesterEmail))
-                {
-                    string requesterBody = $"""
-                    <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                        <p>Your IT request #{reqNo} has been {action}.</p>
-                        <h3>Services Requested:</h3>
-                        {servicesList}
-                        <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
-                    </div>
-                    """;
+                //// Email for Requester
+                //if (IsValidEmail(requesterEmail))
+                //{
+                //    string requesterBody = $"""
+                //    <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                //        <p>Your IT request #{reqNo} has been {action}.</p>
+                //        <h3>Services Requested:</h3>
+                //        {servicesList}
+                //        <p>View details at <a href='https://your-app.com/it-requests/{id}'>Request #{reqNo}</a>.</p>
+                //    </div>
+                //    """;
 
-                    await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true, "IT-Request", null);
-                }
+                //    await _emailService.SendEmailAsync(requesterEmail, subject, requesterBody, true, "IT-Request", null);
+                //}
             }
             catch (Exception ex)
             {
