@@ -44,6 +44,8 @@ namespace JobOnlineAPI.Services
         {
             var fullNameThai = GetFullName(req);
             var jobTitle = req.TryGetValue("JobTitle", out var jobTitleObj) ? jobTitleObj?.ToString() ?? "-" : "-";
+            var JobStartDate = req.TryGetValue("JobStartDate", out var JobStartDateObj) ? JobStartDateObj?.ToString() ?? "-" : "-";
+            var CodeMPID = req.TryGetValue("CodeMPID", out var CodeMPIDObj) ? CodeMPIDObj?.ToString() ?? "-" : "-";
             var typeMail = req.TryGetValue("TypeMail", out var typeMailObj) && typeMailObj != null
                 ? typeMailObj is JsonElement t && t.ValueKind == JsonValueKind.String ? t.GetString() : typeMailObj.ToString()
                 : null;
@@ -55,6 +57,14 @@ namespace JobOnlineAPI.Services
                 "sp_GetDataSendEmailRegister",
                 new { JobID = dbResult.OutJobID },
                 commandType: CommandType.StoredProcedure);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@JobID", dbResult.OutJobID);
+            //sp_GetDateSendEmail 
+            var resultsNew = await connection.QueryAsync<StaffEmailNew>(
+                "EXEC sp_GetDataSendEmailByJobID_V2  @JobID",
+                parameters);
+
 
             var firstHr = results.FirstOrDefault(x => x.Role == 2);
 
@@ -82,7 +92,28 @@ namespace JobOnlineAPI.Services
             else if (!string.IsNullOrWhiteSpace(typeMail) && typeMail == "HRConfirmed")
             {
                 string managerBody = GenerateManagerEmailBody(fullNameThai, jobTitle);
-                foreach (var staff in results)
+                var resultsNewlist = resultsNew.Where(staff => staff.DATATYPE == "Openfor").ToList();
+                string fullName = string.Empty;
+                // ถ้าไม่มี DATATYPE == "Openfor" ให้ใช้ results เดิม
+                if (resultsNewlist.Any())
+                {
+                    var openForStaff = resultsNewlist.First(); 
+                    fullName = $"{openForStaff.NAMFIRSTT} {openForStaff.NAMLASTT}".Trim();
+                }
+                else
+                {
+                    var createStaff = resultsNew.FirstOrDefault(staff => staff.DATATYPE == "Create");
+                    if (createStaff != null)
+                    {
+                        fullName = $"{createStaff.NAMFIRSTT} {createStaff.NAMLASTT}".Trim();
+                    }
+                    else
+                    {
+                        fullName = "ไม่พบข้อมูลผู้สมัคร";
+                    }
+                    resultsNewlist = resultsNew.ToList(); 
+                }
+                foreach (var staff in resultsNewlist)
                 {
                     var emailStaff = staff.Email?.Trim();
                     if (string.IsNullOrWhiteSpace(emailStaff))
@@ -92,9 +123,13 @@ namespace JobOnlineAPI.Services
                     {
                         managerBody = $@"
                             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ทุกท่าน</p>
-                                <p>ขอแจ้งให้ทราบว่า ขณะนี้ได้ดำเนินการสรรหาและตกลงกับผู้สมัคร {fullNameThai} เรียบร้อยแล้วค่ะ</p>
-                                <p style='font-weight: bold; margin: 0 0 10px 0;'>ผู้สมัคร คุณ {fullNameThai} ตำแหน่ง {jobTitle}</p>
+                                <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ{fullName}</p>
+                                <p>สำเนา ผู้เกี่ยวข้อง</p>
+                                <br>
+                                <p>ทางฝ่ายสรรหาทรัพยากรบุคคล ได้ลงทะเบียนพนักงานใหม่เรียบร้อยแล้ว</p>
+                                <p>โดยมีรายละเอียด ดังนี้</p>
+                                <p>ชื่อ-สกุล : {fullNameThai} รหัสพนักงาน : {CodeMPID} วันที่เริ่มงาน : {JobStartDate}  เรียบร้อยแล้วค่ะ</p>
+                                <p style='margin: 0 0 10px 0;'><span style='color: red; font-weight: bold;'>*</span> หากต้องการเปิดคำร้องเพื่อขอบบริการทางด้าน IT โปรด Login และไปที่เมนู IT Request Form เข้าระบบเพื่อสร้างคำขอ https://oneejobs27.oneeclick.co:7191/LoginAdmin <span style='color: red; font-weight: bold;'>*</span></p>
                                 <br>
                                 <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
                                 <p style='margin: 0;'>ฝ่ายทรัพยากรบุคคล</p>
