@@ -484,19 +484,40 @@ namespace JobOnlineAPI.Controllers
             }
         }
 
+        // private BadRequestObjectResult? ValidateInput(IDictionary<string, object?> data)
+        // {
+        //     if (!data.ContainsKey(ApplicantIdKey) || !data.ContainsKey("Status"))
+        //     {
+        //         _logger.LogWarning("Missing required fields in request: ApplicantID or Status");
+        //         return new BadRequestObjectResult("Missing required fields: ApplicantID or Status");
+        //     }
+
+        //     if (!data.TryGetValue(ApplicantIdKey, out object? applicantIdValue) || applicantIdValue == null ||
+        //         !data.TryGetValue("Status", out object? statusValue) || statusValue == null)
+        //     {
+        //         _logger.LogWarning("Invalid or null values for ApplicantID or Status");
+        //         return new BadRequestObjectResult("Invalid or null values for ApplicantID or Status");
+        //     }
+
+        //     return null;
+        // }
         private BadRequestObjectResult? ValidateInput(IDictionary<string, object?> data)
         {
-            if (!data.ContainsKey(ApplicantIdKey) || !data.ContainsKey("Status"))
+            var lowerCaseData = data.ToDictionary(
+                kv => kv.Key.ToLowerInvariant(),
+                kv => kv.Value
+            );
+
+            if (!lowerCaseData.ContainsKey("applicantid") || !lowerCaseData.ContainsKey("status"))
             {
-                _logger.LogWarning("Missing required fields in request: ApplicantID or Status");
-                return new BadRequestObjectResult("Missing required fields: ApplicantID or Status");
+                _logger.LogWarning("Missing required fields in request: applicantID or status");
+                return new BadRequestObjectResult("Missing required fields: applicantID or status");
             }
 
-            if (!data.TryGetValue(ApplicantIdKey, out object? applicantIdValue) || applicantIdValue == null ||
-                !data.TryGetValue("Status", out object? statusValue) || statusValue == null)
+            if (lowerCaseData["applicantid"] == null || lowerCaseData["status"] == null)
             {
-                _logger.LogWarning("Invalid or null values for ApplicantID or Status");
-                return new BadRequestObjectResult("Invalid or null values for ApplicantID or Status");
+                _logger.LogWarning("Invalid or null values for applicantID or status");
+                return new BadRequestObjectResult("Invalid or null values for applicantID or status");
             }
 
             return null;
@@ -504,8 +525,22 @@ namespace JobOnlineAPI.Controllers
 
         private ApplicantRequestData? ExtractRequestData(IDictionary<string, object?> data)
         {
-            if (data[ApplicantIdKey] is not JsonElement applicantIdElement || applicantIdElement.ValueKind != JsonValueKind.Number ||
-                data["Status"] is not JsonElement statusElement || statusElement.ValueKind != JsonValueKind.String || data[JobIdKey] is not JsonElement jobIdElement)
+            // if (data[ApplicantIdKey] is not JsonElement applicantIdElement || applicantIdElement.ValueKind != JsonValueKind.Number ||
+            //     data["Status"] is not JsonElement statusElement || statusElement.ValueKind != JsonValueKind.String || data[JobIdKey] is not JsonElement jobIdElement)
+            // {
+            //     _logger.LogWarning("ApplicantID must be an integer and Status must be a string");
+            //     return null;
+            // }
+
+            // ✅ Normalize key ให้เป็น lowercase ทั้งหมด
+            var normalized = data.ToDictionary(
+                kv => kv.Key.ToLowerInvariant(),
+                kv => kv.Value
+            );
+
+            if (normalized["applicantid"] is not JsonElement applicantIdElement || applicantIdElement.ValueKind != JsonValueKind.Number ||
+                normalized["status"] is not JsonElement statusElement || statusElement.ValueKind != JsonValueKind.String ||
+                normalized["jobid"] is not JsonElement jobIdElement)
             {
                 _logger.LogWarning("ApplicantID must be an integer and Status must be a string");
                 return null;
@@ -515,7 +550,8 @@ namespace JobOnlineAPI.Controllers
             int JobID = jobIdElement.GetInt32();
             string status = statusElement.GetString()!;
 
-            List<CandidateDto> candidates = ExtractCandidates(data);
+            List<CandidateDto> candidates = ExtractCandidates(normalized);
+            // List<CandidateDto> candidates = ExtractCandidates(data);
 
             string? emailSend = data.TryGetValue("EmailSend", out object? emailSendObj) &&
                                emailSendObj is JsonElement emailSendElement &&
@@ -568,25 +604,58 @@ namespace JobOnlineAPI.Controllers
 
         }
 
+        // private List<CandidateDto> ExtractCandidates(IDictionary<string, object?> data)
+        // {
+        //     if (!data.TryGetValue("Candidates", out object? candidatesObj) || candidatesObj == null)
+        //         return [];
+
+        //     string? candidatesJson = candidatesObj.ToString();
+        //     if (string.IsNullOrEmpty(candidatesJson))
+        //         return [];
+
+        //     try
+        //     {
+        //         return JsonSerializer.Deserialize<List<CandidateDto>>(candidatesJson) ?? [];
+        //     }
+        //     catch (JsonException ex)
+        //     {
+        //         _logger.LogWarning(ex, "Failed to deserialize Candidates JSON: {Message}", ex.Message);
+        //         return [];
+        //     }
+        // }
         private List<CandidateDto> ExtractCandidates(IDictionary<string, object?> data)
         {
-            if (!data.TryGetValue("Candidates", out object? candidatesObj) || candidatesObj == null)
-                return [];
-
-            string? candidatesJson = candidatesObj.ToString();
-            if (string.IsNullOrEmpty(candidatesJson))
+            if (!data.TryGetValue("candidates", out object? candidatesObj) || candidatesObj == null)
                 return [];
 
             try
             {
-                return JsonSerializer.Deserialize<List<CandidateDto>>(candidatesJson) ?? [];
+                if (candidatesObj is JsonElement candidatesElement && candidatesElement.ValueKind == JsonValueKind.Array)
+                {
+                    return JsonSerializer.Deserialize<List<CandidateDto>>(
+                        candidatesElement.GetRawText(),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    ) ?? [];
+                }
+
+                // fallback ถ้าเผลอส่งมาเป็น string json
+                string? candidatesJson = candidatesObj.ToString();
+                if (!string.IsNullOrEmpty(candidatesJson))
+                {
+                    return JsonSerializer.Deserialize<List<CandidateDto>>(
+                        candidatesJson,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    ) ?? [];
+                }
             }
             catch (JsonException ex)
             {
                 _logger.LogWarning(ex, "Failed to deserialize Candidates JSON: {Message}", ex.Message);
-                return [];
             }
+
+            return [];
         }
+
 
         private async Task UpdateStatusInDatabase(int applicantId, string status)
         {

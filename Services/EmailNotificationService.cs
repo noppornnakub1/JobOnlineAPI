@@ -479,7 +479,7 @@ namespace JobOnlineAPI.Services
             parameters.Add("@JobID", jobId, DbType.Int32);
             // ตัวอย่าง Dapper async
             var result = await connection.QueryAsync<dynamic>(
-                "sp_GetDataSendMailJobs",
+                "sp_GetDataSendEmailByJobID",
                 parameters,
                 commandType: CommandType.StoredProcedure);
 
@@ -489,18 +489,31 @@ namespace JobOnlineAPI.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            var SentToName = result.FirstOrDefault(x => x.DATATYPE == "Openfor") 
+                  ?? result.FirstOrDefault(x => x.DATATYPE == "Create");
+
+
             string hrBody = string.Empty;
             string SubjectMail = string.Empty;
             hrBody = $@"
                 <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px;'>
-                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน ทีม {DepartmentName}</p>
+                    <p style='font-weight: bold; margin: 0 0 10px 0;'>เรียน คุณ{SentToName?.NAMFIRSTT} {SentToName?.NAMLASTT}</p>
                     <br>
                     <p style='margin: 0 0 10px 0;'>
-                        ฝ่ายทรัพยากรบุคคลขอแจ้งให้ทราบว่า ได้รับเรื่องการเรียกผู้สมัครงานเข้าสัมภาษณ์เรียบร้อยแล้ว 
-                        โดยขณะนี้อยู่ระหว่างการติดต่อผู้สมัครเพื่อนัดหมายวันและเวลาสัมภาษณ์
+                        ทางฝ่ายสรรหาทรัพยากรบุคคล ได้รับเรื่องคำขอของท่านแล้ว <br> 
+                        และดำเนินการตามคำขอของท่าน โดยจะทำการอัพเดตความคืบหน้าผ่านระบบ
+                        โดยท่านจะได้รับ Email แจ้งเตือนอีกครั้งเมื่อมีความคืบหน้า
+                        
                     </p>
                     <br>
-                    <p style='color: red; font-weight: bold;'>**อีเมลนี้เป็นระบบอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
+                    <p style='margin: 0 0 10px 0;'> โดยท่านจะได้รับ Email แจ้งเตือนอีกครั้งเมื่อมีความคืบหน้า </p>
+                    <br>           
+                    <p>
+                        <span style='color: red; font-weight: bold;'>*ติดตามความคืบหน้าของคำขอของท่านผ่านลิงค์*</span> https://oneejobs27.oneeclick.co:7191/LoginAdmin
+                    </p>
+                    <p style='color: red; font-weight: bold;'>
+                        **อีเมลนี้เป็นระบบอัตโนมัติ กรุณาอย่าตอบกลับ**
+                    </p>
                 </div>";
             SubjectMail = $@"แจ้งสถานะการเรียกสัมภาษณ์งาน - ตำแหน่ง {JobTitle}";
 

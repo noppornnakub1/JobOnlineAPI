@@ -35,7 +35,7 @@ namespace JobOnlineAPI.Controllers
             {
                 // ดึงข้อมูล JSON และ clean string
                 string? jsonData = formCollection["jsonData"].FirstOrDefault()?.Trim();
-                if (string.IsNullOrWhiteSpace(jsonData))
+                if (string.IsNullOrWhiteSpace(jsonData) || jsonData == "[]")
                 {
                     _logger.LogWarning("Invalid or missing JSON data.");
                     return BadRequest(new { Error = "Invalid or missing JSON data." });
@@ -628,7 +628,7 @@ namespace JobOnlineAPI.Controllers
                 hrBody = $@"
                     <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
                         <p style='margin: 0; font-weight: bold;'>ขอความกรุณาอนุมัติคำขอใช้งาน IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}</p>
-                        <p style='margin: 0;'>เรียน คุณ {firstRecord?.EMPITNameThai},</p>
+                        <p style='margin: 0;'>เรียน คุณ{firstRecord?.NAMFIRSTT} {firstRecord?.NAMLASTT}</p>
                         <p>ขอแจ้งให้ทราบว่า มีคำขอใช้งานระบบ IT สำหรับ คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai} เข้ามา <br>กรุณาพิจารณาและดำเนินการอนุมัติผ่านระบบตามความเหมาะสม</p>
                         <p style='margin: 0;'>กรุณาคลิก Link:
                             <a target='_blank' href='https://oneejobs27.oneeclick.co:7191/LoginAdmin?ApId={ApplicantID}&ITReq=FromMailIT'
