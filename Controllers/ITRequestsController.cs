@@ -605,6 +605,27 @@ namespace JobOnlineAPI.Controllers
             }
             return successCount;
         }
+
+        [HttpGet("dataUserAdminIT")]
+        [TypeFilter(typeof(JwtAuthorizeAttribute))]
+        public async Task<IActionResult> GetDataUserAdminIT()
+        {
+            try
+            {
+                using var connection = new SqlConnection(_dbConnection.ConnectionString);
+                var parameters = new DynamicParameters();
+                var result = await connection.QueryAsync(new CommandDefinition(
+                    "sp_listNameSignaturesIT",
+                    commandType: CommandType.StoredProcedure));
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetDataUserAdmin");
+                return StatusCode(500, new { Error = "Internal server error", Details = ex.Message });
+            }
+        }
         private async Task<int> SendEmailsITAsync(int ApplicantID, string? TypeCondition, string? Name, string? CostCenter)
         {
             using var connection = new SqlConnection(_dbConnection.ConnectionString);
