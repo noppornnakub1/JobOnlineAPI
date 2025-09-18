@@ -21,23 +21,25 @@ namespace JobOnlineAPI.Controllers
                 string? connectionString = _configuration.GetConnectionString("DefaultConnection");
                 using var connection = new SqlConnection(connectionString);
                 var parameters = new DynamicParameters();
-                parameters.Add("@CodeMPID ", comCode);
+                parameters.Add("@CodeMPID", comCode);
                 parameters.Add("@Exists", dbType: System.Data.DbType.Boolean, direction: System.Data.ParameterDirection.Output);
 
-                var result = await connection.QueryAsync(
+                await connection.ExecuteAsync(
                     "sp_CheckCodeMPIDExists",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
 
-                bool Exists = parameters.Get<bool>("@Exists");
+                bool exists = parameters.Get<bool>("@Exists");
 
-                return Ok(Exists);
+                return Ok(new { exists });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { Error = ex.Message });
             }
         }
+
     }
+
 }
