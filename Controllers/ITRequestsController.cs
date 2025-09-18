@@ -629,13 +629,15 @@ namespace JobOnlineAPI.Controllers
                     <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
                         <p style='margin: 0; font-weight: bold;'>ขอความกรุณาอนุมัติคำขอใช้งาน IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}</p>
                         <p style='margin: 0;'>เรียน คุณ{firstRecord?.NAMFIRSTT} {firstRecord?.NAMLASTT}</p>
-                        <p>ขอแจ้งให้ทราบว่า มีคำขอใช้งานระบบ IT สำหรับ คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai} เข้ามา <br>กรุณาพิจารณาและดำเนินการอนุมัติผ่านระบบตามความเหมาะสม</p>
+                        <p>ขอแจ้งให้ทราบว่า มีคำขอใช้งานระบบ IT สำหรับ คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai} เข้ามา <br>
+                            กรุณาพิจารณาและดำเนินการอนุมัติผ่านระบบตามความเหมาะสม
+                        </p>
                         <p style='margin: 0;'>กรุณาคลิก Link:
                             <a target='_blank' href='https://oneejobs27.oneeclick.co:7191/LoginAdmin?ApId={ApplicantID}&ITReq=FromMailIT'
                                 style='color: #007bff; text-decoration: underline;'>
                                 https://oneejobs27.oneeclick.co
                             </a>
-                            เพื่อดูรายละเอียดและดำเนินการในขั้นตอนต่อไป
+                            เพื่อพิจารณาอนุมัติคำขอ
                         </p>     
                         <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
                         <p style='margin: 0;'>{Name}</p>
@@ -657,17 +659,18 @@ namespace JobOnlineAPI.Controllers
                         <br>
                         <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                     </div>";
-                SubjectMail = $@"แจ้งคำขอใช้งาน IT ได้รับอนุมัติ - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}";
+                SubjectMail = $@"คำขอใช้งาน IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}";
             }
             if (TypeCondition == "ITCompleted")
             {
                 hrBody = $@"
                     <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
                         <p style='margin: 0; font-weight: bold;'>แจ้งผลการดำเนินการ IT - คุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai}</p>
-                        <p style='margin: 0;'>เรียนคุณ {firstRecord?.RequesterNameThai} และคุณ {firstRecord?.ApproveNameThai},</p>
-                        <p>ทีม IT ได้ดำเนินการตามคำขอสำหรับคุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai} เรียบร้อยแล้วค่ะ <br>หากมีข้อสอบถามเพิ่มเติม หรือต้องการความช่วยเหลืออื่นใด สามารถแจ้งกลับได้เลยนะคะ</p>
+                        <p style='margin: 0;'>เรียนคุณ ผู้เกี่ยวข้องทุกท่าน</p>
+                        <p>ทีม IT ได้ดำเนินการตามคำขอสำหรับคุณ {firstRecord?.FirstNameThai} {firstRecord?.LastNameThai} เรียบร้อยแล้วค่ะ <br>
+                            หากมีข้อสอบถามเพิ่มเติม หรือต้องการความช่วยเหลืออื่นใด สามารถแจ้งปัญหา itsupport@onee.one</p>
                         <p style='margin-top: 30px; margin:0'>ด้วยความเคารพ,</p>
-                        <p style='margin: 0;'>ทีม IT Support</p>
+                        <p style='margin: 0;'>IT Department</p>
                         <br>
                         <p style='color:red; font-weight: bold;'>**อีเมลนี้คือข้อความอัตโนมัติ กรุณาอย่าตอบกลับ**</p>
                     </div>";
