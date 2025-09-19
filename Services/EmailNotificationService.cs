@@ -476,7 +476,10 @@ namespace JobOnlineAPI.Services
             string SubjectMail = string.Empty;
             hrBody = $@"
             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                <p style='margin: 0;'>เรียนคุณ {firstRecord?.NAMETHAI} และคุณ {firstRecord?.ApproveNameThai},</p>
+                <p style='margin: 0;'>
+                    เรียนคุณ {firstRecord?.NAMETHAI}
+                    {(string.IsNullOrEmpty(firstRecord?.ApproveNameThai) ? "" : $" และคุณ {firstRecord?.ApproveNameThai}")},
+                </p>
 
                 {(firstRecord?.ApprovalStatus == "Approved" ? $@"
                     <p>
@@ -537,8 +540,7 @@ namespace JobOnlineAPI.Services
                     <br>
                     <p style='margin: 0 0 10px 0;'>
                         ทางฝ่ายสรรหาทรัพยากรบุคคล ได้รับเรื่องคำขอของท่านแล้ว <br> 
-                        และดำเนินการตามคำขอของท่าน โดยจะทำการอัพเดตความคืบหน้าผ่านระบบ <br> 
-                        โดยท่านจะได้รับ Email แจ้งเตือนอีกครั้งเมื่อมีความคืบหน้า
+                        และดำเนินการตามคำขอของท่าน โดยจะทำการอัพเดตความคืบหน้าผ่านระบบ
                     </p>
                     <br>
                     <p style='margin: 0 0 10px 0;'> โดยท่านจะได้รับ Email แจ้งเตือนอีกครั้งเมื่อมีความคืบหน้า </p>

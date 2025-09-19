@@ -844,7 +844,10 @@ namespace JobOnlineAPI.Controllers
             string SubjectMail = string.Empty;
             hrBody = $@"
             <div style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; font-size: 14px; line-height: 1.6;'>
-                <p style='margin: 0;'>เรียนคุณ {firstRecord?.NAMETHAI} และคุณ {firstRecord?.ApproveNameThai},</p>
+                <p style='margin: 0;'>
+                    เรียนคุณ {firstRecord?.NAMETHAI}
+                    {(string.IsNullOrEmpty(firstRecord?.ApproveNameThai) ? "" : $" และคุณ {firstRecord?.ApproveNameThai}")},
+                </p>
 
                 {(firstRecord?.ApprovalStatus == "Approved" ? $@"
                     <p>
