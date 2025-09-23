@@ -136,11 +136,10 @@ namespace JobOnlineAPI.Repositories
                                         </tr>
                                         <tr>
                                             <td style='background-color: #2E86C1; padding: 10px; text-align: center; color: #ffffff;'>
-                                                <p style='margin: 0; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
+                                                <p style='font-size: 14px;'>กรุณา Link: <a href='https://oneejobs27.oneeclick.co:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                                             </td>
                                         </tr>
                                     </table>
-                                    <p style='font-size: 14px;'>กรุณา Link: <a href='https://oneejobs27.oneeclick.co:7191/LoginAdmin' target='_blank' style='color: #2E86C1; text-decoration: underline;'>oneejobs27.oneeclick.co</a> เข้าระบบ เพื่อดูรายละเอียดและดำเนินการพิจารณา</p>
                                 </div>";
 
                         await _emailService.SendEmailAsync(s.Email!, "New Job Application", hrBody, true, "Jobs", null);
